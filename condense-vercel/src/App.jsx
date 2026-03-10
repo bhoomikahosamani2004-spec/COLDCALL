@@ -301,7 +301,7 @@ async function generateMessages(person, research, onLog) {
       (["engineer","lead","specialist"].some(s => seniority.includes(s)) && ["engineer","lead","specialist"].some(s => ex.seniority.toLowerCase().includes(s))) ||
       (["manager","head"].some(s => seniority.includes(s)) && ["manager","head"].some(s => ex.seniority.toLowerCase().includes(s)))
     )) score += 2;
-    const industryWords = industry.split(/[\s,\/&]+/).filter(w => w.length > 4);
+    const industryWords = industry.split(/[\s,\&]+/).filter(w => w.length > 4);
     industryWords.forEach(w => { if (ex.industry.toLowerCase().includes(w)) score += 1; });
     // Prefer examples with longer, richer messages
     const avgLen = ex.messages.reduce((s, m) => s + m.text.length, 0) / (ex.messages.length || 1);
