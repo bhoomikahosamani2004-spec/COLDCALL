@@ -123,35 +123,21 @@ function cleanResearch(r) {
 // ─── LINKEDIN LOOKUP ──────────────────────────────────────────────────────────
 async function lookupLinkedIn(linkedinUrl, onStatus) {
   onStatus("🔍 Looking up LinkedIn profile...");
-  // Extract slug from URL for a cleaner search query
-  const slug = linkedinUrl.replace(/https?:\/\/(www\.)?linkedin\.com\/in\//i, "").replace(/\//g, "").trim();
-  const searchQuery = slug
-    ? `site:linkedin.com/in ${slug} job title company`
-    : `linkedin profile ${linkedinUrl}`;
-
-  const prompt = `Search for this LinkedIn profile and extract the person's details:
-LinkedIn URL: ${linkedinUrl}
-Search hint: ${searchQuery}
-
-Search for "${slug} linkedin" and also "${slug} site:linkedin.com" to find their current job title, company, and full name.
-
-Return ONLY this JSON:
-{
-  "name": "Full Name",
-  "jobTitle": "Their exact job title",
-  "company": "Company name",
-  "industry": "Industry they work in",
-  "seniority": "Engineer / Manager / VP / CTO / Head etc",
-  "region": "Country or City, Country",
-  "confidence": 80
-}`;
-
-  const data = await callClaude({
-    system: "You are a profile lookup agent. Use web search to find the person's LinkedIn details. Return ONLY valid JSON starting with { and ending with }.",
-    messages: [{ role: "user", content: prompt }],
-    tools: [{ type: "web_search_20250305", name: "web_search" }],
-    max_tokens: 800,
-  });
+  try {
+    const res = await fetch("/api/linkedin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ linkedinUrl }),
+    });
+    if (!res.ok) throw new Error("Lookup failed");
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    onStatus("✅ Profile found!");
+    return data;
+  } catch (err) {
+    throw new Error("Could not extract profile: " + err.message);
+  }
+}
 
   // Handle tool_use rounds
   let result = data;
