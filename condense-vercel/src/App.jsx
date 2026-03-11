@@ -139,28 +139,6 @@ async function lookupLinkedIn(linkedinUrl, onStatus) {
   }
 }
 
-  // Handle tool_use rounds
-  let result = data;
-  if (data.stop_reason === "tool_use") {
-    const toolUseBlocks = (data.content || []).filter(b => b.type === "tool_use");
-    const toolResults = toolUseBlocks.map(b => ({ type: "tool_result", tool_use_id: b.id, content: "Search done." }));
-    const followUp = await callClaude({
-      system: "Extract the profile info from search results. Return ONLY valid JSON starting with { and ending with }.",
-      messages: [
-        { role: "user", content: prompt },
-        { role: "assistant", content: data.content },
-        { role: "user", content: toolResults },
-      ],
-      max_tokens: 500,
-    });
-    result = followUp;
-  }
-
-  const text = (result.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-  onStatus("✅ Profile found!");
-  return extractJSON(text);
-}
-
 // ─── RATE LIMIT HELPER ───────────────────────────────────────────────────────
 async function rateLimitDelay(ms, onLog, msg) {
   if (onLog && msg) onLog(msg);
