@@ -466,8 +466,8 @@ const C = {
   purpleDim:   "rgba(192,132,252,0.12)",
 
   // Text
-  text:        "#e2f0ff",
-  textMid:     "#6a9ab8",
+  text:        "#ffffff",
+  textMid:     "#94c8e8",
   textDim:     "#2a4a6a",
   textFaint:   "#162030",
 };
