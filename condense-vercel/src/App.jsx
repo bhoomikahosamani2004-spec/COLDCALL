@@ -365,7 +365,7 @@ const css = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #0a0805;
+    background: #050810;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-image:
@@ -436,22 +436,22 @@ const css = `
 
 const C = {
   // Backgrounds
-  bg:          "#0a0805",
-  bgDeep:      "#070604",
-  surface:     "#0f0d09",
-  surfaceAlt:  "#141009",
-  surfaceMid:  "#1a1510",
+  bg:          "#050810",
+  bgDeep:      "#030508",
+  surface:     "#080d1a",
+  surfaceAlt:  "#0a1020",
+  surfaceMid:  "#0d1526",
 
   // Borders
-  border:      "rgba(212,175,55,0.12)",
-  borderBright:"rgba(212,175,55,0.28)",
-  borderDim:   "rgba(212,175,55,0.06)",
+  border:      "rgba(14,165,233,0.12)",
+  borderBright:"rgba(14,165,233,0.28)",
+  borderDim:   "rgba(14,165,233,0.06)",
 
-  // Gold accent system
-  gold:        "#d4af37",
-  goldBright:  "#f0d060",
-  goldDim:     "rgba(212,175,55,0.15)",
-  goldDimmer:  "rgba(212,175,55,0.07)",
+  // Blue accent system
+  gold:        "#0ea5e9",
+  goldBright:  "#38bdf8",
+  goldDim:     "rgba(14,165,233,0.15)",
+  goldDimmer:  "rgba(14,165,233,0.07)",
 
   // Semantic colors
   green:       "#5de8a0",
@@ -466,12 +466,11 @@ const C = {
   purpleDim:   "rgba(192,132,252,0.12)",
 
   // Text
-  text:        "#e8ddc8",
-  textMid:     "#9a8a6a",
-  textDim:     "#5a4e38",
-  textFaint:   "#3a3020",
+  text:        "#e2f0ff",
+  textMid:     "#6a9ab8",
+  textDim:     "#2a4a6a",
+  textFaint:   "#162030",
 };
-
 const STATUS_CONFIG = {
   idle:        { color: C.textDim,   bg: C.surfaceMid,  label: "Not Started" },
   researching: { color: C.amber,     bg: C.amberDim,    label: "Researching" },
