@@ -369,13 +369,13 @@ const css = `
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-image:
-      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(180,140,60,0.07) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(180,100,40,0.05) 0%, transparent 50%);
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(14,165,233,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(37,99,235,0.06) 0%, transparent 50%);
   }
 
   ::-webkit-scrollbar { width: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #3a2e1a; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 2px; }
 
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(10px); }
@@ -392,41 +392,41 @@ const css = `
     from { opacity: 0; transform: translateX(-8px); }
     to   { opacity: 1; transform: translateX(0); }
   }
-  @keyframes shimmerGold {
+  @keyframes shimmerBlue {
     0%   { background-position: -200% center; }
     100% { background-position:  200% center; }
   }
   @keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 0 8px rgba(212,175,55,0.3); }
-    50%       { box-shadow: 0 0 20px rgba(212,175,55,0.6); }
+    0%, 100% { box-shadow: 0 0 8px rgba(14,165,233,0.3); }
+    50%       { box-shadow: 0 0 20px rgba(14,165,233,0.6); }
   }
   @keyframes borderShimmer {
-    0%   { border-color: rgba(212,175,55,0.2); }
-    50%  { border-color: rgba(212,175,55,0.5); }
-    100% { border-color: rgba(212,175,55,0.2); }
+    0%   { border-color: rgba(14,165,233,0.2); }
+    50%  { border-color: rgba(14,165,233,0.5); }
+    100% { border-color: rgba(14,165,233,0.2); }
   }
 
   .card-enter   { animation: fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
   .log-line     { animation: logIn 0.2s ease; }
   .fade-in      { animation: fadeIn 0.4s ease; }
 
-  input::placeholder { color: #4a3e28; }
-  textarea::placeholder { color: #4a3e28; }
+  input::placeholder { color: #1e3a5f; }
+  textarea::placeholder { color: #1e3a5f; }
 
   input:focus, textarea:focus {
     outline: none;
-    border-color: rgba(212,175,55,0.5) !important;
-    box-shadow: 0 0 0 2px rgba(212,175,55,0.08), 0 0 12px rgba(212,175,55,0.1);
+    border-color: rgba(14,165,233,0.5) !important;
+    box-shadow: 0 0 0 2px rgba(14,165,233,0.08), 0 0 12px rgba(14,165,233,0.1);
   }
 
   .prospect-card:hover {
-    background: rgba(212,175,55,0.04) !important;
-    border-color: rgba(212,175,55,0.2) !important;
+    background: rgba(14,165,233,0.04) !important;
+    border-color: rgba(14,165,233,0.2) !important;
     transform: translateX(2px);
   }
   .prospect-card { transition: all 0.18s ease; }
 
-  .tab-btn:hover { color: #d4af37 !important; }
+  .tab-btn:hover { color: #0ea5e9 !important; }
   .glow-btn:hover:not(:disabled) {
     transform: translateY(-1px);
     filter: brightness(1.15);
@@ -457,7 +457,7 @@ const C = {
   green:       "#5de8a0",
   greenDim:    "rgba(93,232,160,0.12)",
   amber:       "#f5a623",
-  amberDim:    "rgba(245,166,35,0.12)",
+  amberDim:    "rgba(14,165,233,0.12)",
   red:         "#ff6b6b",
   redDim:      "rgba(255,107,107,0.12)",
   blue:        "#60a5fa",
@@ -466,8 +466,8 @@ const C = {
   purpleDim:   "rgba(192,132,252,0.12)",
 
   // Text
-  text:        "#ffffff",
-  textMid:     "#94c8e8",
+  text:        "#e2f0ff",
+  textMid:     "#6a9ab8",
   textDim:     "#2a4a6a",
   textFaint:   "#162030",
 };
@@ -520,7 +520,7 @@ function GlowButton({ onClick, disabled, children, color = C.gold, small, primar
         borderRadius: 4,
         border: primary ? `1px solid ${C.gold}` : `1px solid ${color}55`,
         background: primary
-          ? `linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.08))`
+          ? `linear-gradient(135deg, rgba(14,165,233,0.2), rgba(212,175,55,0.08))`
           : `rgba(0,0,0,0)`,
         color: disabled ? C.textDim : primary ? C.goldBright : color,
         fontWeight: primary ? 600 : 500,
@@ -530,7 +530,7 @@ function GlowButton({ onClick, disabled, children, color = C.gold, small, primar
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.35 : 1,
         display: "flex", alignItems: "center", gap: 6,
-        boxShadow: primary ? `0 0 20px rgba(212,175,55,0.15), inset 0 1px 0 rgba(255,255,255,0.05)` : "none",
+        boxShadow: primary ? `0 0 20px rgba(14,165,233,0.15), inset 0 1px 0 rgba(255,255,255,0.05)` : "none",
         backdropFilter: "blur(4px)",
       }}
     >{children}</button>
@@ -617,6 +617,89 @@ export default function App() {
     setForm({ name: "", jobTitle: "", company: "", linkedinUrl: "" });
   };
 
+  const [uploadStatus, setUploadStatus] = useState("");
+  const fileInputRef = useRef();
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadStatus("📂 Reading file...");
+    const ext = file.name.split(".").pop().toLowerCase();
+    const reader = new FileReader();
+
+    const parseRows = (rows) => {
+      // Normalize headers
+      const headers = rows[0].map(h => (h || "").toString().toLowerCase().trim());
+      const find = (...keys) => headers.findIndex(h => keys.some(k => h.includes(k)));
+      const nameIdx    = find("name", "full name", "contact");
+      const titleIdx   = find("title", "job", "position", "designation", "role");
+      const companyIdx = find("company", "organization", "org", "employer");
+      const emailIdx   = find("email", "mail");
+      const phoneIdx   = find("phone", "mobile", "contact number");
+      const linkedinIdx= find("linkedin", "profile url", "url");
+
+      const added = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const name    = nameIdx >= 0 ? (row[nameIdx] || "").toString().trim() : "";
+        const company = companyIdx >= 0 ? (row[companyIdx] || "").toString().trim() : "";
+        if (!name && !company) continue;
+        const id = `p_${Date.now()}_${i}`;
+        added.push({
+          id,
+          name: name || "Unknown",
+          jobTitle:    titleIdx >= 0    ? (row[titleIdx]    || "").toString().trim() : "",
+          company:     company || "Unknown",
+          email:       emailIdx >= 0    ? (row[emailIdx]    || "").toString().trim() : "",
+          phone:       phoneIdx >= 0    ? (row[phoneIdx]    || "").toString().trim() : "",
+          linkedinUrl: linkedinIdx >= 0 ? (row[linkedinIdx] || "").toString().trim() : "",
+          status: "idle", createdAt: new Date(), sentAt: null,
+        });
+      }
+      setProspects(prev => [...prev, ...added]);
+      setUploadStatus(`✅ ${added.length} prospects imported!`);
+      if (added.length > 0) setSelected(added[0].id);
+      setTimeout(() => setUploadStatus(""), 4000);
+    };
+
+    if (ext === "csv") {
+      reader.onload = (ev) => {
+        const text = ev.target.result;
+        const rows = text.split(/\r?\n/).filter(l => l.trim()).map(l => {
+          // Simple CSV parse (handles quoted fields)
+          const result = [];
+          let cur = "", inQ = false;
+          for (const ch of l) {
+            if (ch === '"') { inQ = !inQ; }
+            else if (ch === "," && !inQ) { result.push(cur); cur = ""; }
+            else cur += ch;
+          }
+          result.push(cur);
+          return result;
+        });
+        parseRows(rows);
+      };
+      reader.readAsText(file);
+    } else if (ext === "xlsx" || ext === "xls") {
+      reader.onload = (ev) => {
+        try {
+          const XLSX = window.XLSX;
+          if (!XLSX) { setUploadStatus("❌ Excel support not loaded. Use CSV instead."); return; }
+          const wb = XLSX.read(ev.target.result, { type: "array" });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+          parseRows(rows);
+        } catch (err) {
+          setUploadStatus("❌ Error reading Excel: " + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      setUploadStatus("❌ Please upload a .csv or .xlsx file");
+    }
+    e.target.value = "";
+  };
+
   const runAgent = async (prospect) => {
     const id = prospect.id;
     setRunning(id);
@@ -657,6 +740,47 @@ export default function App() {
     setProspects(prev => prev.map(p => p.id === id ? { ...p, status: "following", sentAt: new Date() } : p));
   };
 
+  // ── BATCH QUEUE ──────────────────────────────────────────────────────────────
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchFrom, setBatchFrom] = useState(1);
+  const [batchTo, setBatchTo] = useState(30);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, done: [] });
+  const batchCancelRef = useRef(false);
+
+  const runBatch = async () => {
+    const idleProspects = prospects.filter(p => p.status === "idle");
+    const from = Math.max(1, batchFrom) - 1;
+    const to   = Math.min(idleProspects.length, batchTo);
+    const queue = idleProspects.slice(from, to);
+    if (queue.length === 0) return;
+
+    setBatchRunning(true);
+    batchCancelRef.current = false;
+    setBatchProgress({ current: 0, total: queue.length, done: [] });
+    setBatchOpen(false);
+
+    for (let i = 0; i < queue.length; i++) {
+      if (batchCancelRef.current) break;
+      const prospect = queue[i];
+      setBatchProgress(prev => ({ ...prev, current: i + 1 }));
+      await runAgent(prospect);
+      setBatchProgress(prev => ({ ...prev, done: [...prev.done, prospect.id] }));
+      // Small gap between prospects to respect rate limits
+      if (i < queue.length - 1 && !batchCancelRef.current) {
+        await new Promise(r => setTimeout(r, 5000));
+      }
+    }
+
+    setBatchRunning(false);
+    setBatchProgress(prev => ({ ...prev, current: 0 }));
+  };
+
+  const cancelBatch = () => {
+    batchCancelRef.current = true;
+    setBatchRunning(false);
+  };
+
   const getDaysUntilFollowup = (prospect, dayNum) => {
     if (!prospect.sentAt) return null;
     const sent = new Date(prospect.sentAt);
@@ -672,27 +796,28 @@ export default function App() {
 
   return (
     <>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" />
       <style>{css}</style>
       <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: FONT, display: "flex", flexDirection: "column", fontSmoothing: "antialiased" }}>
 
         {/* HEADER */}
         <div style={{
-          background: `linear-gradient(180deg, rgba(20,16,9,0.98) 0%, rgba(15,13,9,0.95) 100%)`,
+          background: `linear-gradient(180deg, rgba(5,8,20,0.98) 0%, rgba(3,6,15,0.95) 100%)`,
           borderBottom: `1px solid ${C.border}`,
           padding: "0 32px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           position: "sticky", top: 0, zIndex: 100, height: 64,
           backdropFilter: "blur(20px)",
-          boxShadow: "0 1px 0 rgba(212,175,55,0.08), 0 4px 24px rgba(0,0,0,0.4)",
+          boxShadow: "0 1px 0 rgba(14,165,233,0.08), 0 4px 24px rgba(0,0,0,0.4)",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             {/* Logo mark */}
             <div style={{
               width: 36, height: 36, borderRadius: 6,
-              background: "linear-gradient(135deg, #2a1f08, #1a1208)",
+              background: "linear-gradient(135deg, #0a1535, #050d20)",
               border: `1px solid ${C.gold}55`,
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: `0 0 16px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,255,255,0.05)`,
+              boxShadow: `0 0 16px rgba(14,165,233,0.2), inset 0 1px 0 rgba(255,255,255,0.05)`,
             }}>
               <span style={{ fontSize: 15, fontFamily: DISPLAY, color: C.gold, fontWeight: 700 }}>C</span>
             </div>
@@ -712,15 +837,76 @@ export default function App() {
                 <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, letterSpacing: "0.06em" }}>{b.label}</span>
               </div>
             ))}
+
+            <div style={{ width: 1, height: 24, background: C.border, margin: "0 4px" }} />
+
+            {/* Batch progress indicator */}
+            {batchRunning && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 4, background: C.goldDim, border: `1px solid ${C.gold}44` }}>
+                <Spinner />
+                <span style={{ fontSize: 11, fontFamily: MONO, color: C.gold }}>
+                  Batch {batchProgress.current}/{batchProgress.total}
+                </span>
+                <button onClick={cancelBatch} style={{ fontSize: 10, fontFamily: MONO, color: C.red, background: "none", border: "none", cursor: "pointer", padding: "0 4px" }}>✕ Stop</button>
+              </div>
+            )}
+
+            {/* Batch Run Button */}
+            {!batchRunning && prospects.filter(p => p.status === "idle").length > 0 && (
+              <GlowButton onClick={() => setBatchOpen(true)} color={C.gold} primary>
+                ⚡ Batch Run
+              </GlowButton>
+            )}
           </div>
         </div>
+
+        {/* BATCH MODAL */}
+        {batchOpen && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
+            onClick={() => setBatchOpen(false)}>
+            <div style={{ background: C.surface, border: `1px solid ${C.borderBright}`, borderRadius: 8, padding: 28, width: 380, boxShadow: `0 0 40px rgba(14,165,233,0.15)` }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 6 }}>Batch Generate</div>
+              <div style={{ fontSize: 12, color: C.textMid, fontFamily: MONO, marginBottom: 20 }}>
+                {prospects.filter(p => p.status === "idle").length} idle prospects available
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+                <div>
+                  <label style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, letterSpacing: "0.1em", display: "block", marginBottom: 6 }}>FROM (prospect #)</label>
+                  <input type="number" min={1} max={prospects.filter(p=>p.status==="idle").length}
+                    value={batchFrom} onChange={e => setBatchFrom(Number(e.target.value))}
+                    style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: `1px solid ${C.border}`, color: C.text, borderRadius: 4, padding: "9px 12px", fontSize: 14, fontFamily: MONO, outline: "none" }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, letterSpacing: "0.1em", display: "block", marginBottom: 6 }}>TO (prospect #)</label>
+                  <input type="number" min={1} max={prospects.filter(p=>p.status==="idle").length}
+                    value={batchTo} onChange={e => setBatchTo(Number(e.target.value))}
+                    style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: `1px solid ${C.border}`, color: C.text, borderRadius: 4, padding: "9px 12px", fontSize: 14, fontFamily: MONO, outline: "none" }} />
+                </div>
+              </div>
+
+              <div style={{ padding: "12px 16px", borderRadius: 4, background: C.goldDimmer, border: `1px solid ${C.borderDim}`, marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: C.textMid, fontFamily: MONO, lineHeight: 1.7 }}>
+                  Will generate messages for <span style={{ color: C.gold }}>{Math.max(0, Math.min(batchTo, prospects.filter(p=>p.status==="idle").length) - Math.max(0, batchFrom - 1))}</span> prospects.<br />
+                  Estimated time: ~<span style={{ color: C.gold }}>{Math.round(Math.max(0, Math.min(batchTo, prospects.filter(p=>p.status==="idle").length) - Math.max(0, batchFrom - 1)) * 0.7)} min</span> (40s per prospect)
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <GlowButton onClick={() => setBatchOpen(false)} color={C.textMid}>Cancel</GlowButton>
+                <GlowButton onClick={runBatch} primary color={C.gold}>⚡ Start Batch</GlowButton>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden", height: "calc(100vh - 64px)" }}>
 
           {/* LEFT SIDEBAR */}
           <div style={{
             width: 290,
-            background: "linear-gradient(180deg, #0d0b07 0%, #090806 100%)",
+            background: "linear-gradient(180deg, #060c1a 0%, #040810 100%)",
             borderRight: `1px solid ${C.border}`,
             display: "flex", flexDirection: "column", overflow: "hidden",
           }}>
@@ -750,7 +936,7 @@ export default function App() {
                       style={{
                         padding: "0 11px", borderRadius: 3,
                         border: `1px solid ${C.borderBright}`,
-                        background: lookupLoading ? C.goldDim : "rgba(212,175,55,0.08)",
+                        background: lookupLoading ? C.goldDim : "rgba(14,165,233,0.08)",
                         color: !form.linkedinUrl ? C.textFaint : C.gold,
                         cursor: !form.linkedinUrl || lookupLoading ? "not-allowed" : "pointer",
                         fontSize: 13, flexShrink: 0, transition: "all 0.15s",
@@ -768,6 +954,27 @@ export default function App() {
                 <GlowButton onClick={addProspect} disabled={!form.name || !form.company} primary>
                   + Add Prospect
                 </GlowButton>
+
+                {/* CSV/Excel Upload */}
+                <div style={{ marginTop: 4 }}>
+                  <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} style={{ display: "none" }} />
+                  <button onClick={() => fileInputRef.current.click()} style={{
+                    width: "100%", padding: "9px", borderRadius: 4,
+                    border: `1px dashed ${C.border}`,
+                    background: "transparent", color: C.textMid,
+                    fontSize: 11, fontFamily: MONO, letterSpacing: "0.06em",
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    transition: "all 0.15s",
+                  }}>
+                    ↑ Upload CSV / Excel
+                  </button>
+                  {uploadStatus && (
+                    <div style={{ fontSize: 10, fontFamily: MONO, marginTop: 5, padding: "4px 8px", borderRadius: 3,
+                      background: uploadStatus.startsWith("✅") ? C.greenDim : uploadStatus.startsWith("❌") ? C.redDim : C.goldDimmer,
+                      color: uploadStatus.startsWith("✅") ? C.green : uploadStatus.startsWith("❌") ? C.red : C.gold,
+                    }}>{uploadStatus}</div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -783,7 +990,7 @@ export default function App() {
                   <div key={p.id} className="card-enter prospect-card" onClick={() => setSelected(p.id)}
                     style={{
                       padding: "12px 14px", borderRadius: 4, marginBottom: 4, cursor: "pointer",
-                      background: selected === p.id ? "rgba(212,175,55,0.07)" : "transparent",
+                      background: selected === p.id ? "rgba(14,165,233,0.07)" : "transparent",
                       border: `1px solid ${selected === p.id ? C.borderBright : "transparent"}`,
                       borderLeft: selected === p.id ? `2px solid ${C.gold}` : "2px solid transparent",
                     }}>
@@ -824,7 +1031,7 @@ export default function App() {
                   width: 64, height: 64, borderRadius: 8,
                   border: `1px solid ${C.border}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "rgba(212,175,55,0.03)",
+                  background: "rgba(14,165,233,0.03)",
                 }}>
                   <span style={{ fontSize: 28, opacity: 0.4 }}>◈</span>
                 </div>
@@ -909,7 +1116,7 @@ export default function App() {
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
                       {/* Pain Points */}
-                      <div style={{ background: "rgba(245,166,35,0.03)", border: `1px solid rgba(245,166,35,0.12)`, borderRadius: 4, padding: 16 }}>
+                      <div style={{ background: "rgba(14,165,233,0.03)", border: `1px solid rgba(14,165,233,0.12)`, borderRadius: 4, padding: 16 }}>
                         <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.amber, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>Pain Points</div>
                         {(selResearch.pain_points || []).map((pt, i) => (
                           <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "5px 0", borderBottom: i < selResearch.pain_points.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none", lineHeight: 1.5, display: "flex", gap: 8 }}>
@@ -919,7 +1126,7 @@ export default function App() {
                       </div>
 
                       {/* Tech Stack */}
-                      <div style={{ background: "rgba(212,175,55,0.03)", border: `1px solid ${C.borderDim}`, borderRadius: 4, padding: 16 }}>
+                      <div style={{ background: "rgba(14,165,233,0.03)", border: `1px solid ${C.borderDim}`, borderRadius: 4, padding: 16 }}>
                         <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.gold, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>Tech Signals</div>
                         {(selResearch.tech_stack_signals || []).map((s, i) => (
                           <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "5px 0", borderBottom: i < selResearch.tech_stack_signals.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none", display: "flex", gap: 8 }}>
@@ -978,7 +1185,7 @@ export default function App() {
                         return (
                           <button key={m.key} className="tab-btn" onClick={() => setActiveMsg(m.key)} style={{
                             padding: "10px 16px", border: "none",
-                            background: isActive ? "rgba(212,175,55,0.06)" : "transparent",
+                            background: isActive ? "rgba(14,165,233,0.06)" : "transparent",
                             cursor: "pointer",
                             borderBottom: isActive ? `1px solid ${C.gold}` : "1px solid transparent",
                             color: isActive ? C.text : C.textDim,
