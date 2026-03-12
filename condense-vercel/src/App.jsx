@@ -1,4 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createClient } from '@supabase/supabase-js';
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 // ─── TRAINING DATA (32 real Veera messages) ─────────────────────────────────
 const trainingData = [{"name": "Samir Soman", "job_title": "Sr./Systems Engineer", "seniority": "IC-Senior", "company": "AutoZone", "industry": "Automotive Retail", "region": "USA", "pain_primary": "Inventory event streaming, Order pipeline reliability, Traffic spikes, B2B transaction reliability", "messages": [{"stage": "After connection", "text": "Greetings Samir. Pleasure connecting with you. How are you?"}, {"stage": "Follow Up", "text": "Given your role as Cloud Architect-SRE & Platform Engineering Lead, DevOps at AutoZone, we believe Condense could support your platform initiatives by simplifying real-time streaming, reducing operational overhead around Kafka/streaming infrastructure, improving observability, and enabling more scalable, reliable data pipelines across cloud environments."}, {"stage": "Follow Up", "text": "We would appreciate 30 minutes at your convenience for a quick virtual discussion to understand your current architecture and explore potential areas of alignment along with your email id to share the detailed email. Need your support to take things forward. Thanks."}]}, {"name": "Pranjal Singh", "job_title": "Sr./Systems Engineer", "seniority": "IC-Senior", "company": "AutoZone", "industry": "Automotive Retail", "region": "India", "pain_primary": "Inventory event streaming, Order pipeline reliability, Traffic spikes, B2B transaction reliability", "messages": [{"stage": "First Message", "text": "Reached out to connect with you to have a 30mins of your slot during next week to position our platform Condense to AutoZone. Can I have your email id to send an tailored email and use cases. Thanks"}, {"stage": "Follow Up", "text": "I came across your profile while looking at teams building large-scale data platforms on GCP at AutoZone.\n\nAt Condense, we help data engineering teams ingest high-throughput streaming data, standardise pipelines, and operate reliably at scale—especially where Kafka, real-time telemetry, and cloud-native architectures are involved.\n\nWould love to exchange notes on how you're handling ingestion, schema evolution, and scaling on GCP."}, {"stage": "Follow Up", "text": "Can we connect next week on your availability for 30mins please?"}]}, {"name": "Shankar N", "job_title": "Senior Vice President- Customer Success", "seniority": "VP", "company": "UB Technology Innovations (UBTI)", "industry": "Software Solutions", "region": "USA", "pain_primary": "Complex data integration Multi-client reliability", "messages": [{"stage": "First Message", "text": "Hi Shankar. How are you?\n\nNeed your email id and if possible 30 mins of your available slots during next week to discuss.\n\n\nI will share a detailed email once I have your email. Thanks"}, {"stage": "Follow Up", "text": "Condense and UBTI can together deliver end-to-end digital transformation by combining a real-time data backbone with solution and application expertise. Condense ingests and streams high-volume data from IoT devices, OT systems, machines, and enterprise platforms, enabling real-time analytics, predictive maintenance, fleet intelligence, and AI-driven optimization."}, {"stage": "Follow Up", "text": "Could we schedule 30 minutes next week to discuss and decide on the appropriate next steps, including whether to proceed further?"}]}, {"name": "Bhavesh Panchal", "job_title": "Chief Technology Officer", "seniority": "CTO", "company": "Magenta Mobility", "industry": "EV Mobility", "region": "India", "pain_primary": "Real-time fleet and battery telemetry reliability. Scalable event processing for fleet growth.High availability for operational continuity Cost-efficient scaling of mobility data infrastructure", "messages": [{"stage": "First Message", "text": "Real-Time Data Platform for EV & Mobility Innovation for Magenta Mobility\nHi Bhavesh,\nHope you are doing well. I'm reaching out from Zeliot, a Bosch-backed deep-tech company building real-time data infrastructure for large-scale mobility platforms. Our platform, Condense, helps standardize and stream real-time data across EVs, charging infra, and enterprise systems—strengthening the data foundation without disrupting existing applications.\n\nWe commonly support use cases like enabling event-driven architectures for fleet operations, real-time analytics, and faster innovation across mobility platforms.\n\nWould you be open to a brief conversation to explore potential alignment with Magenta Mobility's technology roadmap?\n\nBest regards,\nVeera Raghavan"}]}, {"name": "Ajay Kumar", "job_title": "Chief Information Officer", "seniority": "CIO", "company": "Zero Motorcycles Inc.", "industry": "Electric Vehicle Manufacturing (Electric Motorcycles)", "region": "USA", "pain_primary": "Real-time vehicle and battery telemetry reliability, High availability of connected vehicle and monitoring systems, Scalable data infrastructure for growing EV fleets, Cost-efficient management of R&D and production data systems", "messages": [{"stage": "First Message", "text": "Ajay Sir. Good Morning. I'm reaching out to explore a potential collaboration between Zero Motorcycles and Zeliot, leveraging our Condense platform — a real-time data infrastructure built for connected vehicle ecosystems.\n\nCondense enables OEMs and EV manufacturers to seamlessly ingest, process, and analyze vehicle data at scale — helping improve diagnostics, compliance, and customer experience through standardized APIs and low-latency analytics.\n\nI'd love to schedule a short 30-minute discussion to walk you through how Condense could align with Zero Motorcycles' connected tech roadmap.\nWould next week work for you?\n\nLooking forward to your response.\n\nRegards,\nVeera"}, {"stage": "Follow Up", "text": "Condense-backed by BOSCH helps OEMs and EV manufacturers ingest, standardize, and analyze vehicle data at scale using low-latency, standardized APIs to improve diagnostics, compliance, and customer experience. I'd love to schedule a quick 30-minute discussion to explore how Condense could align with Zero Motorcycles' connected technology roadmap—would next week work for you?\nAlternatively, if you're attending Geotab Connect 2026, happening February 10–12 at the MGM Grand in Las Vegas, we could catch up there as well.\nLooking forward to hearing from you. Have a great day."}]}, {"name": "Bapun Kumar Pradhan", "job_title": "Product Development Engineer", "seniority": "Engineer", "company": "Routematic", "industry": "Transportation, Logistics, Supply Chain and Storage", "region": "India", "pain_primary": "Real-time employee transport tracking and route optimization reliability, Scalable processing of high-volume trip and GPS event data, High availability of scheduling and fleet management systems, Cost-efficient scaling of mobility operations infrastructure", "messages": [{"stage": "First Message", "text": "Hi Bapun,\n\nGood Morning! I'm Veera, leading Enterprise Business for India at Zeliot–Condense (Bosch-backed). Our platform, Condense, simplifies Kafka and real-time data streaming with BYOC flexibility, governance, and an IoT/edge-first design.\n\nFor a mobility platform like Routematic, Condense can enable real-time trip data streaming, fleet telemetry, and route optimization analytics — helping improve reliability, efficiency, and overall commuter experience.\n\nWould you be open for a quick face to face meeting during next week to explore how we could support your product roadmap at Routematic?\n\nBest regards,\nVeera Raghavan\nCountry Head – Enterprise Business (India)\nZeliot–Condense\n935-309-4136"}, {"stage": "Follow Up", "text": "GM Bapun,\nCondense backed by BOSCH helps mobility platforms ingest, standardize, and analyze vehicle and trip data at scale using low-latency APIs—enabling better fleet visibility, compliance, and operational intelligence without heavy data engineering. I'd love to schedule a quick 30-minute conversation to explore how Condense could align with Routematic's platform and growth roadmap. Would sometime next week work for you?"}]}, {"name": "Tushar Bhagat", "job_title": "Group CEO", "seniority": "CEO", "company": "Uffizio", "industry": "Software Development", "region": "India", "pain_primary": "Reliable real-time GPS and vehicle telemetry processing, Scalable handling of high-volume tracking and event data, High availability of mission-critical fleet management platforms, Cost-efficient infrastructure scaling for growing customer base", "messages": [{"stage": "First Message", "text": "Hi Sir,\nGreat connecting with you virtually on 9th Jan along with the Bosch team—really enjoyed the discussion and learning more about your platform roadmap. I have sent an email along the deck on Condense, Zeliot's Bosch-backed, AI-first real-time data streaming platform, already powering large-scale mobility and telematics use cases across OEMs.\nWe see strong alignment around Uffizio–Condense synergies (telematics ingestion, real-time transforms for domain algorithms) and proven OTA & high-frequency streaming at OEM scale.\nHappy to set up a short virtual demo with your technical team to walk through the architecture and relevant use cases when convenient.\nRegards,\nVeera"}]}, {"name": "Vikas Parihar", "job_title": "Global Automotive Supply Chain & Logistics Leader", "seniority": "Senior Leadership (Global Function Head level)", "company": "Ola Electric", "industry": "Electric Vehicles / Automotive", "region": "India (Global Role Scope)", "pain_primary": "Lack of unified real-time visibility across vehicle telemetry, charging networks, and distribution operations.", "messages": [{"stage": "Initial Outreach", "text": "Greetings Vikas,\n\nI'm Veera, leading Enterprise Business for India at Zeliot–Condense (Bosch-backed). Our flagship platform, Condense, helps enterprises simplify Kafka and real-time data streaming with BYOC flexibility, built-in governance, and an IoT/edge-first design.\n\nFor an EV pioneer like Ola Electric, Condense can enable real-time vehicle telemetry, charging network data streaming, and fleet performance analytics — driving operational efficiency, predictive insights, and enhanced customer experience.\n\nWould you be open for a virtual discussion next week, based on your availability, to explore potential synergies?\n\nBest regards,\nVeera Raghavan\nCountry Head – Enterprise Business (India)\nZeliot–Condense\n935-309-4136"}]}];
@@ -14,24 +19,18 @@ const SUCCESS_STORIES = [
 ];
 
 // ─── PERSISTENT STORAGE HELPERS ──────────────────────────────────────────────
-const STORAGE_KEYS = {
-  prospects: "veera_prospects_v2",
-  research: "veera_research_v2",
-  messages: "veera_messages_v2",
-  edits: "veera_edits_v2",
-  replies: "veera_replies_v2",
-  notifications: "veera_notifications_v2",
-};
-
-function loadStorage(key) {
+async function dbSave(table, id, data) {
   try {
-    const val = localStorage.getItem(key);
-    return val ? JSON.parse(val) : null;
-  } catch { return null; }
+    await supabase.from(table).upsert({ id, data, updated_at: new Date().toISOString() });
+  } catch(e) { console.error('Save error:', e); }
 }
 
-function saveStorage(key, val) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+async function dbLoad(table) {
+  try {
+    const { data } = await supabase.from(table).select('id, data');
+    if (!data) return {};
+    return Object.fromEntries(data.map(r => [r.id, r.data]));
+  } catch(e) { console.error('Load error:', e); return {}; }
 }
 
 // ─── GEMINI API WRAPPER ───────────────────────────────────────────────────────
@@ -500,13 +499,30 @@ function NotificationBell({ notifications, onClear }) {
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
   // Load persisted state
-  const [prospects, setProspects] = useState(() => loadStorage(STORAGE_KEYS.prospects) || []);
-  const [research, setResearch] = useState(() => loadStorage(STORAGE_KEYS.research) || {});
-  const [messages, setMessages] = useState(() => loadStorage(STORAGE_KEYS.messages) || {});
-  const [edits, setEdits] = useState(() => loadStorage(STORAGE_KEYS.edits) || {});
-  const [replies, setReplies] = useState(() => loadStorage(STORAGE_KEYS.replies) || []);
-  const [notifications, setNotifications] = useState(() => loadStorage(STORAGE_KEYS.notifications) || []);
+ const [prospects, setProspects] = useState([]);
+const [research, setResearch] = useState({});
+const [messages, setMessages] = useState({});
+const [edits, setEdits] = useState({});
+const [replies, setReplies] = useState([]);
+const [notifications, setNotifications] = useState([]);
+const [dbLoaded, setDbLoaded] = useState(false);
 
+useEffect(() => {
+  async function loadAll() {
+    const [p, r, m, e, rep, n] = await Promise.all([
+      dbLoad('prospects'), dbLoad('research'), dbLoad('messages'),
+      dbLoad('edits'), dbLoad('replies'), dbLoad('notifications'),
+    ]);
+    setProspects(Object.values(p));
+    setResearch(r);
+    setMessages(m);
+    setEdits(e);
+    setReplies(Object.values(rep));
+    setNotifications(Object.values(n));
+    setDbLoaded(true);
+  }
+  loadAll();
+}, []);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(() => {
     const p = new URLSearchParams(window.location.search);
@@ -533,12 +549,35 @@ export default function App() {
   const [uploadStatus, setUploadStatus] = useState("");
 
   // Persist state changes
-  useEffect(() => { saveStorage(STORAGE_KEYS.prospects, prospects); }, [prospects]);
-  useEffect(() => { saveStorage(STORAGE_KEYS.research, research); }, [research]);
-  useEffect(() => { saveStorage(STORAGE_KEYS.messages, messages); }, [messages]);
-  useEffect(() => { saveStorage(STORAGE_KEYS.edits, edits); }, [edits]);
-  useEffect(() => { saveStorage(STORAGE_KEYS.replies, replies); }, [replies]);
-  useEffect(() => { saveStorage(STORAGE_KEYS.notifications, notifications); }, [notifications]);
+  useEffect(() => {
+  if (!dbLoaded) return;
+  prospects.forEach(p => dbSave('prospects', p.id, p));
+}, [prospects, dbLoaded]);
+
+useEffect(() => {
+  if (!dbLoaded) return;
+  Object.entries(research).forEach(([id, val]) => dbSave('research', id, val));
+}, [research, dbLoaded]);
+
+useEffect(() => {
+  if (!dbLoaded) return;
+  Object.entries(messages).forEach(([id, val]) => dbSave('messages', id, val));
+}, [messages, dbLoaded]);
+
+useEffect(() => {
+  if (!dbLoaded) return;
+  Object.entries(edits).forEach(([id, val]) => dbSave('edits', id, val));
+}, [edits, dbLoaded]);
+
+useEffect(() => {
+  if (!dbLoaded) return;
+  replies.forEach(r => dbSave('replies', r.id, r));
+}, [replies, dbLoaded]);
+
+useEffect(() => {
+  if (!dbLoaded) return;
+  notifications.forEach(n => dbSave('notifications', n.id || `n_${Date.now()}`, n));
+}, [notifications, dbLoaded]);
 
   // Auto-scroll logs
   useEffect(() => { if (logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [logs]);
@@ -720,7 +759,13 @@ export default function App() {
     const target = new Date(new Date(prospect.sentAt).getTime() + dayNum * 24 * 60 * 60 * 1000);
     return Math.ceil((target - new Date()) / (1000 * 60 * 60 * 24));
   };
-
+if (!dbLoaded) return (
+  <div style={{ minHeight: "100vh", background: "#F5F7FA", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ width: 40, height: 40, border: "3px solid #D0E4FF", borderTop: "3px solid #1B6EF3", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+    <div style={{ color: "#4A6080", fontSize: 14, fontWeight: 500 }}>Loading your activity...</div>
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
   const sel = prospects.find(p => p.id === selected);
   const selResearch = selected ? research[selected] : null;
   const selMessages = selected ? messages[selected] : null;
