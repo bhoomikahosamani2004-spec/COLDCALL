@@ -562,7 +562,15 @@ function Input({ label, value, onChange, placeholder, type = "text" }) {
 export default function App() {
   const [prospects, setProspects] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ name: "", jobTitle: "", company: "", linkedinUrl: "" });
+  const [form, setForm] = useState(() => {
+  const p = new URLSearchParams(window.location.search);
+  return {
+    name: p.get("name") || "",
+    jobTitle: p.get("jobTitle") || "",
+    company: p.get("company") || "",
+    linkedinUrl: p.get("linkedinUrl") || "",
+  };
+});
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupStatus, setLookupStatus] = useState("");
 
