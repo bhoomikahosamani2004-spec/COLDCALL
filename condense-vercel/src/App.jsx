@@ -666,7 +666,8 @@ const handleFileUpload = (e) => {
     const headers = rows[0].map(h => (h || "").toString().toLowerCase().trim());
     const idx = (keys) => headers.findIndex(h => keys.some(k => h.includes(k)));
 
-    const companyIdx = idx(["company name","company","organization","org","employer"]);
+const companyIdx = idx(["company name","company","organization","org","employer"]);
+const nameIdx = idx(["name"]);
 const firstNameIdx = idx(["first name","firstname"]);
 const lastNameIdx = idx(["last name","lastname"]);
 const titleIdx = idx(["title","job","position","designation","role"]);
@@ -677,9 +678,10 @@ const linkedinIdx = idx(["linkedin","person linkedin url","profile url","url"]);
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       const get = (index) => index >= 0 ? (row[index] || "").toString().trim() : "";
+      const fullName = get(nameIdx);
       const firstName = get(firstNameIdx);
       const lastName = get(lastNameIdx);
-      const name = [firstName, lastName].filter(Boolean).join(" ");
+      const name = fullName || [firstName, lastName].filter(Boolean).join(" ");
       const company = get(companyIdx);
       if (!name && !company) continue;
       added.push({
