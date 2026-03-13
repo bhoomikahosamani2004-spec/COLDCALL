@@ -90,7 +90,7 @@ const INDUSTRY_USE_CASES = [
   },
   {
     id: "fintech",
-    industries: ["fintech", "finance", "banking", "insurance", "payments", "lending", "nbfc", "wealth", "trading", "stock", "investment"],
+    industries: ["fintech", "finance", "banking", "insurance", "payments", "lending", "nbfc", "wealth", "trading", "stock", "investment","groww","zerodha","paytm","cred","razorpay"],
     intro: "Given [COMPANY]'s focus on financial services and data-driven decisioning, we see strong alignment in how Condense can power real-time financial data pipelines at scale.",
     use_cases: [
       { title: "Real-Time Transaction Monitoring", desc: "Stream and process high-volume transaction events to power fraud detection, risk scoring, and compliance monitoring in real time." },
@@ -102,6 +102,20 @@ const INDUSTRY_USE_CASES = [
     social_proof: "Many fintech and financial services teams using Condense have reduced their streaming infrastructure costs by 40–50% while significantly improving pipeline reliability and reducing time-to-insight for risk and analytics teams.",
     closing: "I would be happy to walk you through how Condense can support [COMPANY]'s real-time data initiatives. Would you be open to a 30-minute discussion next week? Looking forward to connecting.",
   },
+  {
+  id: "gaming",
+  industries: ["gaming", "fantasy", "sports", "dream11", "mpl", "esports", "game", "fantasy sports"],
+  intro: "Given [COMPANY]'s leadership in fantasy sports and real-time user engagement at scale, we see strong alignment in how Condense can power high-throughput, low-latency data pipelines for your platform.",
+  use_cases: [
+    { title: "Real-Time Order & Seller Analytics", desc: "Stream updates from transaction systems into analytics platforms in real time to enable faster visibility into order flows, seller performance, and marketplace health." },
+    { title: "Customer Behavior & Funnel Analytics", desc: "Capture and process high-volume app and web events to power real-time dashboards, experimentation frameworks, and personalization engines." },
+    { title: "Fraud & Anomaly Detection", desc: "Stream transaction and activity data to identify suspicious behavior, payment anomalies, or operational risks instantly rather than hours later." },
+    { title: "Scalable ML & AI Data Pipelines", desc: "Standardize and operate high-volume Kafka pipelines reliably at scale, reducing operational overhead and accelerating model deployment for data science teams." },
+    { title: "BYOC (Bring Your Own Cloud)", desc: "Condense can be deployed within your own cloud environment (AWS/Azure/GCP), ensuring complete control over data, security, and compliance." },
+  ],
+  social_proof: "Zeliot supports leading companies such as TVS Motor, Tata Motors, Ashok Leyland, Royal Enfield, Eicher Motors, SML Isuzu, Adani Ports & Logistics, and Montra Electric — helping them build large-scale real-time data platforms, process high-frequency streaming data, and enable real-time intelligence services.",
+  closing: "I would be happy to walk you through how leading platforms are using Condense. Please let me know a convenient time for a short discussion next week. Looking forward to your guidance on a suitable time for the discussion.",
+},
 ];
 
 function findIndustryUseCases(company, industry, researchData) {
