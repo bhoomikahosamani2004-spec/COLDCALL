@@ -266,7 +266,7 @@ Respond with ONLY this JSON:
 }
 
 // ─── MESSAGE GENERATION AGENT (ENHANCED) ──────────────────────────────────────
-async function generateMessages(person, research, matchedStories, jdText, replyTrainingData, onLog) {
+async function generateMessages(person, research, matchedStories, jdText, replyTrainingData, industryContext, onLog) {
   onLog("✍️ Crafting personalized messages with JD context + success stories...");
 
   const seniority = (person.seniority || "").toLowerCase();
@@ -301,6 +301,7 @@ async function generateMessages(person, research, matchedStories, jdText, replyT
   const avgFollowLen = Math.round(allFollowUps.reduce((s, t) => s + t.split(" ").length, 0) / (allFollowUps.length || 1));
 
   // Build success story context
+  const { industryUC, useCasesStr, industryIntro, industrySocialProof, industryClosing } = industryContext;
   const storyContext = matchedStories.length > 0
     ? matchedStories.map(s => `- ${s.company} (${s.industry}): ${s.summary} Result: ${s.outcome}`).join("\n")
     : "No closely matched stories — use general Condense value prop.";
@@ -935,15 +936,15 @@ const applyMapping = () => {
       updateStatus("generating");
       addLog(id, "⏳ Pausing 30s to respect API rate limits...");
       await new Promise(r => setTimeout(r, 30000));
-      const industryUC = findIndustryUseCases(person.company, person.industry || "", research);
-const useCasesStr = industryUC.use_cases.map(uc => `• ${uc.title} – ${uc.desc}`).join("\n");
-const industryIntro = industryUC.intro.replace(/\[COMPANY\]/g, person.company);
-const industrySocialProof = industryUC.social_proof.replace(/\[COMPANY\]/g, person.company);
-const industryClosing = industryUC.closing.replace(/\[COMPANY\]/g, person.company);
+      const industryUC = findIndustryUseCases(prospect.company, prospect.industry || "", researchData);
+      const useCasesStr = industryUC.use_cases.map(uc => `• ${uc.title} – ${uc.desc}`).join("\n");
+      const industryIntro = industryUC.intro.replace(/\[COMPANY\]/g, prospect.company);
+      const industrySocialProof = industryUC.social_proof.replace(/\[COMPANY\]/g, prospect.company);
+      const industryClosing = industryUC.closing.replace(/\[COMPANY\]/g, prospect.company);
       const matchedStories = findMatchingStories(prospect.company, prospect.industry || "", researchData);
       addLog(id, `🏆 Matched ${matchedStories.length} relevant success stories`);
 
-      const msgs = await generateMessages(prospect, researchData, matchedStories, prospect.jdText || "", replies, (msg) => addLog(id, msg));
+      const msgs = await generateMessages(prospect, researchData, matchedStories, prospect.jdText || "", replies, { industryUC, useCasesStr, industryIntro, industrySocialProof, industryClosing }, (msg) => addLog(id, msg));
       setMessages(prev => ({ ...prev, [id]: msgs }));
       setActiveMsg("connection_note");
 
