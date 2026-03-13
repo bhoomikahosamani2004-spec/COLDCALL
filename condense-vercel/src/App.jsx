@@ -718,8 +718,11 @@ const applyMapping = () => {
   const added = [];
   csvRows.forEach((row, i) => {
     const get = (field) => csvMapping[field] !== undefined ? (row[csvMapping[field]] || "").toString().trim() : "";
-    const name = get("name");
-    const company = get("company");
+    const fullName = get("name");
+    const firstName = get("firstName");
+    const lastName = get("lastName");
+    const name = fullName || [firstName, lastName].filter(Boolean).join(" ");
+     const company = get("company");
     if (!name && !company) return;
     added.push({
       id: `p_${Date.now()}_${i}`,
@@ -975,7 +978,9 @@ if (!dbLoaded) return (
       {/* Mapping fields */}
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
         {[
-          { field: "name", label: "👤 Person Name *", required: true },
+          { field: "name", label: "👤 Full Name (single column)" },
+          { field: "firstName", label: "👤 First Name" },
+          { field: "lastName", label: "👤 Last Name" },
           { field: "company", label: "🏢 Company *", required: true },
           { field: "jobTitle", label: "💼 Job Title" },
           { field: "email", label: "✉️ Email" },
@@ -1004,8 +1009,8 @@ if (!dbLoaded) return (
         <button onClick={() => setShowMapper(false)} style={{ padding: "10px 20px", borderRadius: 6, border: "1px solid #E4ECF4", background: "#FFFFFF", color: "#4A6080", fontFamily: "'Inter', sans-serif", fontSize: 13, cursor: "pointer" }}>Cancel</button>
         <button
           onClick={applyMapping}
-          disabled={csvMapping.name === undefined || csvMapping.company === undefined}
-          style={{ padding: "10px 24px", borderRadius: 6, border: "none", background: csvMapping.name !== undefined && csvMapping.company !== undefined ? "linear-gradient(135deg, #1B6EF3, #3D8BFF)" : "#E4ECF4", color: csvMapping.name !== undefined && csvMapping.company !== undefined ? "#FFFFFF" : "#8A9BB0", fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 13, cursor: csvMapping.name !== undefined && csvMapping.company !== undefined ? "pointer" : "not-allowed", boxShadow: "0 2px 10px rgba(27,110,243,0.25)" }}>
+          disabled={csvMapping.company === undefined || (csvMapping.name === undefined && csvMapping.firstName === undefined && csvMapping.lastName === undefined)}
+          style={{ padding: "10px 24px", borderRadius: 6, border: "none", background: (csvMapping.company !== undefined && (csvMapping.name !== undefined || csvMapping.firstName !== undefined || csvMapping.lastName !== undefined)) ? "linear-gradient(135deg, #1B6EF3, #3D8BFF)" : "#E4ECF4", color:(csvMapping.company !== undefined && (csvMapping.name !== undefined || csvMapping.firstName !== undefined || csvMapping.lastName !== undefined)) ? "#FFFFFF" : "#8A9BB0", fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 13, cursor: (csvMapping.company !== undefined && (csvMapping.name !== undefined || csvMapping.firstName !== undefined || csvMapping.lastName !== undefined)) ? "pointer" : "not-allowed", boxShadow: "0 2px 10px rgba(27,110,243,0.25)" }}>
           Import {csvRows.filter(r => r[csvMapping.name] || r[csvMapping.company]).length} Prospects →
         </button>
       </div>
