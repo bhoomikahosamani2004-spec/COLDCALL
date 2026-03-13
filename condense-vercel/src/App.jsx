@@ -815,6 +815,12 @@ if (!dbLoaded) return (
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontFamily: MONO, letterSpacing: "0.06em" }}>Trained</span>
             </div>
             <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.12)" }} />
+            <button onClick={() => setShowProfile(s => !s)} style={{ background: showProfile ? "#EEF5FF" : "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "6px 14px", color: "#FFFFFF", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontFamily: FONT }}>
+  <div style={{ width: 24, height: 24, borderRadius: "50%", background: senderProfile.name ? "linear-gradient(135deg, #1B6EF3, #3D8BFF)" : "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#FFFFFF" }}>
+    {senderProfile.name ? senderProfile.name.charAt(0).toUpperCase() : "?"}
+  </div>
+  <span style={{ fontSize: 11, opacity: 0.9 }}>{senderProfile.name || "Set Profile"}</span>
+</button>
             <NotificationBell notifications={dueNotifs} onClear={() => setNotifications(prev => prev.map(n => ({ ...n, cleared: true })))} />
             {batchRunning && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 6, background: "rgba(27,110,243,0.25)", border: "1px solid rgba(61,139,255,0.4)" }}>
@@ -828,6 +834,70 @@ if (!dbLoaded) return (
             )}
           </div>
         </div>
+        {/* SENDER PROFILE SIDE PANEL */}
+{showProfile && (
+  <div style={{ position: "fixed", inset: 0, zIndex: 150 }} onClick={() => setShowProfile(false)}>
+    <div style={{ position: "absolute", top: 60, right: 0, width: 340, height: "calc(100vh - 60px)", background: "#FFFFFF", borderLeft: "1px solid #E4ECF4", boxShadow: "-4px 0 24px rgba(10,37,64,0.10)", display: "flex", flexDirection: "column", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+      
+      {/* Panel Header */}
+      <div style={{ background: "#0A2540", padding: "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+        <div>
+          <div style={{ fontFamily: DISPLAY, fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>Sender Profile</div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", marginTop: 2, fontFamily: MONO }}>Used in all send buttons & sign-offs</div>
+        </div>
+        <button onClick={() => setShowProfile(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFFFFF", fontSize: 16, cursor: "pointer", padding: "4px 10px", borderRadius: 6 }}>✕</button>
+      </div>
+
+      {/* Fields */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {[
+          { key: "name", label: "Full Name *", placeholder: "Veera Raghavan" },
+          { key: "email", label: "Your Email *", placeholder: "veera@zeliot.in" },
+          { key: "phone", label: "Phone / WhatsApp", placeholder: "+91 9353094136" },
+          { key: "title", label: "Job Title", placeholder: "Country Head – Enterprise Business" },
+          { key: "company", label: "Company", placeholder: "Zeliot–Condense" },
+        ].map(field => (
+          <div key={field.key}>
+            <label style={{ fontSize: 10, fontWeight: 600, color: "#4A6080", display: "block", marginBottom: 4, fontFamily: FONT, textTransform: "uppercase", letterSpacing: "0.08em" }}>{field.label}</label>
+            <input
+              value={senderProfile[field.key] || ""}
+              onChange={e => setSenderProfile(p => ({ ...p, [field.key]: e.target.value }))}
+              placeholder={field.placeholder}
+              style={{ width: "100%", background: "#F8FAFC", border: "1px solid #D8E2EE", color: "#0A2540", borderRadius: 6, padding: "9px 12px", fontSize: 13, fontFamily: FONT, outline: "none" }}
+            />
+          </div>
+        ))}
+
+        <div>
+          <label style={{ fontSize: 10, fontWeight: 600, color: "#4A6080", display: "block", marginBottom: 4, fontFamily: FONT, textTransform: "uppercase", letterSpacing: "0.08em" }}>Email Signature</label>
+          <textarea
+            value={senderProfile.signature || ""}
+            onChange={e => setSenderProfile(p => ({ ...p, signature: e.target.value }))}
+            placeholder={"Best regards,\nVeera Raghavan\nCountry Head – Enterprise Business\nZeliot–Condense | +91 935-309-4136"}
+            style={{ width: "100%", background: "#F8FAFC", border: "1px solid #D8E2EE", color: "#0A2540", borderRadius: 6, padding: "9px 12px", fontSize: 12, fontFamily: FONT, lineHeight: 1.6, outline: "none", resize: "vertical", minHeight: 100 }}
+          />
+        </div>
+
+        {senderProfile.name && senderProfile.email && (
+          <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 8, padding: "12px 14px" }}>
+            <div style={{ fontSize: 10, fontFamily: MONO, color: "#0D9E6E", fontWeight: 600, marginBottom: 6 }}>✅ Profile Active</div>
+            <div style={{ fontSize: 12, color: "#0A2540", lineHeight: 1.8 }}>
+              📧 <strong>{senderProfile.email}</strong><br/>
+              📱 <strong>{senderProfile.phone || "not set"}</strong>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Save Button */}
+      <div style={{ padding: "16px 20px", borderTop: "1px solid #E4ECF4", flexShrink: 0 }}>
+        <button onClick={() => setShowProfile(false)} style={{ width: "100%", padding: "12px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#FFFFFF", fontFamily: FONT, fontWeight: 600, fontSize: 13, cursor: "pointer", boxShadow: "0 2px 10px rgba(27,110,243,0.25)" }}>
+          ✓ Save & Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* BULK UPLOAD MANAGER MODAL */}
         {batchOpen && (() => {
@@ -1094,71 +1164,7 @@ if (!dbLoaded) return (
               ))}
             </div>
           </div>
-            {/* SENDER PROFILE */}
-            <div style={{ borderTop: "1px solid #E4ECF4", flexShrink: 0 }}>
-              <button onClick={() => setShowProfile(s => !s)} style={{ width: "100%", padding: "12px 16px", background: showProfile ? "#EEF5FF" : "#FFFFFF", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: FONT }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: senderProfile.name ? "linear-gradient(135deg, #1B6EF3, #3D8BFF)" : "#EEF2F7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: senderProfile.name ? "#FFFFFF" : "#8A9BB0", fontWeight: 700, flexShrink: 0 }}>
-                    {senderProfile.name ? senderProfile.name.charAt(0).toUpperCase() : "?"}
-                  </div>
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: senderProfile.name ? "#0A2540" : "#8A9BB0", fontFamily: FONT }}>{senderProfile.name || "Set your profile"}</div>
-                    <div style={{ fontSize: 10, color: "#8A9BB0", fontFamily: FONT }}>{senderProfile.email || "Click to configure"}</div>
-                  </div>
-                </div>
-                <span style={{ fontSize: 10, color: "#8A9BB0" }}>{showProfile ? "▲" : "▼"}</span>
-              </button>
-
-              {showProfile && (
-                <div style={{ padding: "16px", borderTop: "1px solid #EEF2F7", background: "#F8FAFC", display: "flex", flexDirection: "column", gap: 10, maxHeight: "60vh", overflowY: "auto" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#0A2540", fontFamily: DISPLAY, marginBottom: 2 }}>Your Sender Profile</div>
-                  <div style={{ fontSize: 10, color: "#8A9BB0", marginBottom: 4 }}>Used in all send buttons & sign-offs</div>
-
-                  {[
-                    { key: "name", label: "Full Name *", placeholder: "Veera Raghavan" },
-                    { key: "email", label: "Your Email *", placeholder: "veera@zeliot.in" },
-                    { key: "phone", label: "Phone / WhatsApp", placeholder: "+91 9353094136" },
-                    { key: "title", label: "Job Title", placeholder: "Country Head – Enterprise Business" },
-                    { key: "company", label: "Company", placeholder: "Zeliot–Condense" },
-                  ].map(field => (
-                    <div key={field.key}>
-                      <label style={{ fontSize: 10, fontWeight: 500, color: "#4A6080", display: "block", marginBottom: 3, fontFamily: FONT }}>{field.label}</label>
-                      <input
-                        value={senderProfile[field.key] || ""}
-                        onChange={e => setSenderProfile(p => ({ ...p, [field.key]: e.target.value }))}
-                        placeholder={field.placeholder}
-                        style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: "#0A2540", borderRadius: 6, padding: "7px 10px", fontSize: 12, fontFamily: FONT, outline: "none" }}
-                      />
-                    </div>
-                  ))}
-
-                  <div>
-                    <label style={{ fontSize: 10, fontWeight: 500, color: "#4A6080", display: "block", marginBottom: 3, fontFamily: FONT }}>Email Signature</label>
-                    <textarea
-                      value={senderProfile.signature || ""}
-                      onChange={e => setSenderProfile(p => ({ ...p, signature: e.target.value }))}
-                      placeholder={"Best regards,\nVeera Raghavan\nCountry Head – Enterprise Business\nZeliot–Condense | +91 935-309-4136"}
-                      style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: "#0A2540", borderRadius: 6, padding: "7px 10px", fontSize: 11, fontFamily: FONT, lineHeight: 1.6, outline: "none", resize: "vertical", minHeight: 80 }}
-                    />
-                  </div>
-
-                  {senderProfile.name && senderProfile.email && (
-                    <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 6, padding: "10px 12px" }}>
-                      <div style={{ fontSize: 10, fontFamily: MONO, color: "#0D9E6E", fontWeight: 600, marginBottom: 4 }}>✅ Profile Active</div>
-                      <div style={{ fontSize: 11, color: "#0A2540", lineHeight: 1.7 }}>
-                        📧 Sending from: <strong>{senderProfile.email}</strong><br/>
-                        📱 WhatsApp: <strong>{senderProfile.phone || "not set"}</strong>
-                      </div>
-                    </div>
-                  )}
-
-                  <button onClick={() => setShowProfile(false)} style={{ width: "100%", padding: "9px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#FFFFFF", fontFamily: FONT, fontWeight: 600, fontSize: 12, cursor: "pointer", marginTop: 4 }}>
-                    ✓ Save &amp; Close
-                  </button>
-                </div>
-              )}
-            </div>
-
+           
           {/* MAIN CONTENT */}
           <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
             {!sel ? (
