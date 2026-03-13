@@ -666,7 +666,13 @@ const handleFileUpload = (e) => {
     const headers = rows[0].map(h => (h || "").toString().toLowerCase().trim());
     const idx = (keys) => headers.findIndex(h => keys.some(k => h.includes(k)));
 
-    const firstNameIdx = idx(["first name","firstname"]);
+    const companyIdx = idx(["company name","company","organization","org","employer"]);
+const firstNameIdx = idx(["first name","firstname"]);
+const lastNameIdx = idx(["last name","lastname"]);
+const titleIdx = idx(["title","job","position","designation","role"]);
+const emailIdx = idx(["email","mail"]);
+const phoneIdx = idx(["phone","mobile","whatsapp"]);
+const linkedinIdx = idx(["linkedin","person linkedin url","profile url","url"]);
     const lastNameIdx = idx(["last name","lastname"]);
     const companyIdx = idx(["company name","company","organization","org","employer"]);
     const titleIdx = idx(["title","job","position","designation","role"]);
