@@ -13,7 +13,108 @@ const supabase = SUPABASE_URL && SUPABASE_KEY
   : null;
 // ─── TRAINING DATA (32 real Veera messages) ─────────────────────────────────
 const trainingData = [{"name": "Samir Soman", "job_title": "Sr./Systems Engineer", "seniority": "IC-Senior", "company": "AutoZone", "industry": "Automotive Retail", "region": "USA", "pain_primary": "Inventory event streaming, Order pipeline reliability, Traffic spikes, B2B transaction reliability", "messages": [{"stage": "After connection", "text": "Greetings Samir. Pleasure connecting with you. How are you?"}, {"stage": "Follow Up", "text": "Given your role as Cloud Architect-SRE & Platform Engineering Lead, DevOps at AutoZone, we believe Condense could support your platform initiatives by simplifying real-time streaming, reducing operational overhead around Kafka/streaming infrastructure, improving observability, and enabling more scalable, reliable data pipelines across cloud environments."}, {"stage": "Follow Up", "text": "We would appreciate 30 minutes at your convenience for a quick virtual discussion to understand your current architecture and explore potential areas of alignment along with your email id to share the detailed email. Need your support to take things forward. Thanks."}]}, {"name": "Pranjal Singh", "job_title": "Sr./Systems Engineer", "seniority": "IC-Senior", "company": "AutoZone", "industry": "Automotive Retail", "region": "India", "pain_primary": "Inventory event streaming, Order pipeline reliability, Traffic spikes, B2B transaction reliability", "messages": [{"stage": "First Message", "text": "Reached out to connect with you to have a 30mins of your slot during next week to position our platform Condense to AutoZone. Can I have your email id to send an tailored email and use cases. Thanks"}, {"stage": "Follow Up", "text": "I came across your profile while looking at teams building large-scale data platforms on GCP at AutoZone.\n\nAt Condense, we help data engineering teams ingest high-throughput streaming data, standardise pipelines, and operate reliably at scale—especially where Kafka, real-time telemetry, and cloud-native architectures are involved.\n\nWould love to exchange notes on how you're handling ingestion, schema evolution, and scaling on GCP."}, {"stage": "Follow Up", "text": "Can we connect next week on your availability for 30mins please?"}]}, {"name": "Shankar N", "job_title": "Senior Vice President- Customer Success", "seniority": "VP", "company": "UB Technology Innovations (UBTI)", "industry": "Software Solutions", "region": "USA", "pain_primary": "Complex data integration Multi-client reliability", "messages": [{"stage": "First Message", "text": "Hi Shankar. How are you?\n\nNeed your email id and if possible 30 mins of your available slots during next week to discuss.\n\n\nI will share a detailed email once I have your email. Thanks"}, {"stage": "Follow Up", "text": "Condense and UBTI can together deliver end-to-end digital transformation by combining a real-time data backbone with solution and application expertise. Condense ingests and streams high-volume data from IoT devices, OT systems, machines, and enterprise platforms, enabling real-time analytics, predictive maintenance, fleet intelligence, and AI-driven optimization."}, {"stage": "Follow Up", "text": "Could we schedule 30 minutes next week to discuss and decide on the appropriate next steps, including whether to proceed further?"}]}, {"name": "Bhavesh Panchal", "job_title": "Chief Technology Officer", "seniority": "CTO", "company": "Magenta Mobility", "industry": "EV Mobility", "region": "India", "pain_primary": "Real-time fleet and battery telemetry reliability. Scalable event processing for fleet growth.High availability for operational continuity Cost-efficient scaling of mobility data infrastructure", "messages": [{"stage": "First Message", "text": "Real-Time Data Platform for EV & Mobility Innovation for Magenta Mobility\nHi Bhavesh,\nHope you are doing well. I'm reaching out from Zeliot, a Bosch-backed deep-tech company building real-time data infrastructure for large-scale mobility platforms. Our platform, Condense, helps standardize and stream real-time data across EVs, charging infra, and enterprise systems—strengthening the data foundation without disrupting existing applications.\n\nWe commonly support use cases like enabling event-driven architectures for fleet operations, real-time analytics, and faster innovation across mobility platforms.\n\nWould you be open to a brief conversation to explore potential alignment with Magenta Mobility's technology roadmap?\n\nBest regards,\nVeera Raghavan"}]}, {"name": "Ajay Kumar", "job_title": "Chief Information Officer", "seniority": "CIO", "company": "Zero Motorcycles Inc.", "industry": "Electric Vehicle Manufacturing (Electric Motorcycles)", "region": "USA", "pain_primary": "Real-time vehicle and battery telemetry reliability, High availability of connected vehicle and monitoring systems, Scalable data infrastructure for growing EV fleets, Cost-efficient management of R&D and production data systems", "messages": [{"stage": "First Message", "text": "Ajay Sir. Good Morning. I'm reaching out to explore a potential collaboration between Zero Motorcycles and Zeliot, leveraging our Condense platform — a real-time data infrastructure built for connected vehicle ecosystems.\n\nCondense enables OEMs and EV manufacturers to seamlessly ingest, process, and analyze vehicle data at scale — helping improve diagnostics, compliance, and customer experience through standardized APIs and low-latency analytics.\n\nI'd love to schedule a short 30-minute discussion to walk you through how Condense could align with Zero Motorcycles' connected tech roadmap.\nWould next week work for you?\n\nLooking forward to your response.\n\nRegards,\nVeera"}, {"stage": "Follow Up", "text": "Condense-backed by BOSCH helps OEMs and EV manufacturers ingest, standardize, and analyze vehicle data at scale using low-latency, standardized APIs to improve diagnostics, compliance, and customer experience. I'd love to schedule a quick 30-minute discussion to explore how Condense could align with Zero Motorcycles' connected technology roadmap—would next week work for you?\nAlternatively, if you're attending Geotab Connect 2026, happening February 10–12 at the MGM Grand in Las Vegas, we could catch up there as well.\nLooking forward to hearing from you. Have a great day."}]}, {"name": "Bapun Kumar Pradhan", "job_title": "Product Development Engineer", "seniority": "Engineer", "company": "Routematic", "industry": "Transportation, Logistics, Supply Chain and Storage", "region": "India", "pain_primary": "Real-time employee transport tracking and route optimization reliability, Scalable processing of high-volume trip and GPS event data, High availability of scheduling and fleet management systems, Cost-efficient scaling of mobility operations infrastructure", "messages": [{"stage": "First Message", "text": "Hi Bapun,\n\nGood Morning! I'm Veera, leading Enterprise Business for India at Zeliot–Condense (Bosch-backed). Our platform, Condense, simplifies Kafka and real-time data streaming with BYOC flexibility, governance, and an IoT/edge-first design.\n\nFor a mobility platform like Routematic, Condense can enable real-time trip data streaming, fleet telemetry, and route optimization analytics — helping improve reliability, efficiency, and overall commuter experience.\n\nWould you be open for a quick face to face meeting during next week to explore how we could support your product roadmap at Routematic?\n\nBest regards,\nVeera Raghavan\nCountry Head – Enterprise Business (India)\nZeliot–Condense\n935-309-4136"}, {"stage": "Follow Up", "text": "GM Bapun,\nCondense backed by BOSCH helps mobility platforms ingest, standardize, and analyze vehicle and trip data at scale using low-latency APIs—enabling better fleet visibility, compliance, and operational intelligence without heavy data engineering. I'd love to schedule a quick 30-minute conversation to explore how Condense could align with Routematic's platform and growth roadmap. Would sometime next week work for you?"}]}, {"name": "Tushar Bhagat", "job_title": "Group CEO", "seniority": "CEO", "company": "Uffizio", "industry": "Software Development", "region": "India", "pain_primary": "Reliable real-time GPS and vehicle telemetry processing, Scalable handling of high-volume tracking and event data, High availability of mission-critical fleet management platforms, Cost-efficient infrastructure scaling for growing customer base", "messages": [{"stage": "First Message", "text": "Hi Sir,\nGreat connecting with you virtually on 9th Jan along with the Bosch team—really enjoyed the discussion and learning more about your platform roadmap. I have sent an email along the deck on Condense, Zeliot's Bosch-backed, AI-first real-time data streaming platform, already powering large-scale mobility and telematics use cases across OEMs.\nWe see strong alignment around Uffizio–Condense synergies (telematics ingestion, real-time transforms for domain algorithms) and proven OTA & high-frequency streaming at OEM scale.\nHappy to set up a short virtual demo with your technical team to walk through the architecture and relevant use cases when convenient.\nRegards,\nVeera"}]}, {"name": "Vikas Parihar", "job_title": "Global Automotive Supply Chain & Logistics Leader", "seniority": "Senior Leadership (Global Function Head level)", "company": "Ola Electric", "industry": "Electric Vehicles / Automotive", "region": "India (Global Role Scope)", "pain_primary": "Lack of unified real-time visibility across vehicle telemetry, charging networks, and distribution operations.", "messages": [{"stage": "Initial Outreach", "text": "Greetings Vikas,\n\nI'm Veera, leading Enterprise Business for India at Zeliot–Condense (Bosch-backed). Our flagship platform, Condense, helps enterprises simplify Kafka and real-time data streaming with BYOC flexibility, built-in governance, and an IoT/edge-first design.\n\nFor an EV pioneer like Ola Electric, Condense can enable real-time vehicle telemetry, charging network data streaming, and fleet performance analytics — driving operational efficiency, predictive insights, and enhanced customer experience.\n\nWould you be open for a virtual discussion next week, based on your availability, to explore potential synergies?\n\nBest regards,\nVeera Raghavan\nCountry Head – Enterprise Business (India)\nZeliot–Condense\n935-309-4136"}]}];
+// ─── INDUSTRY USE CASES LIBRARY ──────────────────────────────────────────────
+const INDUSTRY_USE_CASES = [
+  {
+    id: "automotive",
+    industries: ["automotive", "auto", "car", "vehicle", "mobility", "oem", "two-wheeler", "ev", "electric vehicle", "fleet", "telematics"],
+    intro: "Given [COMPANY]'s leadership in automotive platforms and mobility intelligence, we see strong alignment in how Condense can help power real-time, scalable automotive data systems.",
+    use_cases: [
+      { title: "Connected Vehicle Data Platforms", desc: "Ingest and process telemetry from vehicles at scale and power downstream mobility services." },
+      { title: "Real-Time Vehicle Intelligence APIs", desc: "Enable instant insights for pricing, diagnostics, driver behavior, and predictive maintenance." },
+      { title: "Fleet & Dealer Analytics", desc: "Process streaming data from fleets, dealerships, and partner ecosystems for operational insights." },
+      { title: "Insurance & Risk Intelligence", desc: "Enable real-time driving behavior analytics for usage-based insurance and risk scoring." },
+      { title: "Marketplace & Vehicle Lifecycle Data", desc: "Unify vehicle telemetry, ownership, service, and marketplace data streams into a single real-time pipeline." },
+      { title: "BYOC (Bring Your Own Cloud)", desc: "Condense can be deployed within your own cloud environment (AWS/Azure/GCP), ensuring complete control over data, security, and compliance while benefiting from a fully managed real-time processing platform." },
+    ],
+    social_proof: "Zeliot supports leading mobility and automotive companies such as TVS Motor, Volvo, Montra Electric, Bosch, Eicher, CEAT, Royal Enfield, Tata Motors, Adani Ports & Logistics, SML ISUZU, and Ashok Leyland — helping them build large-scale connected vehicle platforms, process high-frequency telematics data, and enable real-time mobility intelligence services.",
+    closing: "I would be happy to walk you through how leading mobility platforms are using Condense. Please let me know a convenient time for a short discussion next week. Looking forward to your guidance on a suitable time for the discussion.",
+  },
+  {
+    id: "ecommerce",
+    industries: ["ecommerce", "e-commerce", "marketplace", "retail tech", "d2c", "quick commerce", "meesho", "flipkart", "amazon", "online retail"],
+    intro: "Given the scale at which [COMPANY] operates its marketplace and analytics workloads, we see strong alignment in how Condense can simplify real-time data pipelines while significantly reducing infrastructure and operational complexity.",
+    use_cases: [
+      { title: "Real-Time Order & Seller Analytics", desc: "Stream updates from transaction systems into analytics platforms in real time to enable faster visibility into order flows, seller performance, and marketplace health." },
+      { title: "Customer Behavior & Funnel Analytics", desc: "Capture and process high-volume app and web events to power real-time dashboards, experimentation frameworks, and personalization engines." },
+      { title: "Fraud & Anomaly Detection", desc: "Stream transaction and activity data to identify suspicious behavior, payment anomalies, or operational risks instantly rather than hours later." },
+      { title: "Operational Intelligence for Logistics & Fulfillment", desc: "Enable real-time monitoring of logistics events, delivery pipelines, and fulfillment operations to quickly detect bottlenecks or service disruptions." },
+      { title: "BYOC (Bring Your Own Cloud)", desc: "Condense can be deployed within your own cloud environment (AWS/Azure/GCP), ensuring complete control over data, security, and compliance." },
+    ],
+    social_proof: "Many teams we work with have been able to reduce their streaming infrastructure and data pipeline costs by 40–50%, while significantly simplifying the engineering effort required to maintain these pipelines. Condense integrates seamlessly with existing modern data stacks such as Kafka, Snowflake, BigQuery, Databricks, and other analytics systems.",
+    closing: "I would love to explore whether there might be an opportunity to support [COMPANY]'s analytics platform with real-time data capabilities or help optimize parts of the current streaming architecture. Would you be open to a 30-minute conversation sometime next week? Looking forward to connecting.",
+  },
+  {
+    id: "retail",
+    industries: ["retail", "autozone", "distribution", "supply chain", "wholesale", "fmcg", "cpg", "supermarket", "grocery"],
+    intro: "Given your role at [COMPANY], I believe Condense can complement your existing architecture by acting as a scalable, low-latency streaming backbone that integrates seamlessly with your data systems.",
+    use_cases: [
+      { title: "Real-Time Inventory & Stock Visibility", desc: "Stream updates from POS systems, warehouse systems, and distribution centers into a unified pipeline to enable near real-time inventory reconciliation, low-stock alerts, and cross-location availability tracking." },
+      { title: "Supply Chain & Logistics Monitoring", desc: "Ingest telemetry and order-status updates from multiple systems to provide live tracking of shipments, SLA monitoring, and exception handling with event-driven alerts." },
+      { title: "Pricing & Promotion Intelligence", desc: "Enable real-time price updates, campaign triggers, and rule-based adjustments by streaming transactional and competitive pricing data directly into analytics systems." },
+      { title: "Customer & Order Analytics", desc: "Capture order events, browsing behavior, and transaction streams in real time to power recommendation engines, fraud detection, and operational dashboards." },
+      { title: "Streaming to BigQuery / Data Lake", desc: "Condense can write structured, partitioned data directly to analytics storage layers, enabling both real-time analytics and historical processing without additional ETL overhead." },
+      { title: "BYOC (Bring Your Own Cloud)", desc: "Condense can be deployed within your own cloud environment (AWS/Azure/GCP), ensuring complete control over data, security, and compliance." },
+    ],
+    social_proof: "Condense is already trusted in production by leading automotive and mobility organizations, including TVS, Volvo Eicher, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield — supporting real-time vehicle data, manufacturing visibility, and digital platform initiatives at scale.",
+    closing: "I would welcome 30 minutes at your convenience to understand your current streaming architecture and explore whether Condense could optimize performance, cost, or operational efficiency in your setup. Looking forward to connecting.",
+  },
+  {
+    id: "healthcare",
+    industries: ["healthcare", "hospital", "health", "medical", "pharma", "clinical", "diagnostics", "healthtech", "nicu", "icu"],
+    intro: "For [COMPANY], we see strong alignment with your focus on patient-centric innovation and care excellence. Condense can play a key role across multiple clinical and operational dimensions.",
+    use_cases: [
+      { title: "Patient Monitoring & Telemetry", desc: "Real-time ingestion of vital signs (ECG, SpO₂, fetal monitoring, NICU telemetry) into centralized dashboards accessible by clinicians. Faster anomaly detection = better patient safety." },
+      { title: "Predictive Analytics in Patient Care", desc: "Integration with AI/ML models for risk prediction, early warning systems, and outcomes forecasting." },
+      { title: "Telehealth & Remote Monitoring", desc: "Seamlessly stream device and wearable data into secure cloud dashboards for remote consultations and follow-up care." },
+      { title: "Hospital Operations Dashboards", desc: "Real-time view of bed occupancy, ER wait times, OT utilization, and resource bottlenecks." },
+      { title: "Clinical Research Data Pipelines", desc: "Secure streaming of anonymized patient data for research collaborations, faster insights, and improved trial outcomes." },
+      { title: "BYOC (Bring Your Own Cloud)", desc: "Condense can be deployed within your own cloud environment ensuring complete control over patient data, security, and compliance." },
+    ],
+    social_proof: "Condense is a secure, scalable, and AI/ML-ready data platform backed by Bosch that simplifies Kafka and real-time streaming pipelines — helping enterprises consolidate fragmented data flows into a single intelligent backbone, improving clinical outcomes, operational efficiency, and cost optimization.",
+    closing: "We would be delighted to showcase a live demo of Condense tailored to healthcare use cases and discuss how [COMPANY] can leverage it to improve care delivery while optimizing TCO. May I kindly request your availability for a short discussion next week? Looking forward to your guidance.",
+  },
+  {
+    id: "digital_transformation",
+    industries: ["digital transformation", "enterprise", "conglomerate", "it services", "consulting", "technology", "saas", "software", "platform"],
+    intro: "Condense enables organizations to continuously stream and standardize live data from operational systems, enterprise applications, and digital products into a single real-time data foundation — creating a consistent, reusable data layer that internal product teams, process owners, and AI initiatives can build upon.",
+    use_cases: [
+      { title: "Unified Real-Time Data Backbone", desc: "Standardize live data flows across business functions, internal products, and platforms, ensuring shared context and consistency across transformation initiatives." },
+      { title: "Real-Time Visibility & Process Optimization", desc: "Observe process performance as it happens, identify bottlenecks and deviations early, and support closed-loop improvement across operations and decision layers." },
+      { title: "Accelerate AI, Analytics & Intelligent Automation", desc: "Provide AI/ML models, dashboards, and automation workflows with live data streams for faster learning, proactive decisioning, and real-time responsiveness." },
+      { title: "Reduce Integration Sprawl", desc: "Replace fragmented, point-to-point integrations with a scalable streaming layer that simplifies operations and supports long-term platform and product evolution." },
+      { title: "BYOC (Bring Your Own Cloud)", desc: "Condense can be deployed within your own cloud environment (AWS/Azure/GCP), ensuring complete control over data, security, and compliance." },
+    ],
+    social_proof: "Condense is already trusted in production by leading organizations including TVS Motor, Eicher Motors, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield — supporting real-time data, manufacturing visibility, and digital platform initiatives at scale.",
+    closing: "If helpful, I'd be glad to share a brief overview focused on how Condense supports internal product platforms, AI readiness, and continuous process excellence. Looking forward to connecting.",
+  },
+  {
+    id: "fintech",
+    industries: ["fintech", "finance", "banking", "insurance", "payments", "lending", "nbfc", "wealth", "trading", "stock", "investment"],
+    intro: "Given [COMPANY]'s focus on financial services and data-driven decisioning, we see strong alignment in how Condense can power real-time financial data pipelines at scale.",
+    use_cases: [
+      { title: "Real-Time Transaction Monitoring", desc: "Stream and process high-volume transaction events to power fraud detection, risk scoring, and compliance monitoring in real time." },
+      { title: "Customer Analytics & Personalization", desc: "Capture customer behavior streams to power real-time personalization, next-best-action engines, and churn prediction models." },
+      { title: "Risk & Compliance Pipelines", desc: "Enable real-time streaming of regulatory data, audit trails, and risk indicators into compliance dashboards with full lineage." },
+      { title: "Market Data & Trading Intelligence", desc: "Process high-frequency market data streams for algorithmic trading, portfolio analytics, and real-time pricing." },
+      { title: "BYOC (Bring Your Own Cloud)", desc: "Condense can be deployed within your own cloud environment ensuring complete control over financial data, security, and regulatory compliance." },
+    ],
+    social_proof: "Many fintech and financial services teams using Condense have reduced their streaming infrastructure costs by 40–50% while significantly improving pipeline reliability and reducing time-to-insight for risk and analytics teams.",
+    closing: "I would be happy to walk you through how Condense can support [COMPANY]'s real-time data initiatives. Would you be open to a 30-minute discussion next week? Looking forward to connecting.",
+  },
+];
 
+function findIndustryUseCases(company, industry, researchData) {
+  const target = `${company} ${industry} ${researchData?.company_overview || ""}`.toLowerCase();
+  let bestMatch = null;
+  let bestScore = 0;
+  INDUSTRY_USE_CASES.forEach(uc => {
+    let score = 0;
+    uc.industries.forEach(tag => { if (target.includes(tag)) score += 3; });
+    if (score > bestScore) { bestScore = score; bestMatch = uc; }
+  });
+  return bestMatch || INDUSTRY_USE_CASES[4]; // default to digital_transformation
+}
 // ─── SUCCESS STORIES LIBRARY ─────────────────────────────────────────────────
 const SUCCESS_STORIES = [
   { id: "tvs", company: "TVS Motor", industry: "Automotive OEM / Two-Wheeler", tags: ["automotive", "oem", "two-wheeler", "vehicle telemetry", "manufacturing"], summary: "TVS Motor uses Condense to stream real-time vehicle telemetry across connected two-wheelers, enabling predictive diagnostics and over-the-air data sync at scale.", outcome: "40% reduction in data pipeline complexity, real-time fleet visibility across 2M+ connected vehicles." },
@@ -211,20 +312,46 @@ async function generateMessages(person, research, matchedStories, jdText, replyT
 
   const prompt = `You are Veera Raghavan, Country Head – Enterprise Business (India) at Zeliot–Condense (Bosch-backed).
 
-ABOUT CONDENSE: Kafka-based real-time data streaming platform, BYOC. Managed Kafka + 50+ connectors + transforms + monitoring + schema registry. 40%+ lower TCO vs self-managed Kafka. Backed by Bosch. Customers: TVS Motor, Eicher Motors, Tata Motors, Ashok Leyland, Royal Enfield.
+ABOUT CONDENSE: ABOUT CONDENSE: Kafka-based real-time data streaming platform by Zeliot, backed by Bosch. BYOC. Managed Kafka + 50+ connectors + transforms + monitoring + schema registry. 40%+ lower TCO vs self-managed Kafka. Always refer to the company as "Zeliot" not "Zeliot-Condense". The platform is called "Condense". So usage is "Zeliot Condense" or just "Condense" — never "Zeliot–Condense".
 
 YOUR WRITING STYLE — REAL MESSAGES:\n${examplesStr}
 
-STYLE RULES:
+STYLE RULES — FOLLOW VEERA'S EXACT WRITING STYLE:
+
+TONE & VOICE:
+- Always professional, warm, and confident — never pushy or salesy
+- Write like a senior business leader reaching out peer-to-peer
+- Use "Greetings [Name]," to open every first message
+- Second line always: "Hope you are doing well." + one specific personal touch about their company or role
+- Introduce Condense as: "Zeliot Condense, a deep-tech real-time data platform backed by Bosch"
+- Always tie Condense to their specific industry: "Given [Company]'s focus on [X], we see strong alignment..."
+- Tone: CTO/CEO = strategic business impact | Engineer/Lead = technical peer | VP/Head = operational efficiency
+- Region: India = warmer | International = more formal
+- NEVER sound like a generic sales pitch — always feel researched and specific
+
+LINKEDIN MESSAGE STRUCTURE:
+- connection_note: MAX 300 chars. "Greetings [Name], came across your profile while exploring [their industry/company] — would love to connect and share how Zeliot Condense is helping similar organizations." No pitch.
+- day0_message (First Message): 
+  • "Greetings [Name], Hope you are doing well."
+  • One line about their company/role from research
+  • "I'm reaching out to introduce Zeliot Condense, a deep-tech real-time data platform backed by Bosch..."
+  • "Given [Company]'s focus on [X], we see strong alignment..."
+  • 2-3 specific use cases for their role (NO bullet points on LinkedIn — write as flowing sentences)
+  • "I would be happy to share more details. Would you be open to a 30-minute discussion next week?"
+  • Sign as: Veera Raghavan | Enterprise Business (India) | Zeliot | +91 935-309-4136
+- day3_followup: 50-80 words. Different angle — reference open positions OR tech signal OR news. Keep door open. End with "Looking forward to connecting."
+- day7_followup: 30-50 words. Reference a success story metric. Ask for 30 mins or email ID.
+- day14_followup: 20-35 words. Final gentle nudge. "Looking forward to your guidance."
+
+WHAT MAKES VEERA'S STYLE UNIQUE:
+- He always mentions Bosch backing — it builds instant credibility
+- He names specific customers: TVS Motor, Tata Motors, Ashok Leyland, Royal Enfield, Eicher Motors
+- He ties use cases directly to the prospect's industry and role — never generic
+- He ends with "Looking forward to connecting" or "Looking forward to your guidance"
+- He asks for "30 minutes next week" — always specific
+- He never uses jargon like "synergies" or "leverage" 
+- He writes in complete, well-structured sentences
 - Avg first message: ~${avgFirstLen} words | Avg follow-up: ~${avgFollowLen} words
-- Warm greeting (Greetings/Hi/Hope you're doing well)
-- Open with THEIR specific role/company context before any pitch
-- Follow-ups shorter than first messages — sometimes 1-2 sentences
-- Ask for "30 mins based on your availability" or email ID
-- Tone: CTO/CEO = strategic | Engineer/Lead = technical peer | VP/Head = business impact
-- NEVER use bullet points or em dashes in LinkedIn messages
-- Region: India = warmer casual | International = more formal
-- Sign as: Veera Raghavan | Country Head – Enterprise Business | Zeliot–Condense | +91 935-309-4136
 ${replyContext}
 
 TARGET PROSPECT:
@@ -247,6 +374,13 @@ Conversation Hooks: ${(research.conversation_hooks || []).join(" | ")}
 
 RELEVANT SUCCESS STORIES TO REFERENCE (pick 1 most relevant):
 ${storyContext}
+INDUSTRY USE CASES (use these EXACT use cases in email and LinkedIn — do not make up your own):
+Industry matched: ${industryUC.id}
+Industry intro line: ${industryIntro}
+Use cases:
+${useCasesStr}
+Social proof to use: ${industrySocialProof}
+Closing line to use: ${industryClosing}
 
 INSTRUCTIONS:
 1. connection_note: MAX 300 chars. Warm, curiosity-driven. Reference 1 specific thing about their role or company (use JD context if available). No pitch.
@@ -276,10 +410,7 @@ About Zeliot: www.zeliot.in/quick-links
 Get Started with Condense: https://www.zeliot.in/try-now"
 - Social proof: "Zeliot supports leading [industry] companies such as TVS Motor, Volvo, Tata Motors, Ashok Leyland, Royal Enfield, Eicher Motors, SML Isuzu, Adani Ports & Logistics, Montra Electric — helping them build large-scale connected platforms, process high-frequency data, and enable real-time intelligence services."
 - Closing: "I would be happy to walk you through how leading [industry] platforms are using Condense. Please let me know a convenient time for a short discussion next week. Looking forward to your guidance on a suitable time for the discussion."
-- Sign-off: Use senderProfile name, title, company and phone if provided, otherwise use: "Veera Raghavan\nCountry Head – Enterprise Business (India)\nZeliot–Condense\n+91 935-309-4136"
-
-TONE RULES FOR EMAIL:
-- More formal and detailed than LinkedIn messages
+- Sign-off: Use senderProfile name, title, company and phone if provided, otherwise use: "Veera Raghavan\nEnterprise Business (India)\nZeliot\n+91 935-309-4136"
 - Use "I'm reaching out" not "Greetings" in body paragraphs
 - Bullet points ARE allowed in emails (unlike LinkedIn)
 - Each bullet point must be relevant to their specific role and research
@@ -804,7 +935,11 @@ const applyMapping = () => {
       updateStatus("generating");
       addLog(id, "⏳ Pausing 30s to respect API rate limits...");
       await new Promise(r => setTimeout(r, 30000));
-
+      const industryUC = findIndustryUseCases(person.company, person.industry || "", research);
+const useCasesStr = industryUC.use_cases.map(uc => `• ${uc.title} – ${uc.desc}`).join("\n");
+const industryIntro = industryUC.intro.replace(/\[COMPANY\]/g, person.company);
+const industrySocialProof = industryUC.social_proof.replace(/\[COMPANY\]/g, person.company);
+const industryClosing = industryUC.closing.replace(/\[COMPANY\]/g, person.company);
       const matchedStories = findMatchingStories(prospect.company, prospect.industry || "", researchData);
       addLog(id, `🏆 Matched ${matchedStories.length} relevant success stories`);
 
