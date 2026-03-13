@@ -411,7 +411,7 @@ STRUCTURE TO FOLLOW:
 - Line 2: "Hope you are doing well." + ONE personal touch about their company/role (1 sentence)
 - Para 1: "I'm reaching out to introduce Zeliot Condense, a deep-tech real-time data platform backed by Bosch, purpose-built for [their industry]. Condense helps organizations transform high-volume [relevant] data into reliable, production-grade data pipelines and real-time intelligence APIs without the operational complexity of managing streaming infrastructure."
 - Para 2: "Given [Company]'s leadership in [specific area from research], we see strong alignment in how Condense can help power real-time, scalable [industry] data systems."
-- Section: "Some relevant use cases where Condense can add value include:" followed by 4-6 bullet points. Each bullet: bold title + dash + description. Make bullets SPECIFIC to their job title and industry using research context. Examples:
+- Section: "Some relevant use cases where Condense can add value include:" followed by 4-6 bullet points. Each bullet: plain text title + dash + description. NO asterisks, NO markdown, NO bold formatting. Format exactly as: • Title – description Make bullets SPECIFIC to their job title and industry using research context. Examples:
   • Connected Vehicle Data Platforms – ingest and process telemetry from vehicles at scale
   • Real-Time [their domain] APIs – enable instant insights for [their KPIs]
   • [Their domain] Analytics – process streaming data for operational insights
