@@ -115,6 +115,7 @@ const INDUSTRY_USE_CASES = [
   ],
   social_proof: "Zeliot supports leading technology and data-driven companies such as TVS Motor, Tata Motors, Royal Enfield, Eicher Motors, SML Isuzu, Adani Ports & Logistics, and Montra Electric — helping them build large-scale real-time data platforms, process high-frequency streaming data, and enable real-time intelligence services for critical applications.",
   closing: "I would be happy to walk you through how leading data-driven platforms are using Condense. Please let me know a convenient time for a short discussion next week. Looking forward to your guidance on a suitable time for the discussion.",
+  },
 ];
 
 function findIndustryUseCases(company, industry, researchData) {
