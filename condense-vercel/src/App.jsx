@@ -552,6 +552,10 @@ useEffect(() => {
   const logsEndRef = useRef();
   const fileInputRef = useRef();
   const [uploadStatus, setUploadStatus] = useState("");
+  const [csvHeaders, setCsvHeaders] = useState([]);
+const [csvRows, setCsvRows] = useState([]);
+const [csvMapping, setCsvMapping] = useState({});
+const [showMapper, setShowMapper] = useState(false);
   const [senderProfile, setSenderProfile] = useState(() => {
   try { return JSON.parse(localStorage.getItem('sender_profile') || 'null') || {}; } catch { return {}; }
 });
@@ -653,47 +657,90 @@ useEffect(() => {
   };
 
   const handleFileUpload = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    setUploadStatus("📂 Reading file...");
-    const ext = file.name.split(".").pop().toLowerCase();
-    const reader = new FileReader();
-    const parseRows = (rows) => {
-      const headers = rows[0].map(h => (h || "").toString().toLowerCase().trim());
-      const find = (...keys) => headers.findIndex(h => keys.some(k => h.includes(k)));
-      const nameIdx = find("name","full name","contact"), titleIdx = find("title","job","position","designation","role"), companyIdx = find("company","organization","org","employer"), emailIdx = find("email","mail"), phoneIdx = find("phone","mobile","contact number"), linkedinIdx = find("linkedin","profile url","url");
-      const added = [];
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        const name = nameIdx >= 0 ? (row[nameIdx] || "").toString().trim() : "";
-        const company = companyIdx >= 0 ? (row[companyIdx] || "").toString().trim() : "";
-        if (!name && !company) continue;
-        const id = `p_${Date.now()}_${i}`;
-        added.push({ id, name: name || "Unknown", jobTitle: titleIdx >= 0 ? (row[titleIdx] || "").toString().trim() : "", company: company || "Unknown", email: emailIdx >= 0 ? (row[emailIdx] || "").toString().trim() : "", phone: phoneIdx >= 0 ? (row[phoneIdx] || "").toString().trim() : "", linkedinUrl: linkedinIdx >= 0 ? (row[linkedinIdx] || "").toString().trim() : "", status: "idle", createdAt: new Date().toISOString(), sentAt: null });
-      }
-      setProspects(prev => [...prev, ...added]);
-      setUploadStatus(`✅ ${added.length} prospects imported!`);
-      if (added.length > 0) { setSelected(added[0].id); setBatchFrom(1); setBatchTo(Math.min(30, added.length)); setTimeout(() => setBatchOpen(true), 600); }
-      setTimeout(() => setUploadStatus(""), 4000);
-    };
-    if (ext === "csv") {
-      reader.onload = (ev) => {
-        const rows = ev.target.result.split(/\r?\n/).filter(l => l.trim()).map(l => { const result = []; let cur = "", inQ = false; for (const ch of l) { if (ch === '"') inQ = !inQ; else if (ch === "," && !inQ) { result.push(cur); cur = ""; } else cur += ch; } result.push(cur); return result; });
-        parseRows(rows);
-      };
-      reader.readAsText(file);
-    } else if (ext === "xlsx" || ext === "xls") {
-      reader.onload = (ev) => {
-        try {
-          const XLSX = window.XLSX; if (!XLSX) { setUploadStatus("❌ Excel support not loaded. Use CSV instead."); return; }
-          const wb = XLSX.read(ev.target.result, { type: "array" });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          parseRows(XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }));
-        } catch (err) { setUploadStatus("❌ Error reading Excel: " + err.message); }
-      };
-      reader.readAsArrayBuffer(file);
-    } else { setUploadStatus("❌ Please upload a .csv or .xlsx file"); }
-    e.target.value = "";
+  const file = e.target.files[0]; if (!file) return;
+  setUploadStatus("📂 Reading file...");
+  const ext = file.name.split(".").pop().toLowerCase();
+  const reader = new FileReader();
+
+  const openMapper = (rows) => {
+    if (!rows || rows.length < 2) { setUploadStatus("❌ File appears empty."); return; }
+    const headers = rows[0].map(h => (h || "").toString().trim());
+    setCsvHeaders(headers);
+    setCsvRows(rows.slice(1));
+
+    // Auto-guess mapping
+    const guess = {};
+    const match = (keys) => headers.findIndex(h => keys.some(k => h.toLowerCase().includes(k)));
+    const nameIdx = match(["full name","contact name","name","person"]);
+    const titleIdx = match(["title","job","position","designation","role"]);
+    const companyIdx = match(["company","organization","org","employer","account"]);
+    const emailIdx = match(["email","mail"]);
+    const phoneIdx = match(["phone","mobile","contact number","whatsapp"]);
+    const linkedinIdx = match(["linkedin","profile url","url"]);
+
+    if (nameIdx >= 0) guess.name = nameIdx;
+    if (titleIdx >= 0) guess.jobTitle = titleIdx;
+    if (companyIdx >= 0) guess.company = companyIdx;
+    if (emailIdx >= 0) guess.email = emailIdx;
+    if (phoneIdx >= 0) guess.phone = phoneIdx;
+    if (linkedinIdx >= 0) guess.linkedinUrl = linkedinIdx;
+
+    setCsvMapping(guess);
+    setShowMapper(true);
+    setUploadStatus("");
   };
+
+  if (ext === "csv") {
+    reader.onload = (ev) => {
+      const rows = ev.target.result.split(/\r?\n/).filter(l => l.trim()).map(l => {
+        const result = []; let cur = "", inQ = false;
+        for (const ch of l) { if (ch === '"') inQ = !inQ; else if (ch === "," && !inQ) { result.push(cur); cur = ""; } else cur += ch; }
+        result.push(cur); return result;
+      });
+      openMapper(rows);
+    };
+    reader.readAsText(file);
+  } else if (ext === "xlsx" || ext === "xls") {
+    reader.onload = (ev) => {
+      try {
+        const XLSX = window.XLSX; if (!XLSX) { setUploadStatus("❌ Excel support not loaded. Use CSV instead."); return; }
+        const wb = XLSX.read(ev.target.result, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        openMapper(XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }));
+      } catch (err) { setUploadStatus("❌ Error reading Excel: " + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  } else { setUploadStatus("❌ Please upload a .csv or .xlsx file"); }
+  e.target.value = "";
+};
+
+const applyMapping = () => {
+  const added = [];
+  csvRows.forEach((row, i) => {
+    const get = (field) => csvMapping[field] !== undefined ? (row[csvMapping[field]] || "").toString().trim() : "";
+    const name = get("name");
+    const company = get("company");
+    if (!name && !company) return;
+    added.push({
+      id: `p_${Date.now()}_${i}`,
+      name: name || "Unknown",
+      jobTitle: get("jobTitle"),
+      company: company || "Unknown",
+      email: get("email"),
+      phone: get("phone"),
+      linkedinUrl: get("linkedinUrl"),
+      status: "idle",
+      createdAt: new Date().toISOString(),
+      sentAt: null,
+    });
+  });
+  setProspects(prev => [...prev, ...added]);
+  setShowMapper(false);
+  setCsvHeaders([]); setCsvRows([]); setCsvMapping({});
+  setUploadStatus(`✅ ${added.length} prospects imported!`);
+  if (added.length > 0) { setSelected(added[0].id); setBatchFrom(1); setBatchTo(Math.min(30, added.length)); setTimeout(() => setBatchOpen(true), 600); }
+  setTimeout(() => setUploadStatus(""), 4000);
+};
 
   const runAgent = async (prospect) => {
     const id = prospect.id;
@@ -898,7 +945,73 @@ if (!dbLoaded) return (
     </div>
   </div>
 )}
+{/* CSV COLUMN MAPPER MODAL */}
+{showMapper && (
+  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowMapper(false)}>
+    <div style={{ background: "#FFFFFF", borderRadius: 12, width: "min(560px, 96vw)", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(10,37,64,0.18)", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+      
+      {/* Header */}
+      <div style={{ background: "#0A2540", padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+        <div>
+          <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>Map Your CSV Columns</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 2, fontFamily: MONO }}>{csvRows.length} rows detected · assign each field below</div>
+        </div>
+        <button onClick={() => setShowMapper(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFFFFF", fontSize: 16, cursor: "pointer", padding: "4px 10px", borderRadius: 6 }}>✕</button>
+      </div>
 
+      {/* Preview row */}
+      <div style={{ padding: "12px 24px", background: "#F8FAFC", borderBottom: "1px solid #E4ECF4", flexShrink: 0 }}>
+        <div style={{ fontSize: 10, color: "#8A9BB0", fontFamily: MONO, marginBottom: 6, letterSpacing: "0.08em" }}>FIRST ROW PREVIEW</div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {csvHeaders.map((h, i) => (
+            <div key={i} style={{ background: "#FFFFFF", border: "1px solid #D8E2EE", borderRadius: 4, padding: "4px 10px" }}>
+              <div style={{ fontSize: 9, color: "#8A9BB0", fontFamily: MONO }}>{h}</div>
+              <div style={{ fontSize: 11, color: "#0A2540", fontFamily: "'Inter', sans-serif", marginTop: 1 }}>{(csvRows[0]?.[i] || "—").toString().slice(0, 20)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mapping fields */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+        {[
+          { field: "name", label: "👤 Person Name *", required: true },
+          { field: "company", label: "🏢 Company *", required: true },
+          { field: "jobTitle", label: "💼 Job Title" },
+          { field: "email", label: "✉️ Email" },
+          { field: "phone", label: "📱 Phone / WhatsApp" },
+          { field: "linkedinUrl", label: "🔗 LinkedIn URL" },
+        ].map(({ field, label, required }) => (
+          <div key={field} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 180, fontSize: 12, color: "#0A2540", fontFamily: "'Inter', sans-serif", fontWeight: 500, flexShrink: 0 }}>{label}</div>
+            <div style={{ flex: 1, fontSize: 12, color: "#8A9BB0", fontFamily: MONO }}>→</div>
+            <select
+              value={csvMapping[field] !== undefined ? csvMapping[field] : ""}
+              onChange={e => setCsvMapping(prev => ({ ...prev, [field]: e.target.value === "" ? undefined : Number(e.target.value) }))}
+              style={{ flex: 2, background: csvMapping[field] !== undefined ? "#EEF5FF" : "#F8FAFC", border: `1px solid ${csvMapping[field] !== undefined ? "#1B6EF3" : "#D8E2EE"}`, color: "#0A2540", borderRadius: 6, padding: "8px 10px", fontSize: 12, fontFamily: "'Inter', sans-serif", outline: "none" }}
+            >
+              <option value="">— not mapped —</option>
+              {csvHeaders.map((h, i) => (
+                <option key={i} value={i}>{h} (e.g. {(csvRows[0]?.[i] || "").toString().slice(0, 25)})</option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: "16px 24px", borderTop: "1px solid #E4ECF4", flexShrink: 0, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+        <button onClick={() => setShowMapper(false)} style={{ padding: "10px 20px", borderRadius: 6, border: "1px solid #E4ECF4", background: "#FFFFFF", color: "#4A6080", fontFamily: "'Inter', sans-serif", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+        <button
+          onClick={applyMapping}
+          disabled={csvMapping.name === undefined || csvMapping.company === undefined}
+          style={{ padding: "10px 24px", borderRadius: 6, border: "none", background: csvMapping.name !== undefined && csvMapping.company !== undefined ? "linear-gradient(135deg, #1B6EF3, #3D8BFF)" : "#E4ECF4", color: csvMapping.name !== undefined && csvMapping.company !== undefined ? "#FFFFFF" : "#8A9BB0", fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 13, cursor: csvMapping.name !== undefined && csvMapping.company !== undefined ? "pointer" : "not-allowed", boxShadow: "0 2px 10px rgba(27,110,243,0.25)" }}>
+          Import {csvRows.filter(r => r[csvMapping.name] || r[csvMapping.company]).length} Prospects →
+        </button>
+      </div>
+    </div>
+  </div>
+)}
         {/* BULK UPLOAD MANAGER MODAL */}
         {batchOpen && (() => {
           const idleList = prospects.filter(p => p.status === "idle");
