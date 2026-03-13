@@ -254,8 +254,37 @@ INSTRUCTIONS:
 3. day3_followup: 50-80 words. Different angle — reference open positions found OR tech signal OR news. Keep door open.
 4. day7_followup: 30-50 words. Softer. Reference the success story OR a specific metric. Ask for 30 mins or email.
 5. day14_followup: 20-35 words. Final gentle nudge. No desperation.
-6. email_subject: Compelling email subject line (under 60 chars)
-7. email_body: Full email version (150-200 words). More structured than LinkedIn. Include relevant success story. Professional sign-off.
+6. email_subject: Compelling subject line under 60 chars. Format: "[Industry/Company] x Zeliot Condense | Real-Time Data Platform"
+7. email_body: Full professional email following EXACTLY this structure and tone:
+
+STRUCTURE TO FOLLOW:
+- Line 1: Always use "Greetings [Name]," — NEVER use "Dear [Name]," under any circumstances
+- Line 2: "Hope you are doing well." + ONE personal touch about their company/role (1 sentence)
+- Para 1: "I'm reaching out to introduce Zeliot Condense, a deep-tech real-time data platform backed by Bosch, purpose-built for [their industry]. Condense helps organizations transform high-volume [relevant] data into reliable, production-grade data pipelines and real-time intelligence APIs without the operational complexity of managing streaming infrastructure."
+- Para 2: "Given [Company]'s leadership in [specific area from research], we see strong alignment in how Condense can help power real-time, scalable [industry] data systems."
+- Section: "Some relevant use cases where Condense can add value include:" followed by 4-6 bullet points. Each bullet: bold title + dash + description. Make bullets SPECIFIC to their job title and industry using research context. Examples:
+  • Connected Vehicle Data Platforms – ingest and process telemetry from vehicles at scale
+  • Real-Time [their domain] APIs – enable instant insights for [their KPIs]
+  • [Their domain] Analytics – process streaming data for operational insights
+  • BYOC (Bring Your Own Cloud) – Condense can be deployed within your own cloud environment (AWS/Azure/GCP), ensuring complete control over data, security, and compliance
+- Para 3: "Unlike traditional streaming stacks that require heavy infrastructure management, Condense abstracts scaling, operations, and monitoring, allowing engineering teams to focus on building [industry] applications rather than managing data infrastructure."
+- Pre-read section (ALWAYS include these exact links):
+"As a pre-read, sharing the below information on Condense.
+Condense Overview: https://docs.zeliot.in/condense
+Case Studies: https://www.zeliot.in/case-studies
+About Zeliot: www.zeliot.in/quick-links
+Get Started with Condense: https://www.zeliot.in/try-now"
+- Social proof: "Zeliot supports leading [industry] companies such as TVS Motor, Volvo, Tata Motors, Ashok Leyland, Royal Enfield, Eicher Motors, SML Isuzu, Adani Ports & Logistics, Montra Electric — helping them build large-scale connected platforms, process high-frequency data, and enable real-time intelligence services."
+- Closing: "I would be happy to walk you through how leading [industry] platforms are using Condense. Please let me know a convenient time for a short discussion next week. Looking forward to your guidance on a suitable time for the discussion."
+- Sign-off: Use senderProfile name, title, company and phone if provided, otherwise use: "Veera Raghavan\nCountry Head – Enterprise Business (India)\nZeliot–Condense\n+91 935-309-4136"
+
+TONE RULES FOR EMAIL:
+- More formal and detailed than LinkedIn messages
+- Use "I'm reaching out" not "Greetings" in body paragraphs
+- Bullet points ARE allowed in emails (unlike LinkedIn)
+- Each bullet point must be relevant to their specific role and research
+- Total length: 300-400 words
+- Never use em dashes in bullet titles, use " – " instead
 
 Return ONLY this JSON:
 {
