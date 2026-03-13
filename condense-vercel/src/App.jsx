@@ -416,8 +416,8 @@ function Input({ label, value, onChange, placeholder, type = "text" }) {
 }
 
 // Send Action Buttons
-function SendButtons({ prospect, messageText, messageType, emailSubject }) {
-  const phone = prospect.phone || "";
+function SendButtons({ prospect, messageText, messageType, emailSubject, senderProfile = {} }) {
+  const phone = senderProfile.phone || prospect.phone || "";
   const email = prospect.email || "";
   const name = prospect.name || "";
 
@@ -445,15 +445,11 @@ function SendButtons({ prospect, messageText, messageType, emailSubject }) {
   };
 
   const sendEmail = () => {
-    if (email) {
-      const subject = encodeURIComponent(emailSubject || `Zeliot Condense — ${prospect.company}`);
-      const body = encodeURIComponent(messageText);
-      window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_blank");
-    } else {
-      const subject = encodeURIComponent(emailSubject || `Zeliot Condense — ${prospect.company}`);
-      const body = encodeURIComponent(messageText);
-      window.open(`mailto:?subject=${subject}&body=${body}`, "_blank");
-    }
+    const signature = senderProfile.signature ? `\n\n${senderProfile.signature}` : "";
+    const fullBody = messageText + signature;
+    const subject = encodeURIComponent(emailSubject || `Zeliot Condense — ${prospect.company}`);
+    const body = encodeURIComponent(fullBody);
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_blank");
   };
 
   return (
@@ -556,6 +552,11 @@ useEffect(() => {
   const logsEndRef = useRef();
   const fileInputRef = useRef();
   const [uploadStatus, setUploadStatus] = useState("");
+  const [senderProfile, setSenderProfile] = useState(() => {
+  try { return JSON.parse(localStorage.getItem('sender_profile') || 'null') || {}; } catch { return {}; }
+});
+const [showProfile, setShowProfile] = useState(false);
+  
 
   // Persist state changes
   useEffect(() => {
@@ -587,6 +588,9 @@ useEffect(() => {
   if (!dbLoaded) return;
   notifications.forEach(n => dbSave('notifications', n.id || `n_${Date.now()}`, n));
 }, [notifications, dbLoaded]);
+  useEffect(() => {
+  localStorage.setItem('sender_profile', JSON.stringify(senderProfile));
+}, [senderProfile]);
 
   // Auto-scroll logs
   useEffect(() => { if (logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [logs]);
@@ -1090,6 +1094,70 @@ if (!dbLoaded) return (
               ))}
             </div>
           </div>
+            {/* SENDER PROFILE */}
+            <div style={{ borderTop: "1px solid #E4ECF4", flexShrink: 0 }}>
+              <button onClick={() => setShowProfile(s => !s)} style={{ width: "100%", padding: "12px 16px", background: showProfile ? "#EEF5FF" : "#FFFFFF", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: FONT }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: senderProfile.name ? "linear-gradient(135deg, #1B6EF3, #3D8BFF)" : "#EEF2F7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: senderProfile.name ? "#FFFFFF" : "#8A9BB0", fontWeight: 700, flexShrink: 0 }}>
+                    {senderProfile.name ? senderProfile.name.charAt(0).toUpperCase() : "?"}
+                  </div>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: senderProfile.name ? "#0A2540" : "#8A9BB0", fontFamily: FONT }}>{senderProfile.name || "Set your profile"}</div>
+                    <div style={{ fontSize: 10, color: "#8A9BB0", fontFamily: FONT }}>{senderProfile.email || "Click to configure"}</div>
+                  </div>
+                </div>
+                <span style={{ fontSize: 10, color: "#8A9BB0" }}>{showProfile ? "▲" : "▼"}</span>
+              </button>
+
+              {showProfile && (
+                <div style={{ padding: "16px", borderTop: "1px solid #EEF2F7", background: "#F8FAFC", display: "flex", flexDirection: "column", gap: 10, maxHeight: "60vh", overflowY: "auto" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#0A2540", fontFamily: DISPLAY, marginBottom: 2 }}>Your Sender Profile</div>
+                  <div style={{ fontSize: 10, color: "#8A9BB0", marginBottom: 4 }}>Used in all send buttons & sign-offs</div>
+
+                  {[
+                    { key: "name", label: "Full Name *", placeholder: "Veera Raghavan" },
+                    { key: "email", label: "Your Email *", placeholder: "veera@zeliot.in" },
+                    { key: "phone", label: "Phone / WhatsApp", placeholder: "+91 9353094136" },
+                    { key: "title", label: "Job Title", placeholder: "Country Head – Enterprise Business" },
+                    { key: "company", label: "Company", placeholder: "Zeliot–Condense" },
+                  ].map(field => (
+                    <div key={field.key}>
+                      <label style={{ fontSize: 10, fontWeight: 500, color: "#4A6080", display: "block", marginBottom: 3, fontFamily: FONT }}>{field.label}</label>
+                      <input
+                        value={senderProfile[field.key] || ""}
+                        onChange={e => setSenderProfile(p => ({ ...p, [field.key]: e.target.value }))}
+                        placeholder={field.placeholder}
+                        style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: "#0A2540", borderRadius: 6, padding: "7px 10px", fontSize: 12, fontFamily: FONT, outline: "none" }}
+                      />
+                    </div>
+                  ))}
+
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 500, color: "#4A6080", display: "block", marginBottom: 3, fontFamily: FONT }}>Email Signature</label>
+                    <textarea
+                      value={senderProfile.signature || ""}
+                      onChange={e => setSenderProfile(p => ({ ...p, signature: e.target.value }))}
+                      placeholder={"Best regards,\nVeera Raghavan\nCountry Head – Enterprise Business\nZeliot–Condense | +91 935-309-4136"}
+                      style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: "#0A2540", borderRadius: 6, padding: "7px 10px", fontSize: 11, fontFamily: FONT, lineHeight: 1.6, outline: "none", resize: "vertical", minHeight: 80 }}
+                    />
+                  </div>
+
+                  {senderProfile.name && senderProfile.email && (
+                    <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 6, padding: "10px 12px" }}>
+                      <div style={{ fontSize: 10, fontFamily: MONO, color: "#0D9E6E", fontWeight: 600, marginBottom: 4 }}>✅ Profile Active</div>
+                      <div style={{ fontSize: 11, color: "#0A2540", lineHeight: 1.7 }}>
+                        📧 Sending from: <strong>{senderProfile.email}</strong><br/>
+                        📱 WhatsApp: <strong>{senderProfile.phone || "not set"}</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  <button onClick={() => setShowProfile(false)} style={{ width: "100%", padding: "9px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#FFFFFF", fontFamily: FONT, fontWeight: 600, fontSize: 12, cursor: "pointer", marginTop: 4 }}>
+                    ✓ Save &amp; Close
+                  </button>
+                </div>
+              )}
+            </div>
 
           {/* MAIN CONTENT */}
           <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
@@ -1241,7 +1309,7 @@ if (!dbLoaded) return (
                           {/* Send Buttons */}
                           <div style={{ marginTop: 14, padding: "14px 0", borderTop: "1px solid #EEF2F7" }}>
                             <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, letterSpacing: "0.04em", marginBottom: 8 }}>SEND DIRECTLY →</div>
-                            <SendButtons prospect={sel} messageText={text} messageType={activeMsg} emailSubject={selMessages.email_subject} />
+                            <SendButtons prospect={sel} messageText={text} messageType={activeMsg} emailSubject={selMessages.email_subject} senderProfile={senderProfile} />
                           </div>
 
                           <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
