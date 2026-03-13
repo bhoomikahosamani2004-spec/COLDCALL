@@ -656,38 +656,50 @@ useEffect(() => {
     setShowJD(false);
   };
 
-  const handleFileUpload = (e) => {
+const handleFileUpload = (e) => {
   const file = e.target.files[0]; if (!file) return;
   setUploadStatus("📂 Reading file...");
   const ext = file.name.split(".").pop().toLowerCase();
   const reader = new FileReader();
 
-  const openMapper = (rows) => {
-    if (!rows || rows.length < 2) { setUploadStatus("❌ File appears empty."); return; }
-    const headers = rows[0].map(h => (h || "").toString().trim());
-    setCsvHeaders(headers);
-    setCsvRows(rows.slice(1));
+  const parseRows = (rows) => {
+    const headers = rows[0].map(h => (h || "").toString().toLowerCase().trim());
+    const idx = (keys) => headers.findIndex(h => keys.some(k => h.includes(k)));
 
-    // Auto-guess mapping
-    const guess = {};
-    const match = (keys) => headers.findIndex(h => keys.some(k => h.toLowerCase().includes(k)));
-    const nameIdx = match(["full name","contact name","name","person"]);
-    const titleIdx = match(["title","job","position","designation","role"]);
-    const companyIdx = match(["company","organization","org","employer","account"]);
-    const emailIdx = match(["email","mail"]);
-    const phoneIdx = match(["phone","mobile","contact number","whatsapp"]);
-    const linkedinIdx = match(["linkedin","profile url","url"]);
+    const firstNameIdx = idx(["first name","firstname"]);
+    const lastNameIdx = idx(["last name","lastname"]);
+    const companyIdx = idx(["company name","company","organization","org","employer"]);
+    const titleIdx = idx(["title","job","position","designation","role"]);
+    const emailIdx = idx(["email","mail"]);
+    const phoneIdx = idx(["phone","mobile","whatsapp"]);
+    const linkedinIdx = idx(["linkedin","person linkedin url","profile url","url"]);
 
-    if (nameIdx >= 0) guess.name = nameIdx;
-    if (titleIdx >= 0) guess.jobTitle = titleIdx;
-    if (companyIdx >= 0) guess.company = companyIdx;
-    if (emailIdx >= 0) guess.email = emailIdx;
-    if (phoneIdx >= 0) guess.phone = phoneIdx;
-    if (linkedinIdx >= 0) guess.linkedinUrl = linkedinIdx;
-
-    setCsvMapping(guess);
-    setShowMapper(true);
-    setUploadStatus("");
+    const added = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const get = (index) => index >= 0 ? (row[index] || "").toString().trim() : "";
+      const firstName = get(firstNameIdx);
+      const lastName = get(lastNameIdx);
+      const name = [firstName, lastName].filter(Boolean).join(" ");
+      const company = get(companyIdx);
+      if (!name && !company) continue;
+      added.push({
+        id: `p_${Date.now()}_${i}`,
+        name: name || "Unknown",
+        jobTitle: get(titleIdx),
+        company: company || "Unknown",
+        email: get(emailIdx),
+        phone: get(phoneIdx),
+        linkedinUrl: get(linkedinIdx),
+        status: "idle",
+        createdAt: new Date().toISOString(),
+        sentAt: null,
+      });
+    }
+    setProspects(prev => [...prev, ...added]);
+    setUploadStatus(`✅ ${added.length} prospects imported!`);
+    if (added.length > 0) { setSelected(added[0].id); setBatchFrom(1); setBatchTo(Math.min(30, added.length)); setTimeout(() => setBatchOpen(true), 600); }
+    setTimeout(() => setUploadStatus(""), 4000);
   };
 
   if (ext === "csv") {
@@ -697,7 +709,7 @@ useEffect(() => {
         for (const ch of l) { if (ch === '"') inQ = !inQ; else if (ch === "," && !inQ) { result.push(cur); cur = ""; } else cur += ch; }
         result.push(cur); return result;
       });
-      openMapper(rows);
+      parseRows(rows);
     };
     reader.readAsText(file);
   } else if (ext === "xlsx" || ext === "xls") {
@@ -706,13 +718,13 @@ useEffect(() => {
         const XLSX = window.XLSX; if (!XLSX) { setUploadStatus("❌ Excel support not loaded. Use CSV instead."); return; }
         const wb = XLSX.read(ev.target.result, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        openMapper(XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }));
+        parseRows(XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }));
       } catch (err) { setUploadStatus("❌ Error reading Excel: " + err.message); }
     };
     reader.readAsArrayBuffer(file);
   } else { setUploadStatus("❌ Please upload a .csv or .xlsx file"); }
   e.target.value = "";
-};
+}; 
 
 const applyMapping = () => {
   const added = [];
