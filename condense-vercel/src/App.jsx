@@ -673,13 +673,6 @@ const titleIdx = idx(["title","job","position","designation","role"]);
 const emailIdx = idx(["email","mail"]);
 const phoneIdx = idx(["phone","mobile","whatsapp"]);
 const linkedinIdx = idx(["linkedin","person linkedin url","profile url","url"]);
-    const lastNameIdx = idx(["last name","lastname"]);
-    const companyIdx = idx(["company name","company","organization","org","employer"]);
-    const titleIdx = idx(["title","job","position","designation","role"]);
-    const emailIdx = idx(["email","mail"]);
-    const phoneIdx = idx(["phone","mobile","whatsapp"]);
-    const linkedinIdx = idx(["linkedin","person linkedin url","profile url","url"]);
-
     const added = [];
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
