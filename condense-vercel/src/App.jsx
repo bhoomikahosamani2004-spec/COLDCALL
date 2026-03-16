@@ -630,7 +630,13 @@ function SendButtons({ prospect, messageText, messageType, emailSubject, senderP
       alert("No phone number saved. Message copied to clipboard.");
     }
   };
-
+  const sendLinkedIn = () => {
+  const linkedinUrl = prospect.linkedinUrl
+    ? (prospect.linkedinUrl.startsWith("http") ? prospect.linkedinUrl : "https://" + prospect.linkedinUrl)
+    : `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent((prospect.name || "") + " " + (prospect.company || ""))}`;
+  navigator.clipboard.writeText(messageText);
+  window.open(linkedinUrl, "_blank");
+};
   const sendEmail = () => {
     const signature = senderProfile.signature ? `\n\n${senderProfile.signature}` : "";
     const fullBody = messageText + signature;
