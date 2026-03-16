@@ -489,16 +489,6 @@ const DISPLAY = "'Sora', 'Inter', sans-serif";
 const MONO = "'JetBrains Mono', 'Fira Code', monospace";
 
 const css = `
-@media (max-width: 768px) {
-    .desktop-only { display: none !important; }
-    .mobile-sidebar { position: fixed !important; left: 0; top: 60px; bottom: 0; z-index: 90; transform: translateX(-100%); transition: transform 0.3s ease; }
-    .mobile-sidebar.open { transform: translateX(0) !important; }
-    .mobile-overlay { display: block !important; }
-  }
-  @media (min-width: 769px) {
-    .mobile-only { display: none !important; }
-    .mobile-overlay { display: none !important; }
-  }
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #F5F7FA; -webkit-font-smoothing: antialiased; }
@@ -659,7 +649,7 @@ function SendButtons({ prospect, messageText, messageType, emailSubject, senderP
   };
 
   return (
-   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 10 }}>
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
       <button className="send-btn" onClick={sendWhatsApp} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.whatsapp}55`, background: C.whatsappDim, color: C.whatsapp, fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: "pointer" }}>
         <span style={{ fontSize: 14 }}>💬</span> WhatsApp
       </button>
@@ -753,14 +743,6 @@ useEffect(() => {
   const [activeTab, setActiveTab] = useState("messages"); // messages | research | stories | reply
   const [showJD, setShowJD] = useState(false);
   const [extraContext, setExtraContext] = useState({});
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-useEffect(() => {
-  const handleResize = () => setIsMobile(window.innerWidth <= 768);
-  window.addEventListener("resize", handleResize);
-  return () => window.removeEventListener("resize", handleResize);
-}, []);
   const [replyText, setReplyText] = useState("");
   const [replyIndustry, setReplyIndustry] = useState("");
   const [replyTone, setReplyTone] = useState("");
@@ -1096,10 +1078,7 @@ if (!dbLoaded) return (
       <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: FONT, display: "flex", flexDirection: "column" }}>
 
         {/* HEADER */}
-       <div style={{ background: "#0A2540", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: isMobile ? "0 16px" : "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, height: 60, boxShadow: "0 2px 16px rgba(10,37,64,0.18)" }}>
-         {isMobile && activeView === "prospects" && (
-  <button onClick={() => setSidebarOpen(o => !o)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFFFFF", fontSize: 18, cursor: "pointer", padding: "6px 10px", borderRadius: 6, marginRight: 8 }}>☰</button>
-)}
+        <div style={{ background: "#0A2540", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "0 28px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, height: 60, boxShadow: "0 2px 16px rgba(10,37,64,0.18)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 10px rgba(27,110,243,0.4)" }}>
@@ -1122,11 +1101,11 @@ if (!dbLoaded) return (
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontFamily: MONO, letterSpacing: "0.06em" }}>Trained</span>
             </div>
             {[
-  { key: "prospects", label: "🎯 Prospects", icon: "🎯" },
-  { key: "dashboard", label: "📊 Dashboard", icon: "📊" },
-  { key: "training", label: "🧠 Training", icon: "🧠" },
+            { key: "prospects", label: "🎯 Prospects" },
+            { key: "dashboard", label: "📊 Dashboard" },
+            { key: "training", label: "🧠 Training" },
 ].map(v => (
-  <button key={v.key} onClick={() => { setActiveView(v.key); setSidebarOpen(false); }} style={{ padding: isMobile ? "5px 8px" : "5px 12px", borderRadius: 6, border: "none", background: activeView === v.key ? "rgba(27,110,243,0.3)" : "transparent", color: activeView === v.key ? "#FFFFFF" : "rgba(255,255,255,0.5)", fontSize: isMobile ? 14 : 11, fontFamily: FONT, cursor: "pointer", fontWeight: activeView === v.key ? 600 : 400 }}>{isMobile ? v.icon : v.label}</button>
+  <button key={v.key} onClick={() => setActiveView(v.key)} style={{ padding: "5px 12px", borderRadius: 6, border: "none", background: activeView === v.key ? "rgba(27,110,243,0.3)" : "transparent", color: activeView === v.key ? "#FFFFFF" : "rgba(255,255,255,0.5)", fontSize: 11, fontFamily: FONT, cursor: "pointer", fontWeight: activeView === v.key ? 600 : 400 }}>{v.label}</button>
 ))}
             <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.12)" }} />
             <button onClick={() => setShowProfile(s => !s)} style={{ background: showProfile ? "#EEF5FF" : "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "6px 14px", color: "#FFFFFF", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontFamily: FONT }}>
@@ -1453,10 +1432,7 @@ if (!dbLoaded) return (
         <div style={{ display: "flex", flex: 1, overflow: "hidden", height: "calc(100vh - 64px)" }}>
 
          {/* LEFT SIDEBAR */}
-          {isMobile && sidebarOpen && (
-  <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 89, top: 60 }} />
-)}
-{activeView === "prospects" && <div className={isMobile ? (sidebarOpen ? "mobile-sidebar open" : "mobile-sidebar") : ""} style={{ width: isMobile ? 280 : 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "4px 0 20px rgba(10,37,64,0.15)" : "2px 0 8px rgba(10,37,64,0.04)", position: isMobile ? "fixed" : "relative", top: isMobile ? 60 : "auto", bottom: isMobile ? 0 : "auto", left: 0, zIndex: isMobile ? 90 : "auto", transform: isMobile ? (sidebarOpen ? "translateX(0)" : "translateX(-100%)") : "none", transition: "transform 0.3s ease" }}>
+{activeView === "prospects" && <div style={{ width: 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "2px 0 8px rgba(10,37,64,0.04)" }}>
             {/* Add Prospect Form */}
             <div style={{ padding: "18px 16px", borderBottom: "1px solid #EEF2F7", overflowY: "auto", maxHeight: "55vh" }}>
               <div style={{ marginBottom: 14 }}>
@@ -1551,7 +1527,7 @@ if (!dbLoaded) return (
         </div>}
            
               {/* MAIN CONTENT */}
-<div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "16px" : "28px 32px", background: "#F5F7FA" }}>
+<div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
 
 {/* DASHBOARD VIEW */}
 {activeView === "dashboard" && (
@@ -1560,7 +1536,7 @@ if (!dbLoaded) return (
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}>Dashboard</div>
       <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Engagement tracking & batch analytics</div>
     </div>
-   <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap: isMobile ? 10 : 16, marginBottom: 24 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
       {[
         { label: "Messages Generated", value: prospects.filter(p => p.status !== "idle").length, icon: "✉️", color: C.blue },
         { label: "Prospects Active", value: prospects.filter(p => p.status === "following" || p.status === "ready").length, icon: "🎯", color: C.green },
@@ -1576,7 +1552,7 @@ if (!dbLoaded) return (
         </div>
       ))}
     </div>
-   <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 10 : 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
       <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>📋 Recent Prospects</div>
         {prospects.length === 0 ? <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, textAlign: "center", padding: "20px 0" }}>No prospects yet</div> :
@@ -1684,8 +1660,9 @@ if (!dbLoaded) return (
               <div style={{ maxWidth: 900, margin: "0 auto" }}>
 
                 {/* Prospect Header */}
-               <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid #E4ECF4" }}>
-  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "flex-start", gap: isMobile ? 12 : 0 }}>
+                <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid #E4ECF4" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
                       <h1 style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em", marginBottom: 6, lineHeight: 1.2 }}>{sel.name}</h1>
                       <div style={{ fontSize: 12, color: C.textMid, fontFamily: MONO, letterSpacing: "0.02em" }}>
                         {sel.jobTitle && <span>{sel.jobTitle}</span>}
