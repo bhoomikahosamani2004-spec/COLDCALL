@@ -425,7 +425,7 @@ STRUCTURE TO FOLLOW:
 Condense Overview: https://docs.zeliot.in/condense
 Case Studies: https://www.zeliot.in/case-studies
 About Zeliot: www.zeliot.in/quick-links
-Get Started with Condense: https://www.zeliot.in/try-now"
+Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1"
 - Social proof: "Zeliot supports leading [industry] companies such as TVS Motor, Volvo, Tata Motors, Ashok Leyland, Royal Enfield, Eicher Motors, SML Isuzu, Adani Ports & Logistics, Montra Electric — helping them build large-scale connected platforms, process high-frequency data, and enable real-time intelligence services."
 - Closing: "I would be happy to walk you through how leading [industry] platforms are using Condense. Please let me know a convenient time for a short discussion next week. Looking forward to your guidance on a suitable time for the discussion."
 - Sign-off: Use senderProfile name, title, company and phone if provided, otherwise use: "Veera Raghavan\nEnterprise Business (India)\nZeliot\n+91 935-309-4136"
