@@ -130,13 +130,17 @@ function findIndustryUseCases(company, industry, researchData) {
   return bestMatch || INDUSTRY_USE_CASES[4]; // default to digital_transformation
 }
 // ─── SUCCESS STORIES LIBRARY ─────────────────────────────────────────────────
+// ─── SUCCESS STORIES LIBRARY (from Zeliot PDFs) ──────────────────────────────
 const SUCCESS_STORIES = [
-  { id: "tvs", company: "TVS Motor", industry: "Automotive OEM / Two-Wheeler", tags: ["automotive", "oem", "two-wheeler", "vehicle telemetry", "manufacturing"], summary: "TVS Motor uses Condense to stream real-time vehicle telemetry across connected two-wheelers, enabling predictive diagnostics and over-the-air data sync at scale.", outcome: "40% reduction in data pipeline complexity, real-time fleet visibility across 2M+ connected vehicles." },
-  { id: "eicher", company: "Eicher Motors / Royal Enfield", industry: "Automotive OEM / Commercial Vehicles", tags: ["automotive", "oem", "commercial vehicle", "two-wheeler", "connected vehicle"], summary: "Eicher Motors deployed Condense for high-frequency CAN bus data streaming from commercial trucks and Royal Enfield motorcycles, standardizing data across vehicle lines.", outcome: "Unified real-time data backbone across two brands, enabling shared analytics and compliance." },
-  { id: "tata_motors", company: "Tata Motors", industry: "Automotive OEM / EV / Commercial Vehicles", tags: ["automotive", "oem", "ev", "commercial vehicle", "fleet", "tata"], summary: "Tata Motors leverages Condense for real-time EV battery telemetry streaming and commercial fleet monitoring, supporting their transition to electric mobility.", outcome: "Real-time BMS data streaming enabling proactive battery health management at fleet scale." },
-  { id: "ashok_leyland", company: "Ashok Leyland", industry: "Commercial Vehicle Manufacturing", tags: ["commercial vehicle", "automotive", "logistics", "fleet management", "manufacturing"], summary: "Ashok Leyland uses Condense to unify telemetry from heavy commercial vehicles, enabling real-time diagnostics and dealer network visibility.", outcome: "Reduced downtime through real-time fault detection; improved aftersales response by 35%." },
-  { id: "sml_isuzu", company: "SML Isuzu", industry: "Commercial Vehicle / Light Trucks", tags: ["commercial vehicle", "automotive", "light trucks", "fleet"], summary: "SML Isuzu deployed Condense for vehicle data aggregation across their light commercial vehicle fleet, enabling centralized monitoring and analytics.", outcome: "Streamlined data from 10+ data sources into a single real-time pipeline." },
-  { id: "three_wheeler_ev", company: "EV Three-Wheeler OEM (Confidential)", industry: "Electric Three-Wheeler / Last-Mile Delivery", tags: ["ev", "three-wheeler", "last-mile", "electric vehicle", "fleet", "delivery", "logistics"], summary: "A leading EV three-wheeler manufacturer uses Condense to stream battery and motor telemetry for their last-mile delivery fleet, enabling real-time route optimization and battery swap scheduling.", outcome: "30% improvement in battery utilization; predictive swap scheduling reduced downtime by 25%." },
+  { id: "vecv_volvo_eicher", company: "VECV (Volvo Eicher)", industry: "Commercial Vehicle OEM", tags: ["automotive","oem","commercial vehicle","ibm","kafka","connected vehicle","fleet","eicher","volvo","truck"], summary: "VECV switched from IBM Event Streams to Condense to power their connected vehicle program for 200K+ M&HCV variants — achieving real-time scalability, cloud flexibility, and AIS-140 compliance.", outcome: "20% TCO reduction · 99.95% uptime · 35% less dev & ops spend · 6 months GTM acceleration · 500 MBps peak throughput · 200K connected vehicles." },
+  { id: "royal_enfield", company: "Royal Enfield", industry: "Automotive OEM / Two-Wheeler", tags: ["automotive","oem","two-wheeler","gcp","kafka","byoc","motorbike","bike"], summary: "Royal Enfield uses Condense as the core streaming engine for their next-gen connected bike platform, handling high-volume telemetry on Google Cloud (GCP) with BYOC Kafka.", outcome: "40,000+ connected bikes · BYOC Kafka on GCP · high-volume telemetry ingestion at scale." },
+  { id: "montra_electric", company: "Montra Electric", industry: "EV OEM / Electric Mobility", tags: ["ev","electric vehicle","oem","kafka","confluent","tco","three-wheeler","electric"], summary: "Montra Electric replaced Confluent + Sibros with Condense, handling 65 MBps average data ingress across diverse EV variants including trucks and 3-wheelers.", outcome: "40% reduction in TCO · scaled from 20K to 62K+ connected vehicles." },
+  { id: "ceat", company: "CEAT Tyres", industry: "Tyre OEM / Fleet Management", tags: ["tyre","fleet","oem","byoc","fleet management","automotive"], summary: "CEAT built a full fleet-management system for intelligent tyre health analytics in under 120 days using Condense — fully deployed on their own cloud (BYOC).", outcome: "Rapid GTM in 120 days · 6,500+ connected vehicles · fully operational BYOC deployment." },
+  { id: "adani_ports", company: "Adani Ports & Logistics", industry: "Logistics / Ports", tags: ["logistics","ports","supply chain","asset tracking","google pub/sub","adani"], summary: "Adani Ports deployed Condense as a unified backend for all connected assets across pan-India ports, integrating with Amnex device gateways via Google Pub/Sub.", outcome: "Pan-India asset control · Google Pub/Sub data backend · centralized monitoring across all ports." },
+  { id: "tata_motors", company: "Tata Motors", industry: "Automotive OEM / EV / Commercial Vehicles", tags: ["automotive","oem","ev","commercial vehicle","fleet","tata","can","telemetry","dtc"], summary: "Tata Motors deployed Condense for full-stack Telemetry, CAN, Events, and DTC integration across legacy and new fleet variants.", outcome: "15,000 vehicles · 10s packet frequency · mission-critical control · advanced system integration." },
+  { id: "ashok_leyland", company: "Ashok Leyland", industry: "Commercial Vehicle OEM", tags: ["commercial vehicle","automotive","oem","saas","fleet management","leyland","ialert"], summary: "Ashok Leyland uses Condense for iAlert FMS and ConnectAll — supporting massive scale on SaaS infrastructure with hardware connector support.", outcome: "Fully managed SaaS with HW connectors · backbone for iAlert FMS · supports massive scale." },
+  { id: "syaa", company: "Syaa (OEM SI)", industry: "Asset Tracking / IoT", tags: ["logistics","asset tracking","iot","4g","2g","oem","fleet","telematics"], summary: "Syaa uses Condense for high-scale asset tracking, handling 100M+ packets daily with smart frequency switching (6s ignition ON / 120s ignition OFF).", outcome: "25,000+ vehicles · 100M+ packets daily · efficient 4G & 2G pipeline." },
+  { id: "tvs", company: "TVS Motor", industry: "Automotive OEM / Two-Wheeler", tags: ["automotive","oem","two-wheeler","vehicle telemetry","manufacturing","tvs"], summary: "TVS Motor uses Condense to stream real-time vehicle telemetry across connected two-wheelers, enabling predictive diagnostics and OTA data sync at scale.", outcome: "Real-time fleet visibility with high-frequency telemetry streaming across connected two-wheelers." },
 ];
 
 // ─── PERSISTENT STORAGE HELPERS ──────────────────────────────────────────────
@@ -444,6 +448,9 @@ Return ONLY this JSON:
   "day14_followup": "...",
   "email_subject": "...",
   "email_body": "...",
+  "email_followup1": "...",
+  "email_followup2": "...",
+  "key_points": [
   "key_points": [
     "Why this message was written this way — what research was used",
     "What pain point was targeted and why",
@@ -461,7 +468,7 @@ Return ONLY this JSON:
   const data2 = await callClaude({
     system: "You are Veera Raghavan. Study the training examples and replicate the style precisely. Return ONLY valid JSON. Start with { and end with }.",
     messages: [{ role: "user", content: prompt }],
-    max_tokens: 1800,
+    max_tokens: 2200,
   });
   const text2 = (data2.content || []).filter(b => b.type === "text").map(b => b.text).join("");
   onLog(`✅ Messages crafted using ${topExamples.length} training examples + ${matchedStories.length} success stories`);
@@ -576,6 +583,8 @@ const FOLLOWUP_SCHEDULE = [
   { key: "day7_followup",   label: "Follow-Up 2",     day: "Day 7",  icon: "📨", hint: "7 days after first message" },
   { key: "day14_followup",  label: "Follow-Up 3",     day: "Day 14", icon: "📨", hint: "Final nudge — keep door open" },
   { key: "email_body",      label: "Email",           day: "Email",  icon: "✉️", hint: "Full email version" },
+  { key: "email_followup1", label: "Email F/U 1",     day: "E+3",   icon: "📧", hint: "Follow-up email 3 days after first email" },
+  { key: "email_followup2", label: "Email F/U 2",     day: "E+7",   icon: "📧", hint: "Final follow-up email 7 days after first email" },
 ];
 
 // ─── COMPONENTS ───────────────────────────────────────────────────────────────
@@ -868,7 +877,7 @@ useEffect(() => {
   const addProspect = () => {
     if (!form.name || !form.company) return;
     const id = `p_${Date.now()}`;
-    setProspects(prev => [...prev, { ...form, id, status: "idle", createdAt: new Date().toISOString(), sentAt: null }]);
+   setProspects(prev => [{ ...form, id, status: "idle", createdAt: new Date().toISOString(), sentAt: null }, ...prev]);
     setSelected(id);
     setForm({ name: "", jobTitle: "", company: "", linkedinUrl: "", email: "", phone: "", jdText: "" });
     setShowJD(false);
@@ -915,7 +924,7 @@ const linkedinIdx = idx(["linkedin","person linkedin url","profile url","url"]);
         sentAt: null,
       });
     }
-    setProspects(prev => [...prev, ...added]);
+    setProspects(prev => [...added, ...prev]);
     setUploadStatus(`✅ ${added.length} prospects imported!`);
     if (added.length > 0) { setSelected(added[0].id); setBatchFrom(1); setBatchTo(Math.min(30, added.length)); setTimeout(() => setBatchOpen(true), 600); }
     setTimeout(() => setUploadStatus(""), 4000);
@@ -968,7 +977,7 @@ const applyMapping = () => {
       sentAt: null,
     });
   });
-  setProspects(prev => [...prev, ...added]);
+  setProspects(prev => [...added, ...prev]);
   setShowMapper(false);
   setCsvHeaders([]); setCsvRows([]); setCsvMapping({});
   setUploadStatus(`✅ ${added.length} prospects imported!`);
