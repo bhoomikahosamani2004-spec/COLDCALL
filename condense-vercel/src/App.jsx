@@ -1456,7 +1456,7 @@ if (!dbLoaded) return (
           {isMobile && sidebarOpen && (
   <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 89, top: 60 }} />
 )}
-{activeView === "prospects" && <div className={isMobile ? `mobile-sidebar${sidebarOpen ? " open" : ""}` : ""} style={{ width: isMobile ? 280 : 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "4px 0 20px rgba(10,37,64,0.15)" : "2px 0 8px rgba(10,37,64,0.04)", position: isMobile ? "fixed" : "relative", top: isMobile ? 60 : "auto", bottom: isMobile ? 0 : "auto", left: 0, zIndex: isMobile ? 90 : "auto", transform: isMobile ? (sidebarOpen ? "translateX(0)" : "translateX(-100%)") : "none", transition: "transform 0.3s ease" }}>
+{activeView === "prospects" && className={isMobile ? (sidebarOpen ? "mobile-sidebar open" : "mobile-sidebar") : ""} style={{ width: isMobile ? 280 : 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: isMobile ? "4px 0 20px rgba(10,37,64,0.15)" : "2px 0 8px rgba(10,37,64,0.04)", position: isMobile ? "fixed" : "relative", top: isMobile ? 60 : "auto", bottom: isMobile ? 0 : "auto", left: 0, zIndex: isMobile ? 90 : "auto", transform: isMobile ? (sidebarOpen ? "translateX(0)" : "translateX(-100%)") : "none", transition: "transform 0.3s ease" }}>
             {/* Add Prospect Form */}
             <div style={{ padding: "18px 16px", borderBottom: "1px solid #EEF2F7", overflowY: "auto", maxHeight: "55vh" }}>
               <div style={{ marginBottom: 14 }}>
