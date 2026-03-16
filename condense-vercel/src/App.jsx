@@ -1122,7 +1122,6 @@ if (!dbLoaded) return (
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontFamily: MONO, letterSpacing: "0.06em" }}>Trained</span>
             </div>
             {[
-            {[
   { key: "prospects", label: "🎯 Prospects", icon: "🎯" },
   { key: "dashboard", label: "📊 Dashboard", icon: "📊" },
   { key: "training", label: "🧠 Training", icon: "🧠" },
