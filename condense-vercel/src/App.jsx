@@ -440,7 +440,19 @@ Return ONLY this JSON:
   "day7_followup": "...",
   "day14_followup": "...",
   "email_subject": "...",
-  "email_body": "..."
+  "email_body": "...",
+  "key_points": [
+    "Why this message was written this way — what research was used",
+    "What pain point was targeted and why",
+    "What personalization hook was used",
+    "What success story or proof point was referenced"
+  ],
+  "objections": [
+    {"title": "We already use Confluent / built our own Kafka", "response": "Full response text..."},
+    {"title": "Not the right time / budget constraints", "response": "Full response text..."},
+    {"title": "Send me more information / not sure if relevant", "response": "Full response text..."},
+    {"title": "We have an internal team handling this", "response": "Full response text..."}
+  ]
 }`;
 
   const data2 = await callClaude({
@@ -638,6 +650,9 @@ function SendButtons({ prospect, messageText, messageType, emailSubject, senderP
       <button className="send-btn" onClick={sendEmail} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 4, border: `1px solid ${C.amber}55`, background: C.amberDim, color: C.amber, fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: "pointer" }}>
         <span style={{ fontSize: 14 }}>✉️</span> Send Mail
       </button>
+      <button className="send-btn" onClick={sendLinkedIn} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 4, border: "1px solid #0077B544", background: "#EBF5FB", color: "#0077B5", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: "pointer" }}>
+        <span style={{ fontSize: 14 }}>💼</span> LinkedIn
+      </button>
     </div>
   );
 }
@@ -689,17 +704,20 @@ const [dbLoaded, setDbLoaded] = useState(false);
 useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
-    const [p, r, m, e, rep, n] = await Promise.all([
-      dbLoad('prospects'), dbLoad('research'), dbLoad('messages'),
-      dbLoad('edits'), dbLoad('replies'), dbLoad('notifications'),
-    ]);
+  const [p, r, m, e, rep, n, rat, tr] = await Promise.all([
+  dbLoad('prospects'), dbLoad('research'), dbLoad('messages'),
+  dbLoad('edits'), dbLoad('replies'), dbLoad('notifications'),
+  dbLoad('ratings'), dbLoad('training'),
+]);
     setProspects(Object.values(p));
     setResearch(r);
     setMessages(m);
     setEdits(e);
     setReplies(Object.values(rep));
     setNotifications(Object.values(n));
-    setDbLoaded(true);
+    setRatings(rat);
+    setTrainingExamples(Object.values(tr));
+    setDbLoaded(true);    
   }
   loadAll();
 }, []);
@@ -735,6 +753,10 @@ const [showMapper, setShowMapper] = useState(false);
   try { return JSON.parse(localStorage.getItem('sender_profile') || 'null') || {}; } catch { return {}; }
 });
 const [showProfile, setShowProfile] = useState(false);
+const [activeView, setActiveView] = useState("prospects"); // prospects | dashboard | training
+const [ratings, setRatings] = useState({});
+const [ratingFeedback, setRatingFeedback] = useState({});
+const [trainingExamples, setTrainingExamples] = useState([]);
   
 
   // Persist state changes
@@ -767,6 +789,17 @@ useEffect(() => {
   if (!dbLoaded) return;
   notifications.forEach(n => dbSave('notifications', n.id || `n_${Date.now()}`, n));
 }, [notifications, dbLoaded]);
+  
+  useEffect(() => {
+  if (!dbLoaded) return;
+  Object.entries(ratings).forEach(([id, val]) => dbSave('ratings', id, val));
+}, [ratings, dbLoaded]);
+
+useEffect(() => {
+  if (!dbLoaded) return;
+  trainingExamples.forEach(t => dbSave('training', t.id, t));
+}, [trainingExamples, dbLoaded]);
+  
   useEffect(() => {
   localStorage.setItem('sender_profile', JSON.stringify(senderProfile));
 }, [senderProfile]);
@@ -1056,6 +1089,13 @@ if (!dbLoaded) return (
               <span style={{ fontSize: 18, fontFamily: DISPLAY, fontWeight: 700, color: replies.length > 0 ? "#FFC043" : "rgba(255,255,255,0.25)", lineHeight: 1 }}>{replies.length}</span>
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontFamily: MONO, letterSpacing: "0.06em" }}>Trained</span>
             </div>
+            {[
+            { key: "prospects", label: "🎯 Prospects" },
+            { key: "dashboard", label: "📊 Dashboard" },
+            { key: "training", label: "🧠 Training" },
+].map(v => (
+  <button key={v.key} onClick={() => setActiveView(v.key)} style={{ padding: "5px 12px", borderRadius: 6, border: "none", background: activeView === v.key ? "rgba(27,110,243,0.3)" : "transparent", color: activeView === v.key ? "#FFFFFF" : "rgba(255,255,255,0.5)", fontSize: 11, fontFamily: FONT, cursor: "pointer", fontWeight: activeView === v.key ? 600 : 400 }}>{v.label}</button>
+))}
             <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.12)" }} />
             <button onClick={() => setShowProfile(s => !s)} style={{ background: showProfile ? "#EEF5FF" : "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "6px 14px", color: "#FFFFFF", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontFamily: FONT }}>
   <div style={{ width: 24, height: 24, borderRadius: "50%", background: senderProfile.name ? "linear-gradient(135deg, #1B6EF3, #3D8BFF)" : "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#FFFFFF" }}>
@@ -1475,9 +1515,115 @@ if (!dbLoaded) return (
             </div>
           </div>
            
-          {/* MAIN CONTENT */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
-            {!sel ? (
+              {/* MAIN CONTENT */}
+<div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
+
+{/* DASHBOARD VIEW */}
+{activeView === "dashboard" && (
+  <div style={{ maxWidth: 900, margin: "0 auto" }} className="card-enter">
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}>Dashboard</div>
+      <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Engagement tracking & batch analytics</div>
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
+      {[
+        { label: "Messages Generated", value: prospects.filter(p => p.status !== "idle").length, icon: "✉️", color: C.blue },
+        { label: "Prospects Active", value: prospects.filter(p => p.status === "following" || p.status === "ready").length, icon: "🎯", color: C.green },
+        { label: "Training Examples", value: trainingExamples.length, icon: "🧠", color: C.amber },
+        { label: "Replies Logged", value: replies.length, icon: "💬", color: C.purple },
+        { label: "Total Prospects", value: prospects.length, icon: "👤", color: C.gold },
+        { label: "Completed", value: prospects.filter(p => p.status === "done").length, icon: "✅", color: C.green },
+      ].map(stat => (
+        <div key={stat.label} style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: "18px 20px", boxShadow: "0 1px 4px rgba(10,37,64,0.06)" }}>
+          <div style={{ fontSize: 24, marginBottom: 6 }}>{stat.icon}</div>
+          <div style={{ fontSize: 28, fontFamily: DISPLAY, fontWeight: 800, color: stat.color, lineHeight: 1 }}>{stat.value}</div>
+          <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO, marginTop: 4 }}>{stat.label}</div>
+        </div>
+      ))}
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>📋 Recent Prospects</div>
+        {prospects.length === 0 ? <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, textAlign: "center", padding: "20px 0" }}>No prospects yet</div> :
+          prospects.slice(-5).reverse().map(p => (
+            <div key={p.id} onClick={() => { setActiveView("prospects"); setSelected(p.id); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #F0F4F8", cursor: "pointer" }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: C.text, fontFamily: FONT }}>{p.name}</div>
+                <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{p.company}</div>
+              </div>
+              <Badge status={p.status} />
+            </div>
+          ))
+        }
+      </div>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>📊 Status Breakdown</div>
+        {Object.entries(STATUS_CONFIG).map(([status, cfg]) => {
+          const count = prospects.filter(p => p.status === status).length;
+          if (count === 0) return null;
+          return (
+            <div key={status} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #F0F4F8" }}>
+              <span style={{ fontSize: 12, color: C.textMid, fontFamily: FONT }}>{cfg.label}</span>
+              <span style={{ fontSize: 12, fontFamily: MONO, color: cfg.color, fontWeight: 600 }}>{count}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+)}
+
+{/* TRAINING VIEW */}
+{activeView === "training" && (
+  <div style={{ maxWidth: 900, margin: "0 auto" }} className="card-enter">
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div>
+        <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}>Training</div>
+        <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Teach the AI with your best messages</div>
+      </div>
+    </div>
+    <div style={{ background: C.goldDimmer, border: `1px solid ${C.gold}33`, borderRadius: 8, padding: "12px 16px", marginBottom: 20, fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.7 }}>
+      🧠 <strong>How training works:</strong> Rate any generated message 4-5 stars and it's automatically added here. The AI reads all training examples before generating new messages, learning your preferred tone, style, and structure.
+    </div>
+    <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid #E4ECF4", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 16 }}>🧠</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: C.navy, fontFamily: DISPLAY }}>Training Examples</span>
+          <span style={{ fontSize: 10, fontFamily: MONO, color: C.gold, background: C.goldDim, padding: "2px 8px", borderRadius: 10 }}>{trainingExamples.length} examples</span>
+        </div>
+      </div>
+      {trainingExamples.length === 0 ? (
+        <div style={{ padding: "60px 20px", textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>🧠</div>
+          <div style={{ fontSize: 14, color: C.textDim, fontFamily: FONT, marginBottom: 8 }}>No training examples yet</div>
+          <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO }}>Rate generated messages 4+ stars or add manually</div>
+        </div>
+      ) : (
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+          {trainingExamples.map((ex, i) => (
+            <div key={ex.id} style={{ padding: "14px 16px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                <div>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: C.text, fontFamily: FONT }}>{ex.prospect} · {ex.company}</span>
+                  <span style={{ fontSize: 10, fontFamily: MONO, color: C.textDim, marginLeft: 8 }}>{ex.messageType}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 12, color: "#F5A623" }}>{"★".repeat(ex.stars)}</span>
+                  <button onClick={() => setTrainingExamples(prev => prev.filter(t => t.id !== ex.id))} style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer", fontFamily: MONO }}>Remove</button>
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.6, maxHeight: 80, overflow: "hidden" }}>{ex.message?.slice(0, 200)}...</div>
+              {ex.feedback && <div style={{ fontSize: 11, color: C.amber, fontFamily: MONO, marginTop: 6 }}>Feedback: {ex.feedback}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
+{activeView === "prospects" && !sel ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 20 }}>
                 <div style={{ width: 72, height: 72, borderRadius: 16, background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 32px rgba(27,110,243,0.25)" }}>
                   <span style={{ fontSize: 32 }}>⚡</span>
@@ -1499,7 +1645,7 @@ if (!dbLoaded) return (
                   ))}
                 </div>
               </div>
-            ) : (
+            ) : activeView === "prospects" && sel ? (
               <div style={{ maxWidth: 900, margin: "0 auto" }}>
 
                 {/* Prospect Header */}
@@ -1557,6 +1703,8 @@ if (!dbLoaded) return (
                       { key: "research", label: "Research", icon: "🔍" },
                       { key: "stories", label: `Stories${selMatchedStories.length > 0 ? ` (${selMatchedStories.length})` : ""}`, icon: "🏆" },
                       { key: "reply", label: "Log Reply", icon: "📬" },
+                      { key: "keypoints", label: "Key Points", icon: "💡" },
+                      { key: "objections", label: "Objections", icon: "🛡️" },
                     ].map(tab => (
                       <button key={tab.key} className="tab-btn" onClick={() => setActiveTab(tab.key)} style={{ padding: "12px 18px", border: "none", background: "transparent", cursor: "pointer", borderBottom: activeTab === tab.key ? "2px solid #1B6EF3" : "2px solid transparent", marginBottom: "-2px", color: activeTab === tab.key ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 13, fontWeight: activeTab === tab.key ? 600 : 400, display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s", borderRadius: "6px 6px 0 0" }}>
                         {tab.icon} {tab.label}
@@ -1628,14 +1776,54 @@ if (!dbLoaded) return (
                             <SendButtons prospect={sel} messageText={text} messageType={activeMsg} emailSubject={selMessages.email_subject} senderProfile={senderProfile} />
                           </div>
 
-                          <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>
-                              {isEmail ? "Opens your mail client with message pre-filled" : "Copy → paste into LinkedIn or use send buttons above"}
-                            </div>
-                            {edits[editKey] !== undefined && (
-                              <GlowButton small color={C.textDim} onClick={() => setEdits(prev => { const n = { ...prev }; delete n[editKey]; return n; })}>↺ Reset</GlowButton>
-                            )}
-                          </div>
+                         <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+  <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>
+    {isEmail ? "Opens your mail client with message pre-filled" : "Copy → paste into LinkedIn or use send buttons above"}
+  </div>
+  {edits[editKey] !== undefined && (
+    <GlowButton small color={C.textDim} onClick={() => setEdits(prev => { const n = { ...prev }; delete n[editKey]; return n; })}>↺ Reset</GlowButton>
+  )}
+</div>
+
+{/* STAR RATING */}
+<div style={{ marginTop: 16, padding: "16px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+    <span style={{ fontSize: 18 }}>⭐</span>
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT }}>Rate this message</div>
+      <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>5 stars adds it to training data</div>
+    </div>
+  </div>
+  <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+    {[1,2,3,4,5].map(star => {
+      const currentRating = ratings[editKey]?.stars || 0;
+      return (
+        <button key={star} onClick={() => {
+          const newRating = { stars: star, message: text, messageType: activeMsg, prospect: sel.name, company: sel.company, createdAt: new Date().toISOString() };
+          setRatings(prev => ({ ...prev, [editKey]: newRating }));
+          if (star >= 4) {
+            const trainingEx = { id: `t_${Date.now()}`, ...newRating, feedback: ratingFeedback[editKey] || "" };
+            setTrainingExamples(prev => {
+              const exists = prev.find(t => t.id === trainingEx.id);
+              return exists ? prev : [...prev, trainingEx];
+            });
+          }
+        }} style={{ fontSize: 22, background: "none", border: "none", cursor: "pointer", color: star <= currentRating ? "#F5A623" : "#D8E2EE", transition: "all 0.15s", transform: star <= currentRating ? "scale(1.1)" : "scale(1)" }}>★</button>
+      );
+    })}
+    {ratings[editKey]?.stars > 0 && (
+      <span style={{ fontSize: 11, color: ratings[editKey].stars >= 4 ? C.green : C.textDim, fontFamily: MONO, marginLeft: 8, alignSelf: "center" }}>
+        {ratings[editKey].stars >= 4 ? "✅ Added to training!" : "Saved"}
+      </span>
+    )}
+  </div>
+  <textarea
+    value={ratingFeedback[editKey] || ""}
+    onChange={e => setRatingFeedback(prev => ({ ...prev, [editKey]: e.target.value }))}
+    placeholder="Optional: what did you like or want changed?"
+    style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontFamily: FONT, outline: "none", resize: "vertical", minHeight: 60 }}
+  />
+</div>
                         </div>
                       );
                     })()}
@@ -1791,7 +1979,45 @@ if (!dbLoaded) return (
                     </div>
                   </div>
                 )}
+                {/* KEY POINTS TAB */}
+{activeTab === "keypoints" && selMessages?.key_points && (
+  <div className="card-enter">
+    <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 16 }}>💡 Why This Message Was Written This Way</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {selMessages.key_points.map((point, i) => (
+          <div key={i} style={{ display: "flex", gap: 12, padding: "12px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", borderLeft: "3px solid #1B6EF3" }}>
+            <span style={{ color: C.gold, fontFamily: MONO, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>→</span>
+            <span style={{ fontSize: 13, color: C.textMid, fontFamily: FONT, lineHeight: 1.6 }}>{point}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
 
+{/* OBJECTIONS TAB */}
+{activeTab === "objections" && selMessages?.objections && (
+  <div className="card-enter">
+    <div style={{ fontSize: 12, color: C.textMid, fontFamily: MONO, marginBottom: 16, lineHeight: 1.7 }}>
+      Ready-made responses to common objections. Copy and use when prospects push back.
+    </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {selMessages.objections.map((obj, i) => (
+        <div key={i} style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 18, boxShadow: "0 1px 4px rgba(10,37,64,0.05)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ color: C.amber, fontSize: 14 }}>？</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.amber, fontFamily: FONT }}>{obj.title}</span>
+            </div>
+            <GlowButton small color={C.textMid} onClick={() => navigator.clipboard.writeText(obj.response)}>Copy</GlowButton>
+          </div>
+          <div style={{ fontSize: 13, color: C.textMid, fontFamily: FONT, lineHeight: 1.7, padding: "10px 14px", background: "#F8FAFC", borderRadius: 6 }}>{obj.response}</div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
                 {/* LOG REPLY TAB */}
                 {activeTab === "reply" && (
                   <div className="card-enter">
@@ -1874,6 +2100,8 @@ if (!dbLoaded) return (
                 )}
               </div>
             )}
+          </div>
+        )}
           </div>
         </div>
       </div>
