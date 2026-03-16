@@ -1656,7 +1656,7 @@ if (!dbLoaded) return (
                   ))}
                 </div>
               </div>
-            ) : sel ? (
+            ) : sel && activeView === "prospects" ? (
               <div style={{ maxWidth: 900, margin: "0 auto" }}>
 
                 {/* Prospect Header */}
