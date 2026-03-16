@@ -280,7 +280,7 @@ Respond with ONLY this JSON:
 }
 
 // ─── MESSAGE GENERATION AGENT (ENHANCED) ──────────────────────────────────────
-async function generateMessages(person, research, matchedStories, jdText, replyTrainingData, industryContext, onLog) {
+  async function generateMessages(person, research, matchedStories, jdText, replyTrainingData, industryContext, extraContext, onLog) {
   onLog("✍️ Crafting personalized messages with JD context + success stories...");
 
   const seniority = (person.seniority || "").toLowerCase();
@@ -386,7 +386,10 @@ Persona Focus: ${(research.persona_context?.focus_areas || []).join(", ")}
 Recent News: ${(research.recent_news || []).join(" | ")}
 Why Condense Fits: ${research.why_condense_fits}
 Conversation Hooks: ${(research.conversation_hooks || []).join(" | ")}
-
+${extraContext ? `EXTRA CONTEXT FROM VEERA (use this to personalize — this is personal intel Veera has about this prospect):
+${extraContext}
+Reference this naturally in the messages — e.g. "Given we connected at AutoExpo..." or "Since you're on AWS IoT..." — make it feel personal and specific.
+` : ""}
 RELEVANT SUCCESS STORIES TO REFERENCE (pick 1 most relevant):
 ${storyContext}
 INDUSTRY USE CASES (use these EXACT use cases in email and LinkedIn — do not make up your own):
@@ -739,6 +742,7 @@ useEffect(() => {
   const [running, setRunning] = useState(null);
   const [activeTab, setActiveTab] = useState("messages"); // messages | research | stories | reply
   const [showJD, setShowJD] = useState(false);
+  const [extraContext, setExtraContext] = useState({});
   const [replyText, setReplyText] = useState("");
   const [replyIndustry, setReplyIndustry] = useState("");
   const [replyTone, setReplyTone] = useState("");
@@ -981,9 +985,10 @@ const applyMapping = () => {
     try {
       updateStatus("researching");
       const researchData = await runResearchAgent(
-        prospect.company, prospect.linkedinUrl, prospect.name, prospect.jobTitle,
-        prospect.jdText || "", (msg) => addLog(id, msg)
-      );
+  prospect.company, prospect.linkedinUrl, prospect.name, prospect.jobTitle,
+  prospect.jdText || "", (msg) => addLog(id, msg)
+);
+const extraCtx = extraContext[id] || "";
       setResearch(prev => ({ ...prev, [id]: researchData }));
 
       updateStatus("generating");
@@ -997,7 +1002,7 @@ const applyMapping = () => {
       const matchedStories = findMatchingStories(prospect.company, prospect.industry || "", researchData);
       addLog(id, `🏆 Matched ${matchedStories.length} relevant success stories`);
 
-      const msgs = await generateMessages(prospect, researchData, matchedStories, prospect.jdText || "", replies, { industryUC, useCasesStr, industryIntro, industrySocialProof, industryClosing }, (msg) => addLog(id, msg));
+      const msgs = await generateMessages(prospect, researchData, matchedStories, prospect.jdText || "", replies, { industryUC, useCasesStr, industryIntro, industrySocialProof, industryClosing }, extraCtx, (msg) => addLog(id, msg));
       setMessages(prev => ({ ...prev, [id]: msgs }));
       setActiveMsg("connection_note");
 
@@ -1426,8 +1431,8 @@ if (!dbLoaded) return (
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden", height: "calc(100vh - 64px)" }}>
 
-          {/* LEFT SIDEBAR */}
-          <div style={{ width: 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "2px 0 8px rgba(10,37,64,0.04)" }}>
+         {/* LEFT SIDEBAR */}
+{activeView === "prospects" && <div style={{ width: 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "2px 0 8px rgba(10,37,64,0.04)" }}>
             {/* Add Prospect Form */}
             <div style={{ padding: "18px 16px", borderBottom: "1px solid #EEF2F7", overflowY: "auto", maxHeight: "55vh" }}>
               <div style={{ marginBottom: 14 }}>
@@ -1518,8 +1523,8 @@ if (!dbLoaded) return (
                   )}
                 </div>
               ))}
-            </div>
           </div>
+        </div>}
            
               {/* MAIN CONTENT */}
 <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
@@ -1683,7 +1688,22 @@ if (!dbLoaded) return (
                     </div>
                   </div>
                 </div>
-
+                {/* EXTRA CONTEXT BOX */}
+<div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 18, marginBottom: 20 }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+    <div style={{ width: 36, height: 36, borderRadius: 8, background: "linear-gradient(135deg, #F59E0B, #F97316)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✏️</div>
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: C.navy, fontFamily: FONT }}>Extra Context</div>
+      <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>Optional — personalises the message</div>
+    </div>
+  </div>
+  <textarea
+    value={extraContext[sel.id] || ""}
+    onChange={e => setExtraContext(prev => ({ ...prev, [sel.id]: e.target.value }))}
+    placeholder="Met at AutoExpo 2024, uses AWS IoT, recently raised Series B, mentioned pain with Kafka ops..."
+    style={{ width: "100%", background: "#F8FAFC", border: "1px solid #E4ECF4", color: C.text, borderRadius: 8, padding: "10px 14px", fontSize: 12, fontFamily: FONT, lineHeight: 1.7, outline: "none", resize: "vertical", minHeight: 80 }}
+  />
+</div>
                 {/* Agent Log */}
                 {logs[sel.id]?.length > 0 && (
                   <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: "14px 16px", marginBottom: 20 }}>
@@ -1927,10 +1947,62 @@ if (!dbLoaded) return (
                       </div>
                     </div>
 
-                    <div style={{ background: "rgba(93,232,160,0.03)", border: `1px solid rgba(93,232,160,0.15)`, borderRadius: 4, padding: 16 }}>
-                      <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.green, fontFamily: MONO, marginBottom: 10, opacity: 0.8 }}>Why Condense Fits</div>
-                      <div style={{ fontSize: 14, color: "#1A4060", lineHeight: 1.8, fontStyle: "italic" }}>{selResearch.why_condense_fits}</div>
-                    </div>
+                    {/* WHY CONDENSE HELPS */}
+<div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 10, padding: 20, marginBottom: 10 }}>
+  <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>⚡ Why Condense Helps {sel.company}</div>
+  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    {(selResearch.why_condense_fits || "").split(". ").filter(s => s.trim()).map((point, i) => (
+      <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #B8EDD3" }}>
+        <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, fontFamily: MONO }}>→</span>
+        <span style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.6 }}>{point.trim()}{point.trim().endsWith(".") ? "" : "."}</span>
+      </div>
+    ))}
+  </div>
+</div>
+
+{/* INDUSTRY USE CASES */}
+{(() => {
+  const industryUC = findIndustryUseCases(sel.company, sel.industry || "", selResearch);
+  return (
+    <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20, marginBottom: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 6 }}>🎯 Relevant Use Cases for {sel.company}</div>
+      <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 14 }}>Industry matched: {industryUC.id}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {industryUC.use_cases.map((uc, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", borderLeft: "3px solid #1B6EF3" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT, marginBottom: 3 }}>{i + 1}. {uc.title}</div>
+              <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.6 }}>{uc.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+})()}
+
+{/* SOURCES */}
+<div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20, marginBottom: 10 }}>
+  <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>🔗 Research Sources</div>
+  {selResearch.pre_read_links?.length > 0 ? (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {selResearch.pre_read_links.map((link, i) => (
+        <div key={i} style={{ display: "flex", gap: 12, padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4" }}>
+          <span style={{ color: C.gold, fontFamily: MONO, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
+          <div style={{ flex: 1 }}>
+            <a href={link.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 600, color: C.gold, textDecoration: "none", fontFamily: FONT }}>{link.title} ↗</a>
+            <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO, marginTop: 3 }}>{link.relevance}</div>
+            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link.url}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, textAlign: "center", padding: "16px 0" }}>
+      No sources found. Run the agent to generate research with sources.
+    </div>
+  )}
+</div>
                   </div>
                 )}
 
