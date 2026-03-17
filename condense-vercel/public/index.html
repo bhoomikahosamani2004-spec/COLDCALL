@@ -4,11 +4,40 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Condense Agentic Outreach</title>
+
     <style>
       body { margin: 0; background: #050508; }
     </style>
   </head>
+
   <body>
     <div id="root"></div>
+
+    <!-- User identification (optional) -->
+    <script>
+      window.usetifulTags = {
+        userId: "user-1",
+        firstName: "User",
+        lastName: "Demo"
+      };
+    </script>
+
+    <!-- USETIFUL SCRIPT -->
+    <script>
+      (function (w, d, s) {
+        var a = d.getElementsByTagName('head')[0];
+        var r = d.createElement('script');
+        r.async = 1;
+        r.src = s;
+        r.setAttribute('id', 'usetifulScript');
+
+        // ✅ YOUR REAL TOKEN
+        r.dataset.token = "56b3d960e34d28c0d928f58d17e6dda1";
+
+        r.dataset.apiHostname = "https://www.usetiful.com";
+        a.appendChild(r);
+      })(window, document, "https://www.usetiful.com/dist/usetiful.js");
+    </script>
+
   </body>
 </html>
