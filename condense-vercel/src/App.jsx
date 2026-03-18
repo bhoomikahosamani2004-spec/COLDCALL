@@ -729,7 +729,7 @@ function Badge({ status }) {
 }
 
 function Spinner() {
-  return <div style={{ width: 14, height: 14, border: "1.5px solid #DDEAFF", borderTop: "1.5px solid #1B6EF3", borderRadius: "50%", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />;
+  return ={{ width: 14, height: 14, border: "1.5px solid #DDEAFF", borderTop: "1.5px solid #1B6EF3", borderRadius: "50%", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />;
 }
 
 function GlowButton({ onClick, disabled, children, color = C.gold, small, primary }) {
@@ -1647,10 +1647,31 @@ if (!dbLoaded) return (
                 </div>
               ) : prospects.map(p => (
                 <div key={p.id} className="card-enter prospect-card" onClick={() => setSelected(p.id)} style={{ padding: "11px 14px", marginBottom: 0, background: selected === p.id ? "#EEF5FF" : "#FFFFFF", borderBottom: "1px solid #F0F4F8", borderLeft: selected === p.id ? "3px solid #1B6EF3" : "3px solid transparent" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: selected === p.id ? C.navy : C.text, lineHeight: 1.3, fontFamily: FONT }}>{p.name}</div>
-                    {running === p.id && <Spinner />}
-                  </div>
+                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+  <div style={{ fontWeight: 600, fontSize: 13, color: selected === p.id ? C.navy : C.text, lineHeight: 1.3, fontFamily: FONT }}>{p.name}</div>
+  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    {running === p.id && <Spinner />}
+    <button
+      onClick={e => {
+        e.stopPropagation();
+        if (selected === p.id) setSelected(null);
+        setProspects(prev => prev.filter(pr => pr.id !== p.id));
+        if (supabase) {
+          supabase.from('prospects').delete().eq('id', p.id);
+          supabase.from('research').delete().eq('id', p.id);
+          supabase.from('messages').delete().eq('id', p.id);
+          supabase.from('edits').delete().eq('id', p.id);
+        }
+        setResearch(prev => { const n = {...prev}; delete n[p.id]; return n; });
+        setMessages(prev => { const n = {...prev}; delete n[p.id]; return n; });
+      }}
+      title="Remove prospect"
+      style={{ background: "none", border: "none", cursor: "pointer", color: C.textFaint, fontSize: 14, lineHeight: 1, padding: "0 2px", borderRadius: 3 }}
+      onMouseEnter={e => e.currentTarget.style.color = C.red}
+      onMouseLeave={e => e.currentTarget.style.color = C.textFaint}
+    >✕</button>
+  </div>
+</div>
                   <div style={{ fontSize: 11, color: C.textMid, marginTop: 2, fontFamily: FONT }}>{p.company}</div>
                   {p.email && <div style={{ fontSize: 10, color: C.textDim, marginTop: 1 }}>✉️ {p.email}</div>}
                   <div style={{ marginTop: 6 }}><Badge status={p.status} /></div>
