@@ -243,7 +243,7 @@ Provide detailed research across ALL these areas:
 
 1. COMPANY: What ${company} does, scale, revenue signals, HQ
 2. TECH STACK: Search for "site:linkedin.com ${company} kafka" OR "${company} engineering blog" — identify streaming/data tech used
-3. OPEN POSITIONS: Search "${company} data engineer jobs" OR "${company} kafka jobs" — list 2-3 relevant open roles that signal data infra investment
+3. TECH SIGNALS: Look for any additional data infrastructure signals from engineering blogs, job descriptions, or company tech pages.
 4. PERSONA ACTIVITY: What does a ${jobTitle} at ${company} typically focus on? What are their KPIs? What keeps them up at night?
 5. PAIN POINTS: 4 specific pains relevant to their role AND company scale
 6. RECENT NEWS: Search "${company} news 2025 2026" — funding, product launches, expansions
@@ -256,7 +256,6 @@ Respond with ONLY this JSON:
 {
   "company_overview": "2-3 sentence summary",
   "tech_stack_signals": ["signal 1", "signal 2", "signal 3"],
-  "open_positions": [{"title": "Data Engineer", "signal": "signals Kafka investment", "urgency": "high", "posted_date": "exact date as shown on job site or date unknown", "is_active": true, "url": "https://linkedin.com/jobs/... or not found"}],
   "condense_fit": {"score": "high", "reason": "2-3 sentence explanation"},
   "persona_context": {"focus_areas": ["area1","area2"], "kpis": ["kpi1","kpi2"], "pain_areas": ["pain1","pain2"]},
   "pain_points": ["pain 1", "pain 2", "pain 3", "pain 4"],
@@ -2058,23 +2057,7 @@ if (!dbLoaded) return (
     <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.7 }}>{selResearch.condense_fit.reason}</div>
   </div>
 )}
-                    {/* Open Positions */}
-                    {selResearch.open_positions?.length > 0 && (
-                      <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 8, padding: 16, marginBottom: 10 }}>
-                        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.green, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>💼 Open Positions (signals investment)</div>
-                        {selResearch.open_positions.map((pos, i) => (
-                          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: i < selResearch.open_positions.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none" }}>
-                            <div>
-                              <div style={{ fontSize: 12, color: C.text, fontFamily: FONT, fontWeight: 500 }}>{pos.title}</div>
-                              <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>{pos.signal}</div>
-                              {pos.posted_date && (
-                                <div style={{ fontSize: 10, fontFamily: MONO, marginTop: 3, color: pos.is_active === false ? C.red : C.green }}>
-                                  {pos.is_active === false ? "⚠️ May be filled" : "✅ Active"} · Posted: {pos.posted_date}
-                                  {pos.url && pos.url !== "not found" && (
-                                      <a href={pos.url} target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: C.gold, fontSize: 10, fontFamily: MONO }}>↗ View Job</a>
-                                  )}
-                              </div>
-                            )}
+                
                             </div>
                             {pos.urgency === "high" && <span style={{ fontSize: 9, fontFamily: MONO, color: C.green, background: C.greenDim, padding: "2px 8px", borderRadius: 3 }}>HIGH SIGNAL</span>}
                           </div>
