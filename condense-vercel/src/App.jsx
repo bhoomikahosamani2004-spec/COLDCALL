@@ -251,8 +251,7 @@ Provide detailed research across ALL these areas:
 8. WHY CONDENSE FITS: 2-3 sentence pitch tied to their specific tech signals and open roles
 9. CONVERSATION HOOKS: 2 specific hooks based on open roles OR news OR tech signals
 10. CONDENSE FIT: Score as "high", "medium", or "low". High = active Kafka/streaming usage + scale + data engineering roles. Medium = some signals but unclear. Low = small company or no data infra signals.
-11. JOB POSTINGS: Search "${company} jobs site:linkedin.com/jobs" OR "${company} site:indeed.com jobs" OR "${company} site:naukri.com jobs". For each job found, include the EXACT URL of the job posting, the EXACT date shown on the listing page (e.g. "Posted 3 days ago" = write that exactly as found). If you cannot find the actual URL or date, do NOT invent them — write url: "not found" and posted_date: "date unknown". Only include jobs you actually found on a real job site.
-Respond with ONLY this JSON:
+
 {
   "company_overview": "2-3 sentence summary",
   "tech_stack_signals": ["signal 1", "signal 2", "signal 3"],
@@ -284,7 +283,7 @@ Respond with ONLY this JSON:
     why_condense_fits: stripCites(json.why_condense_fits),
     conversation_hooks: stripCites(json.conversation_hooks),
   };
-  onLog("✅ Research complete — " + (clean.pain_points?.length || 0) + " pain points, " + (clean.open_positions?.length || 0) + " open roles found");
+  onLog("✅ Research complete — " + (clean.pain_points?.length || 0) + " pain points, " + (clean.conversation_hooks?.length || 0) + " conversation hooks found");
   return clean;
 }
 
@@ -363,7 +362,7 @@ LINKEDIN MESSAGE STRUCTURE:
   • 2-3 specific use cases for their role (NO bullet points on LinkedIn — write as flowing sentences)
   • "I would be happy to share more details. Would you be open to a 30-minute discussion next week?"
   • Sign as: Veera Raghavan | Enterprise Business (India) | Zeliot | +91 935-309-4136
-- day3_followup: 50-80 words. Different angle — reference open positions OR tech signal OR news. Keep door open. End with "Looking forward to connecting."
+- day3_followup: 50-80 words. Different angle — reference tech signal OR recent news. Keep door open.
 - day7_followup: 30-50 words. Reference a success story metric. Ask for 30 mins or email ID.
 - day14_followup: 20-35 words. Final gentle nudge. "Looking forward to your guidance."
 
@@ -390,7 +389,6 @@ RESEARCH CONTEXT:
 Company Overview: ${research.company_overview}
 Tech Stack: ${(research.tech_stack_signals || []).join(", ")}
 Pain Points: ${(research.pain_points || []).join(" | ")}
-Open Positions: ${(research.open_positions || []).map(p => p.title + " (" + p.signal + ")").join(", ")}
 Persona Focus: ${(research.persona_context?.focus_areas || []).join(", ")}
 Recent News: ${(research.recent_news || []).join(" | ")}
 Why Condense Fits: ${research.why_condense_fits}
@@ -412,7 +410,7 @@ Closing line to use: ${industryClosing}
 INSTRUCTIONS:
 1. connection_note: MAX 300 chars. Warm, curiosity-driven. Reference 1 specific thing about their role or company (use JD context if available). No pitch.
 2. day0_message: 80-120 words. Open with strongest hook. Reference their JD responsibilities if provided. Name specific pain. Optionally reference 1 success story from a similar company. One CTA.
-3. day3_followup: 50-80 words. Different angle — reference open positions found OR tech signal OR news. Keep door open.
+3. day3_followup: 50-80 words. Different angle — reference tech signal OR recent news. Keep door open.
 4. day7_followup: 30-50 words. Softer. Reference the success story OR a specific metric. Ask for 30 mins or email.
 5. day14_followup: 20-35 words. Final gentle nudge. No desperation.
 6. email_subject: Compelling subject line under 60 chars. Format: "[Industry/Company] x Zeliot Condense | Real-Time Data Platform"
@@ -566,6 +564,19 @@ Zeliot
 
 REMINDER: Para 1 = Condense intro only. Para 2 = their role + company. This order is MANDATORY.
 SPACING: Always separate paragraphs with a blank line (double newline \n\n). Never run paragraphs together without a blank line between them.
+ email_followup1: 3-4 short paragraphs. Send 3 days after the first email. 
+   Take a completely different angle from email_body — reference a tech signal 
+   OR recent company news OR a relevant success story metric (e.g. "40% TCO reduction", 
+   "99.95% uptime"). Never mention job openings. Same Veera sign-off. 
+   End with soft CTA for 30 mins next week.
+   email_followup2: 2-3 short paragraphs. Final nudge, 7 days after first email. 
+   Reference one specific Condense outcome metric. Keep door open — no desperation. 
+   Never mention job openings. Same Veera sign-off.
+
+GLOBAL RULE FOR ALL 9 OUTPUTS: Never reference job openings, hiring signals, 
+or open positions in any message — LinkedIn or email. Use tech signals, 
+recent news, success story metrics, or persona pain points instead.
+
 Return ONLY this JSON:
 {
   "connection_note": "...",
@@ -1803,7 +1814,7 @@ if (!dbLoaded) return (
                   {replies.length > 0 && <div style={{ marginTop: 14, fontSize: 12, color: C.amber, background: C.amberDim, padding: "6px 16px", borderRadius: 20, display: "inline-block", fontWeight: 500 }}>🧠 {replies.length} reply pattern{replies.length > 1 ? "s" : ""} trained — pitches improving</div>}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, maxWidth: 480, marginTop: 8 }}>
-                  {[["🔍","Deep Research","Company, tech stack, open roles"],["✍️","AI Drafting","Veera-style personalized scripts"],["📊","Smart Matching","Success stories auto-matched"]].map(([icon,title,desc])=>(
+                  {[["🔍","Deep Research","Company, tech stack, pain points"],["✍️","AI Drafting","Veera-style personalized scripts"],["📊","Smart Matching","Success stories auto-matched"]].map(([icon,title,desc])=>(
                     <div key={title} style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: "14px 12px", textAlign: "center", boxShadow: "0 1px 4px rgba(10,37,64,0.06)" }}>
                       <div style={{ fontSize: 22, marginBottom: 6 }}>{icon}</div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, marginBottom: 3 }}>{title}</div>
@@ -2025,144 +2036,138 @@ if (!dbLoaded) return (
                   </div>
                 )}
 
-                {/* RESEARCH TAB */}
-                {activeTab === "research" && selResearch && (
-                  <div className="card-enter">
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                      <div style={{ background: "rgba(14,165,233,0.03)", border: `1px solid rgba(14,165,233,0.12)`, borderRadius: 4, padding: 16 }}>
-                        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.amber, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>Pain Points</div>
-                        {(selResearch.pain_points || []).map((pt, i) => (
-                          <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "5px 0", borderBottom: i < selResearch.pain_points.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none", lineHeight: 1.5, display: "flex", gap: 8 }}>
-                            <span style={{ color: C.amber, opacity: 0.5, flexShrink: 0 }}>—</span>{pt}
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ background: "rgba(14,165,233,0.03)", border: `1px solid ${C.borderDim}`, borderRadius: 4, padding: 16 }}>
-                        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.gold, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>Tech Signals</div>
-                        {(selResearch.tech_stack_signals || []).map((s, i) => (
-                          <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "5px 0", borderBottom: i < selResearch.tech_stack_signals.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none", display: "flex", gap: 8 }}>
-                            <span style={{ color: C.gold, opacity: 0.4, flexShrink: 0 }}>·</span>{s}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-{selResearch.condense_fit && (
-  <div style={{ background: selResearch.condense_fit.score === "high" ? C.greenDim : selResearch.condense_fit.score === "medium" ? C.amberDim : C.redDim, border: `1px solid ${selResearch.condense_fit.score === "high" ? C.green : selResearch.condense_fit.score === "medium" ? C.amber : C.red}44`, borderRadius: 8, padding: 16, marginBottom: 10 }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-      <span style={{ fontSize: 18 }}>{selResearch.condense_fit.score === "high" ? "🟢" : selResearch.condense_fit.score === "medium" ? "🟡" : "🔴"}</span>
-      <span style={{ fontSize: 13, fontWeight: 700, color: selResearch.condense_fit.score === "high" ? C.green : selResearch.condense_fit.score === "medium" ? C.amber : C.red, fontFamily: FONT }}>
-        {selResearch.condense_fit.score?.toUpperCase()} FIT for Condense
-      </span>
-    </div>
-    <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.7 }}>{selResearch.condense_fit.reason}</div>
-  </div>
-)}
-                
-                            </div>
-                            {pos.urgency === "high" && <span style={{ fontSize: 9, fontFamily: MONO, color: C.green, background: C.greenDim, padding: "2px 8px", borderRadius: 3 }}>HIGH SIGNAL</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Persona Context */}
-                    {selResearch.persona_context && (
-                      <div style={{ background: "#FAF5FF", border: "1px solid #DDD0F8", borderRadius: 8, padding: 16, marginBottom: 10 }}>
-                        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.purple, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>👤 Persona Context</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                          <div>
-                            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 6 }}>FOCUS AREAS</div>
-                            {(selResearch.persona_context.focus_areas || []).map((f, i) => (
-                              <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}>
-                                <span style={{ color: C.purple, opacity: 0.5 }}>·</span>{f}
-                              </div>
-                            ))}
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 6 }}>KPIs</div>
-                            {(selResearch.persona_context.kpis || []).map((k, i) => (
-                              <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}>
-                                <span style={{ color: C.purple, opacity: 0.5 }}>·</span>{k}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                      <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 8, padding: 16 }}>
-                        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textDim, fontFamily: MONO, marginBottom: 10 }}>Company Overview</div>
-                        <div style={{ fontSize: 12, color: C.textMid, lineHeight: 1.7 }}>{selResearch.company_overview}</div>
-                      </div>
-                      <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 8, padding: 16 }}>
-                        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textDim, fontFamily: MONO, marginBottom: 10 }}>Recent News</div>
-                        {(selResearch.recent_news || []).map((n, i) => (
-                          <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "4px 0", lineHeight: 1.5, display: "flex", gap: 8 }}>
-                            <span style={{ color: C.textDim, opacity: 0.5, flexShrink: 0 }}>·</span>{n}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* WHY CONDENSE HELPS */}
-<div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 10, padding: 20, marginBottom: 10 }}>
-  <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>⚡ Why Condense Helps {sel.company}</div>
-  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-    {(selResearch.why_condense_fits || "").split(". ").filter(s => s.trim()).map((point, i) => (
-      <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #B8EDD3" }}>
-        <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, fontFamily: MONO }}>→</span>
-        <span style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.6 }}>{point.trim()}{point.trim().endsWith(".") ? "" : "."}</span>
+               {/* RESEARCH TAB */}
+{activeTab === "research" && selResearch && (
+  <div className="card-enter">
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+      <div style={{ background: "rgba(14,165,233,0.03)", border: `1px solid rgba(14,165,233,0.12)`, borderRadius: 4, padding: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.amber, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>Pain Points</div>
+        {(selResearch.pain_points || []).map((pt, i) => (
+          <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "5px 0", borderBottom: i < selResearch.pain_points.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none", lineHeight: 1.5, display: "flex", gap: 8 }}>
+            <span style={{ color: C.amber, opacity: 0.5, flexShrink: 0 }}>—</span>{pt}
+          </div>
+        ))}
       </div>
-    ))}
-  </div>
-</div>
-
-{/* INDUSTRY USE CASES */}
-{(() => {
-  const industryUC = findIndustryUseCases(sel.company, sel.industry || "", selResearch);
-  return (
-    <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20, marginBottom: 10 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 6 }}>🎯 Relevant Use Cases for {sel.company}</div>
-      <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 14 }}>Industry matched: {industryUC.id}</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {industryUC.use_cases.map((uc, i) => (
-          <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", borderLeft: "3px solid #1B6EF3" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT, marginBottom: 3 }}>{i + 1}. {uc.title}</div>
-              <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.6 }}>{uc.desc}</div>
-            </div>
+      <div style={{ background: "rgba(14,165,233,0.03)", border: `1px solid ${C.borderDim}`, borderRadius: 4, padding: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.gold, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>Tech Signals</div>
+        {(selResearch.tech_stack_signals || []).map((s, i) => (
+          <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "5px 0", borderBottom: i < selResearch.tech_stack_signals.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none", display: "flex", gap: 8 }}>
+            <span style={{ color: C.gold, opacity: 0.4, flexShrink: 0 }}>·</span>{s}
           </div>
         ))}
       </div>
     </div>
-  );
-})()}
 
-{/* SOURCES */}
-<div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20, marginBottom: 10 }}>
-  <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>🔗 Research Sources</div>
-  {selResearch.pre_read_links?.length > 0 ? (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {selResearch.pre_read_links.map((link, i) => (
-        <div key={i} style={{ display: "flex", gap: 12, padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4" }}>
-          <span style={{ color: C.gold, fontFamily: MONO, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
-          <div style={{ flex: 1 }}>
-            <a href={link.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 600, color: C.gold, textDecoration: "none", fontFamily: FONT }}>{link.title} ↗</a>
-            <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO, marginTop: 3 }}>{link.relevance}</div>
-            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link.url}</div>
+    {selResearch.condense_fit && (
+      <div style={{ background: selResearch.condense_fit.score === "high" ? C.greenDim : selResearch.condense_fit.score === "medium" ? C.amberDim : C.redDim, border: `1px solid ${selResearch.condense_fit.score === "high" ? C.green : selResearch.condense_fit.score === "medium" ? C.amber : C.red}44`, borderRadius: 8, padding: 16, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <span style={{ fontSize: 18 }}>{selResearch.condense_fit.score === "high" ? "🟢" : selResearch.condense_fit.score === "medium" ? "🟡" : "🔴"}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: selResearch.condense_fit.score === "high" ? C.green : selResearch.condense_fit.score === "medium" ? C.amber : C.red, fontFamily: FONT }}>
+            {selResearch.condense_fit.score?.toUpperCase()} FIT for Condense
+          </span>
+        </div>
+        <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.7 }}>{selResearch.condense_fit.reason}</div>
+      </div>
+    )}
+
+    {/* Persona Context */}
+    {selResearch.persona_context && (
+      <div style={{ background: "#FAF5FF", border: "1px solid #DDD0F8", borderRadius: 8, padding: 16, marginBottom: 10 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.purple, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>👤 Persona Context</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 6 }}>FOCUS AREAS</div>
+            {(selResearch.persona_context.focus_areas || []).map((f, i) => (
+              <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}>
+                <span style={{ color: C.purple, opacity: 0.5 }}>·</span>{f}
+              </div>
+            ))}
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 6 }}>KPIs</div>
+            {(selResearch.persona_context.kpis || []).map((k, i) => (
+              <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}>
+                <span style={{ color: C.purple, opacity: 0.5 }}>·</span>{k}
+              </div>
+            ))}
           </div>
         </div>
-      ))}
+      </div>
+    )}
+
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 8, padding: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textDim, fontFamily: MONO, marginBottom: 10 }}>Company Overview</div>
+        <div style={{ fontSize: 12, color: C.textMid, lineHeight: 1.7 }}>{selResearch.company_overview}</div>
+      </div>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 8, padding: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textDim, fontFamily: MONO, marginBottom: 10 }}>Recent News</div>
+        {(selResearch.recent_news || []).map((n, i) => (
+          <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "4px 0", lineHeight: 1.5, display: "flex", gap: 8 }}>
+            <span style={{ color: C.textDim, opacity: 0.5, flexShrink: 0 }}>·</span>{n}
+          </div>
+        ))}
+      </div>
     </div>
-  ) : (
-    <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, textAlign: "center", padding: "16px 0" }}>
-      No sources found. Run the agent to generate research with sources.
+
+    {/* WHY CONDENSE HELPS */}
+    <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 10, padding: 20, marginBottom: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>⚡ Why Condense Helps {sel.company}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {(selResearch.why_condense_fits || "").split(". ").filter(s => s.trim()).map((point, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #B8EDD3" }}>
+            <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, fontFamily: MONO }}>→</span>
+            <span style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.6 }}>{point.trim()}{point.trim().endsWith(".") ? "" : "."}</span>
+          </div>
+        ))}
+      </div>
     </div>
-  )}
-</div>
-                  </div>
-                )}
+
+    {/* INDUSTRY USE CASES */}
+    {(() => {
+      const industryUC = findIndustryUseCases(sel.company, sel.industry || "", selResearch);
+      return (
+        <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20, marginBottom: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 6 }}>🎯 Relevant Use Cases for {sel.company}</div>
+          <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 14 }}>Industry matched: {industryUC.id}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {industryUC.use_cases.map((uc, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", borderLeft: "3px solid #1B6EF3" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT, marginBottom: 3 }}>{i + 1}. {uc.title}</div>
+                  <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.6 }}>{uc.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    })()}
+
+    {/* SOURCES */}
+    <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20, marginBottom: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>🔗 Research Sources</div>
+      {selResearch.pre_read_links?.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {selResearch.pre_read_links.map((link, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4" }}>
+              <span style={{ color: C.gold, fontFamily: MONO, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
+              <div style={{ flex: 1 }}>
+                <a href={link.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 600, color: C.gold, textDecoration: "none", fontFamily: FONT }}>{link.title} ↗</a>
+                <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO, marginTop: 3 }}>{link.relevance}</div>
+                <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link.url}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, textAlign: "center", padding: "16px 0" }}>
+          No sources found. Run the agent to generate research with sources.
+        </div>
+      )}
+    </div>
+  </div>
+)}
 
                 {/* SUCCESS STORIES TAB */}
                 {activeTab === "stories" && (
