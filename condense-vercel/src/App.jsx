@@ -2047,7 +2047,17 @@ if (!dbLoaded) return (
                         ))}
                       </div>
                     </div>
-
+{selResearch.condense_fit && (
+  <div style={{ background: selResearch.condense_fit.score === "high" ? C.greenDim : selResearch.condense_fit.score === "medium" ? C.amberDim : C.redDim, border: `1px solid ${selResearch.condense_fit.score === "high" ? C.green : selResearch.condense_fit.score === "medium" ? C.amber : C.red}44`, borderRadius: 8, padding: 16, marginBottom: 10 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+      <span style={{ fontSize: 18 }}>{selResearch.condense_fit.score === "high" ? "🟢" : selResearch.condense_fit.score === "medium" ? "🟡" : "🔴"}</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: selResearch.condense_fit.score === "high" ? C.green : selResearch.condense_fit.score === "medium" ? C.amber : C.red, fontFamily: FONT }}>
+        {selResearch.condense_fit.score?.toUpperCase()} FIT for Condense
+      </span>
+    </div>
+    <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.7 }}>{selResearch.condense_fit.reason}</div>
+  </div>
+)}
                     {/* Open Positions */}
                     {selResearch.open_positions?.length > 0 && (
                       <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 8, padding: 16, marginBottom: 10 }}>
@@ -2057,6 +2067,11 @@ if (!dbLoaded) return (
                             <div>
                               <div style={{ fontSize: 12, color: C.text, fontFamily: FONT, fontWeight: 500 }}>{pos.title}</div>
                               <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>{pos.signal}</div>
+                              {pos.posted_date && (
+                                <div style={{ fontSize: 10, fontFamily: MONO, marginTop: 3, color: pos.is_active === false ? C.red : C.green }}>
+                                  {pos.is_active === false ? "⚠️ May be filled" : "✅ Active"} · Posted: {pos.posted_date}
+                              </div>
+                            )}
                             </div>
                             {pos.urgency === "high" && <span style={{ fontSize: 9, fontFamily: MONO, color: C.green, background: C.greenDim, padding: "2px 8px", borderRadius: 3 }}>HIGH SIGNAL</span>}
                           </div>
