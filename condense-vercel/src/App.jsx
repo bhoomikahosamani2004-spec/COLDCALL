@@ -1026,18 +1026,20 @@ const handleFileUpload = (e) => {
   const ext = file.name.split(".").pop().toLowerCase();
   const reader = new FileReader();
 
- const parseRows = (rows) => {
-  const headers = rows[0].map(h => (h || "").toString().toLowerCase().trim());
-  const idx = (keys) => headers.findIndex(h => keys.some(k => h === k || h.includes(k)));
+  const parseRows = (rows) => {
+    const headers = rows[0].map(h => (h || "").toString().toLowerCase().trim());
+    const idx = (keys) => headers.findIndex(h => 
+  keys.some(k => h.toLowerCase().replace(/\s+/g, " ").trim().includes(k.toLowerCase()))
+);
 
-  const companyIdx = idx(["company name", "company", "organization", "org", "employer"]);
-  const nameIdx = idx(["full name", "contact name", "person name", "name"]);
-  const firstNameIdx = idx(["first name", "firstname", "first_name"]);
-  const lastNameIdx = idx(["last name", "lastname", "last_name"]);
-  const titleIdx = idx(["title", "job title", "position", "designation", "role"]);
-  const emailIdx = idx(["email", "mail", "email address"]);
-  const phoneIdx = idx(["phone", "mobile", "whatsapp", "phone number"]);
-  const linkedinIdx = idx(["person linkedin url", "linkedin url", "linkedin", "profile url", "url"]);
+const companyIdx = idx(["company name", "company", "organization", "org", "employer"]);
+const nameIdx = idx(["full name", "contact name", "person name"]);
+const firstNameIdx = idx(["first name", "firstname", "first_name"]);
+const lastNameIdx = idx(["last name", "lastname", "last_name"]);
+const titleIdx = idx(["title", "job title", "position", "designation", "role"]);
+const emailIdx = idx(["email", "mail"]);
+const phoneIdx = idx(["phone", "mobile", "whatsapp"]);
+const linkedinIdx = idx(["person linkedin url", "linkedin url", "linkedin", "profile url"]);
     const added = [];
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
