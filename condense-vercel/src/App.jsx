@@ -107,7 +107,7 @@ const INDUSTRY_USE_CASES = [
   industries: ["gaming", "fantasy", "sports", "dream11", "mpl", "esports", "game", "fantasy sports"],
   intro: "Given [COMPANY]'s leadership in fantasy sports and real-time user engagement at scale, we see strong alignment in how Condense can power high-throughput, low-latency data pipelines for your platform.",
   use_cases: [
-    { title: "Real-Time Order & Seller Analytics", desc: "Stream updates from transaction systems into analytics platforms in real time to enable faster visibility into order flows, seller performance, and marketplace health." },
+    { title: "Real-Time Contest & Leaderboard Analytics", desc: "Stream live match events, user picks, and scoring updates into real-time leaderboards and contest dashboards for millions of concurrent users." },
     { title: "Customer Behavior & Funnel Analytics", desc: "Capture and process high-volume app and web events to power real-time dashboards, experimentation frameworks, and personalization engines." },
     { title: "Fraud & Anomaly Detection", desc: "Stream transaction and activity data to identify suspicious behavior, payment anomalies, or operational risks instantly rather than hours later." },
     { title: "Scalable ML & AI Data Pipelines", desc: "Standardize and operate high-volume Kafka pipelines reliably at scale, reducing operational overhead and accelerating model deployment for data science teams." },
@@ -206,7 +206,10 @@ function extractJSON(text) {
 if (parsed.email_body) {
   parsed.email_body = parsed.email_body
     .replace(/\n{3,}/g, "\n\n")  // max double newline
-    .replace(/([^\n])\n([^\n])/g, "$1\n\n$2"); // single newlines → double
+   if (parsed.email_body) {
+  parsed.email_body = parsed.email_body
+    .replace(/\n{3,}/g, "\n\n"); // collapse 3+ newlines to max double
+}
 }
 return parsed;
 }
@@ -349,7 +352,7 @@ STYLE RULES — FOLLOW VEERA'S EXACT WRITING STYLE:
 TONE & VOICE:
 - Always professional, warm, and confident — never pushy or salesy
 - Write like a senior business leader reaching out peer-to-peer
-- Use "Greetings [Name]," to open every first message
+- ALWAYS use "Greetings [Name]," — NEVER "Dear [Name]," under any circumstances. This is mandatory.
 - Second line always: "Hope you are doing well." + one specific personal touch about their company or role
 - Introduce Condense as: "Zeliot Condense, a deep-tech real-time data platform backed by Bosch"
 - Always tie Condense to their specific industry: "Given [Company]'s focus on [X], we see strong alignment..."
@@ -451,7 +454,7 @@ Zeliot
 +91 935-309-4136
 
 ═══ EXAMPLE 2 — ECOMMERCE (Meesho) ═══
-Dear Syed,
+Greetings Syed,
 I hope you're doing well.
 I'm reaching out from Zeliot–Condense, a deep-tech real-time data platform backed by Bosch. We work with high-scale digital and mobility companies to simplify real-time data pipelines while significantly reducing the infrastructure and operational complexity of streaming data systems.
 Given the scale at which Meesho operates its marketplace and analytics workloads, I thought this might be highly relevant for your team.
