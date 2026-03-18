@@ -181,7 +181,7 @@ async function callClaude({ system, messages, max_tokens = 1500 }) {
 
   const body = {
     contents,
-    generationConfig: { maxOutputTokens: max_tokens, temperature: 0.7, responseMimeType: "application/json" },
+    generationConfig: { maxOutputTokens: max_tokens, temperature: 0.3, responseMimeType: "application/json" },
   };
   if (system) body.system_instruction = { parts: [{ text: system }] };
 
@@ -201,7 +201,14 @@ function extractJSON(text) {
   let s = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").replace(/<[^>]+>/g, "").trim();
   const start = s.indexOf("{"); const end = s.lastIndexOf("}");
   if (start === -1 || end === -1) throw new Error("No JSON in response");
-  return JSON.parse(s.slice(start, end + 1));
+  const parsed = JSON.parse(s.slice(start, end + 1));
+// Normalize paragraph spacing in email_body
+if (parsed.email_body) {
+  parsed.email_body = parsed.email_body
+    .replace(/\n{3,}/g, "\n\n")  // max double newline
+    .replace(/([^\n])\n([^\n])/g, "$1\n\n$2"); // single newlines → double
+}
+return parsed;
 }
 
 function stripCites(text) {
@@ -246,12 +253,14 @@ Provide detailed research across ALL these areas:
 7. PRE-READ LINKS: Suggest 2-3 relevant articles/resources Veera could reference in outreach (company blog, industry report, their recent press release URLs if known)
 8. WHY CONDENSE FITS: 2-3 sentence pitch tied to their specific tech signals and open roles
 9. CONVERSATION HOOKS: 2 specific hooks based on open roles OR news OR tech signals
-
+10. CONDENSE FIT: Score as "high", "medium", or "low". High = active Kafka/streaming usage + scale + data engineering roles. Medium = some signals but unclear. Low = small company or no data infra signals.
+11. JOB POSTINGS: Search "${company} jobs site:linkedin.com/jobs" OR "${company} data engineer jobs 2025". Only include ACTIVE postings. Extract exact posting date shown. If posted >90 days ago set is_active: false. If date not found write "date unknown".
 Respond with ONLY this JSON:
 {
   "company_overview": "2-3 sentence summary",
   "tech_stack_signals": ["signal 1", "signal 2", "signal 3"],
-  "open_positions": [{"title": "Data Engineer", "signal": "signals Kafka investment", "urgency": "high"}],
+  "open_positions": [{"title": "Data Engineer", "signal": "signals Kafka investment", "urgency": "high", "posted_date": "actual date found on job site or date unknown", "is_active": true}],
+   "condense_fit": {"score": "high", "reason": "2-3 sentence explanation"}
   "persona_context": {"focus_areas": ["area1","area2"], "kpis": ["kpi1","kpi2"], "pain_areas": ["pain1","pain2"]},
   "pain_points": ["pain 1", "pain 2", "pain 3", "pain 4"],
   "recent_news": ["news 1", "news 2"],
@@ -435,6 +444,12 @@ Zeliot supports leading mobility and automotive companies such as TVS Motor, Vol
 I would be happy to walk you through how leading mobility platforms are using Condense. Please let me know a convenient time for a short discussion next week.
 Looking forward to your guidance on a suitable time for the discussion.
 
+Best regards,
+Veera Raghavan
+Enterprise Business (India)
+Zeliot
++91 935-309-4136
+
 ═══ EXAMPLE 2 — ECOMMERCE (Meesho) ═══
 Dear Syed,
 I hope you're doing well.
@@ -456,6 +471,12 @@ Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_s
 I would love to explore whether there might be an opportunity to support [Company]'s analytics platform with real-time data capabilities or help optimize parts of the current streaming architecture.
 Would you be open to a 30 minute conversation sometime next week?
 Looking forward to connecting.
+
+Best regards,
+Veera Raghavan
+Enterprise Business (India)
+Zeliot
++91 935-309-4136
 
 ═══ EXAMPLE 3 — RETAIL/GCP (AutoZone) ═══
 Greetings Mr. Pranjal,
@@ -479,6 +500,12 @@ Proven Adoption: Condense is already trusted in production by leading organizati
 I would welcome 30 minutes at your convenience to understand your current GCP streaming architecture and explore whether Condense could optimize performance, cost, or operational efficiency in your setup.
 Looking forward to connecting.
 
+Best regards,
+Veera Raghavan
+Enterprise Business (India)
+Zeliot
++91 935-309-4136
+
 ═══ EXAMPLE 4 — HEALTHCARE (Fernandez Hospital) ═══
 Greetings,
 Hope you are doing well. I'm delighted to introduce our flagship platform Condense (Bosch-backed). Condense is a secure, scalable, and AI/ML-ready data platform that simplifies Kafka and real-time streaming pipelines. It enables hospitals and enterprises to consolidate fragmented data flows into a single intelligent backbone, helping improve clinical outcomes, operational efficiency, and cost optimization.
@@ -492,6 +519,11 @@ We would be delighted to showcase a live demo of Condense tailored to healthcare
 May I kindly request your availability for a short discussion next week?
 Looking forward to your guidance.
 
+Best regards,
+Veera Raghavan
+Enterprise Business (India)
+Zeliot
++91 935-309-4136
 ═══ EXAMPLE 5 — DIGITAL TRANSFORMATION (Ather/OEM) ═══
 Greetings Arun,
 Wish you a prosperous New Year! Hope you're doing well. I wanted to introduce Zeliot Condense — backed by BOSCH — our unified real-time data streaming platform designed to support large-scale digital transformation, business process excellence, and AI-led initiatives across the enterprise.
@@ -510,6 +542,12 @@ Proven Adoption: Condense is already trusted in production by leading automotive
 If helpful, I'd be glad to share a brief overview focused on how Condense supports internal product platforms, AI readiness, and continuous process excellence.
 Looking forward to connecting.
 
+Best regards,
+Veera Raghavan
+Enterprise Business (India)
+Zeliot
++91 935-309-4136
+
 ═══ INSTRUCTIONS — MATCH THESE EXAMPLES ═══
 - Pick the example MOST similar to the prospect's industry and adapt it
 - Keep the same paragraph order, tone, and closing style as the matching example
@@ -523,9 +561,15 @@ Looking forward to connecting.
 - Total length: 350-500 words
 - No asterisks, no markdown, no bold in email body
 - Numbered use cases only — never bullet points in email
+- Sign-off: Always end email with "Best regards," on its own line, then on separate lines: sender name, title, company, phone. If senderProfile is provided use those details, otherwise default to:
+Best regards,
+Veera Raghavan
+Enterprise Business (India)
+Zeliot
++91 935-309-4136
 
 REMINDER: Para 1 = Condense intro only. Para 2 = their role + company. This order is MANDATORY.
-
+SPACING: Always separate paragraphs with a blank line (double newline \n\n). Never run paragraphs together without a blank line between them.
 Return ONLY this JSON:
 {
   "connection_note": "...",
