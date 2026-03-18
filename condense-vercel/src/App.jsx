@@ -201,18 +201,12 @@ function extractJSON(text) {
   let s = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").replace(/<[^>]+>/g, "").trim();
   const start = s.indexOf("{"); const end = s.lastIndexOf("}");
   if (start === -1 || end === -1) throw new Error("No JSON in response");
-  const parsed = JSON.parse(s.slice(start, end + 1));
-// Normalize paragraph spacing in email_body
+ const parsed = JSON.parse(s.slice(start, end + 1));
 if (parsed.email_body) {
-  parsed.email_body = parsed.email_body
-    .replace(/\n{3,}/g, "\n\n")  // max double newline
-   if (parsed.email_body) {
-  parsed.email_body = parsed.email_body
-    .replace(/\n{3,}/g, "\n\n"); // collapse 3+ newlines to max double
-}
+  parsed.email_body = parsed.email_body.replace(/\n{3,}/g, "\n\n");
 }
 return parsed;
-}
+
 
 function stripCites(text) {
   if (!text) return text;
@@ -263,7 +257,7 @@ Respond with ONLY this JSON:
   "company_overview": "2-3 sentence summary",
   "tech_stack_signals": ["signal 1", "signal 2", "signal 3"],
   "open_positions": [{"title": "Data Engineer", "signal": "signals Kafka investment", "urgency": "high", "posted_date": "actual date found on job site or date unknown", "is_active": true}],
-   "condense_fit": {"score": "high", "reason": "2-3 sentence explanation"}
+  "condense_fit": {"score": "high", "reason": "2-3 sentence explanation"},
   "persona_context": {"focus_areas": ["area1","area2"], "kpis": ["kpi1","kpi2"], "pain_areas": ["pain1","pain2"]},
   "pain_points": ["pain 1", "pain 2", "pain 3", "pain 4"],
   "recent_news": ["news 1", "news 2"],
@@ -729,7 +723,7 @@ function Badge({ status }) {
 }
 
 function Spinner() {
-  return ={{ width: 14, height: 14, border: "1.5px solid #DDEAFF", borderTop: "1.5px solid #1B6EF3", borderRadius: "50%", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />;
+ return <div style={{ width: 14, height: 14, border: "1.5px solid #DDEAFF", borderTop: "1.5px solid #1B6EF3", borderRadius: "50%", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />;
 }
 
 function GlowButton({ onClick, disabled, children, color = C.gold, small, primary }) {
