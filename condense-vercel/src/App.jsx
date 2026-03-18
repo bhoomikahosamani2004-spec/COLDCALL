@@ -411,33 +411,120 @@ INSTRUCTIONS:
 4. day7_followup: 30-50 words. Softer. Reference the success story OR a specific metric. Ask for 30 mins or email.
 5. day14_followup: 20-35 words. Final gentle nudge. No desperation.
 6. email_subject: Compelling subject line under 60 chars. Format: "[Industry/Company] x Zeliot Condense | Real-Time Data Platform"
-7. email_body: Full professional email following EXACTLY this structure and tone:
+7. email_body: Study these 5 REAL emails written by Veera and replicate the style, structure, and tone EXACTLY:
 
-STRUCTURE TO FOLLOW:
-- Line 1: Always use "Greetings [Name]," — NEVER use "Dear [Name]," under any circumstances
-- Line 2: "Hope you are doing well." + ONE personal touch about their company/role (1 sentence)
-- Para 1: "I'm reaching out to introduce Zeliot Condense, a deep-tech real-time data platform backed by Bosch, purpose-built for [their industry]. Condense helps organizations transform high-volume [relevant] data into reliable, production-grade data pipelines and real-time intelligence APIs without the operational complexity of managing streaming infrastructure."
-- Para 2: "Given [Company]'s leadership in [specific area from research], we see strong alignment in how Condense can help power real-time, scalable [industry] data systems."
-- Section: "Some relevant use cases where Condense can add value include:" followed by 4-6 bullet points. Each bullet: plain text title + dash + description. NO asterisks, NO markdown, NO bold formatting. Format exactly as: • Title – description Make bullets SPECIFIC to their job title and industry using research context. Examples:
-  • Connected Vehicle Data Platforms – ingest and process telemetry from vehicles at scale
-  • Real-Time [their domain] APIs – enable instant insights for [their KPIs]
-  • [Their domain] Analytics – process streaming data for operational insights
-  • BYOC (Bring Your Own Cloud) – Condense can be deployed within your own cloud environment (AWS/Azure/GCP), ensuring complete control over data, security, and compliance
-- Para 3: "Unlike traditional streaming stacks that require heavy infrastructure management, Condense abstracts scaling, operations, and monitoring, allowing engineering teams to focus on building [industry] applications rather than managing data infrastructure."
-- Pre-read section (ALWAYS include these exact links):
-"As a pre-read, sharing the below information on Condense.
+═══ EXAMPLE 1 — AUTOMOTIVE (CarDekho) ═══
+Greetings Raghav,
+I hope you are doing well.
+I'm reaching out to introduce Zeliot Condense, a deep-tech real-time data platform backed by Bosch, purpose-built for connected mobility and automotive data systems. Condense helps organizations transform high-volume vehicle and device data into reliable, production-grade data pipelines and real-time intelligence APIs without the operational complexity of managing streaming infrastructure.
+Given CarDekho / GirnarSoft's leadership in automotive platforms, digital retail, fleet solutions, and mobility intelligence, we see strong alignment in how Condense can help power real-time, scalable automotive data systems.
+Some relevant use cases where Condense can add value include:
+- Connected Vehicle Data Platforms – ingest and process telemetry from vehicles at scale and power downstream mobility services.
+- Real-Time Vehicle Intelligence APIs – enable instant insights for pricing, diagnostics, driver behavior, and predictive maintenance.
+- Fleet & Dealer Analytics – process streaming data from fleets, dealerships, and partner ecosystems for operational insights.
+- Insurance & Risk Intelligence – enable real-time driving behavior analytics for usage-based insurance and risk scoring.
+- Marketplace & Vehicle Lifecycle Data – unify vehicle telemetry, ownership, service, and marketplace data streams into a single real-time pipeline.
+- BYOC (Bring Your Own Cloud) – Condense can be deployed within your own cloud environment (AWS/Azure/GCP), ensuring complete control over data, security, and compliance while benefiting from a fully managed real-time processing platform.
+Unlike traditional streaming stacks that require heavy infrastructure management, Condense abstracts scaling, operations, and monitoring, allowing engineering teams to focus on building mobility applications rather than managing data infrastructure.
+As a pre-read, sharing the below information on Condense.
 Condense Overview: https://docs.zeliot.in/condense
 Case Studies: https://www.zeliot.in/case-studies
-About Zeliot: www.zeliot.in/quick-links
-Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1"
-- Social proof: "Zeliot supports leading [industry] companies such as TVS Motor, Volvo, Tata Motors, Ashok Leyland, Royal Enfield, Eicher Motors, SML Isuzu, Adani Ports & Logistics, Montra Electric — helping them build large-scale connected platforms, process high-frequency data, and enable real-time intelligence services."
-- Closing: "I would be happy to walk you through how leading [industry] platforms are using Condense. Please let me know a convenient time for a short discussion next week. Looking forward to your guidance on a suitable time for the discussion."
-- Sign-off: Use senderProfile name, title, company and phone if provided, otherwise use: "Veera Raghavan\nEnterprise Business (India)\nZeliot\n+91 935-309-4136"
-- Use "I'm reaching out" not "Greetings" in body paragraphs
-- Bullet points ARE allowed in emails (unlike LinkedIn)
-- Each bullet point must be relevant to their specific role and research
-- Total length: 300-400 words
-- Never use em dashes in bullet titles, use " – " instead
+About Zeliot: https://bento.me/zeliotofficial
+Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1
+Zeliot supports leading mobility and automotive companies such as TVS Motor, Volvo, Montra Electric, Bosch, Eicher, CEAT, Royal Enfield, Tata Motors, Adani Ports & Logistics, SML ISUZU, and Ashok Leyland helping them build large-scale connected vehicle platforms, process high-frequency telematics data, and enable real-time mobility intelligence services.
+I would be happy to walk you through how leading mobility platforms are using Condense. Please let me know a convenient time for a short discussion next week.
+Looking forward to your guidance on a suitable time for the discussion.
+
+═══ EXAMPLE 2 — ECOMMERCE (Meesho) ═══
+Dear Syed,
+I hope you're doing well.
+I'm reaching out from Zeliot–Condense, a deep-tech real-time data platform backed by Bosch. We work with high-scale digital and mobility companies to simplify real-time data pipelines while significantly reducing the infrastructure and operational complexity of streaming data systems.
+Given the scale at which Meesho operates its marketplace and analytics workloads, I thought this might be highly relevant for your team.
+Today, many high-growth platforms rely on a mix of Kafka, CDC pipelines, event streams, and multiple ingestion tools to move operational data into analytics platforms. While powerful, these stacks often introduce challenges around pipeline sprawl, high cloud costs, operational overhead, and delays in making data usable for analytics and AI use cases.
+Condense is designed to address exactly this problem. It acts as a real-time data platform that simplifies ingestion, transformation, and serving of high-volume event streams, enabling analytics teams to operationalize real-time data at scale without managing complex infrastructure.
+For marketplace platforms like Meesho, we typically see strong impact in areas such as:
+Real-time order and seller analytics – Streaming operational data from transaction systems into analytics platforms in real time to enable faster visibility into order flows, seller performance, and marketplace health.
+Customer behavior and funnel analytics – Capturing and processing high-volume app and web events to power real-time dashboards, experimentation frameworks, and personalization engines.
+Fraud and anomaly detection – Streaming transaction and activity data to identify suspicious behavior, payment anomalies, or operational risks instantly rather than hours later.
+Operational intelligence for logistics and fulfillment – Enabling real-time monitoring of logistics events, delivery pipelines, and fulfillment operations to quickly detect bottlenecks or service disruptions.
+Many teams we work with have been able to reduce their streaming infrastructure and data pipeline costs by 40–50%, while significantly simplifying the engineering effort required to maintain these pipelines.
+As a pre-read, sharing the below information on Condense.
+Condense Overview: https://docs.zeliot.in/condense
+Case Studies: https://www.zeliot.in/case-studies
+About Zeliot: https://bento.me/zeliotofficial
+Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1
+I would love to explore whether there might be an opportunity to support [Company]'s analytics platform with real-time data capabilities or help optimize parts of the current streaming architecture.
+Would you be open to a 30 minute conversation sometime next week?
+Looking forward to connecting.
+
+═══ EXAMPLE 3 — RETAIL/GCP (AutoZone) ═══
+Greetings Mr. Pranjal,
+It was a pleasure connecting with you. I wanted to introduce Zeliot Condense, a Bosch-backed deep-tech company — a real-time data engineering platform that is being adopted and backed through strategic engagements with Bosch for large-scale connected mobility and enterprise data initiatives.
+Condense is a backend, cloud-native data foundation that operates beneath existing enterprise systems, analytics platforms, and AI/ML workflows. Its primary role is to standardize, govern, and reliably move high-velocity operational data across vehicles, devices, and infrastructure — without requiring changes to existing applications, models, or business logic.
+Given your role as a GCP Data Engineer at AutoZone, I believe Condense can complement your existing GCP architecture by acting as a scalable, low-latency streaming backbone that integrates seamlessly with services such as BigQuery, GCS, Pub/Sub, and analytics layers.
+Below are a few relevant use cases where Condense can add value:
+1. Real-Time Inventory & Stock Visibility – Stream updates from POS systems, warehouse systems, and distribution centers into a unified pipeline to enable near real-time inventory reconciliation, low-stock alerts, and cross-location availability tracking.
+2. Supply Chain & Logistics Monitoring – Ingest telemetry and order-status updates from multiple systems to provide live tracking of shipments, SLA monitoring, and exception handling with event-driven alerts.
+3. Pricing & Promotion Intelligence – Enable real-time price updates, campaign triggers, and rule-based adjustments by streaming transactional and competitive pricing data directly into analytics systems.
+4. Customer & Order Analytics – Capture order events, browsing behavior, and transaction streams in real time to power recommendation engines, fraud detection, and operational dashboards.
+5. Simplified Streaming Operations on GCP – Instead of managing complex Kafka clusters or stitching together multiple Pub/Sub flows, Condense provides: managed topic and retention control, built-in transformation and enrichment layer, easier connector deployment, better observability across throughput and pipeline performance.
+6. Streaming to BigQuery / Data Lake – Condense can write structured, partitioned data directly to analytics storage layers, enabling both real-time analytics and historical processing without additional ETL overhead.
+By reducing operational complexity and centralizing real-time ingestion and transformation, Condense helps data engineering teams focus on building reliable, scalable data products rather than maintaining streaming infrastructure.
+As a pre-read, sharing the below information on Condense.
+Condense Overview: https://docs.zeliot.in/condense
+Case Studies: https://www.zeliot.in/case-studies
+About Zeliot: https://bento.me/zeliotofficial
+Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1
+Proven Adoption: Condense is already trusted in production by leading organizations, including TVS, Volvo Eicher, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield — supporting real-time vehicle data, manufacturing visibility, and digital platform initiatives at scale.
+I would welcome 30 minutes at your convenience to understand your current GCP streaming architecture and explore whether Condense could optimize performance, cost, or operational efficiency in your setup.
+Looking forward to connecting.
+
+═══ EXAMPLE 4 — HEALTHCARE (Fernandez Hospital) ═══
+Greetings,
+Hope you are doing well. I'm delighted to introduce our flagship platform Condense (Bosch-backed). Condense is a secure, scalable, and AI/ML-ready data platform that simplifies Kafka and real-time streaming pipelines. It enables hospitals and enterprises to consolidate fragmented data flows into a single intelligent backbone, helping improve clinical outcomes, operational efficiency, and cost optimization.
+For Fernandez Hospitals, we see strong alignment with your focus on maternal and neonatal care excellence and patient-centric innovation. Condense can play a key role across multiple dimensions:
+Patient Monitoring & Telemetry – Real-time ingestion of vital signs (ECG, SpO₂, fetal monitoring, NICU telemetry) into centralized dashboards accessible by clinicians. Faster anomaly detection = better patient safety.
+Predictive Analytics in Neonatal & Maternal Health – Integration with AI/ML models for risk prediction, early warning systems, and outcomes forecasting.
+Telehealth & Remote Monitoring – Seamlessly stream device and wearable data into secure cloud dashboards for remote consultations and follow-up care.
+Hospital Operations Dashboards – Real-time view of bed occupancy, ER wait times, OT utilization, and resource bottlenecks.
+Clinical Research Data Pipelines – Secure streaming of anonymized patient data for research collaborations, faster insights, and improved trial outcomes.
+We would be delighted to showcase a live demo of Condense tailored to healthcare use cases and discuss how [Company] can leverage it to improve care delivery while optimizing TCO.
+May I kindly request your availability for a short discussion next week?
+Looking forward to your guidance.
+
+═══ EXAMPLE 5 — DIGITAL TRANSFORMATION (Ather/OEM) ═══
+Greetings Arun,
+Wish you a prosperous New Year! Hope you're doing well. I wanted to introduce Zeliot Condense — backed by BOSCH — our unified real-time data streaming platform designed to support large-scale digital transformation, business process excellence, and AI-led initiatives across the enterprise.
+Condense enables organizations to continuously stream and standardize live data from operational systems, enterprise applications, and digital products into a single real-time data foundation. This creates a consistent, reusable data layer that internal product teams, process owners, and AI initiatives can build upon without repeated integration effort.
+Leaders responsible for digital transformation and internal platforms typically use Condense to:
+Create a unified real-time data backbone – Standardize live data flows across business functions, internal products, and platforms, ensuring shared context and consistency across transformation initiatives.
+Enable real-time visibility and continuous optimization – Observe process performance as it happens, identify bottlenecks and deviations early, and support closed-loop improvement across operations and decision layers.
+Accelerate AI, analytics, and intelligent automation – Provide AI/ML models, dashboards, and automation workflows with live data streams for faster learning, proactive decisioning, and real-time responsiveness.
+Reduce integration sprawl – Replace fragmented, point-to-point integrations with a scalable streaming layer that simplifies operations and supports long-term platform and product evolution.
+As a pre-read, sharing the below information on Condense.
+Condense Overview: https://docs.zeliot.in/condense
+Case Studies: https://www.zeliot.in/case-studies
+About Zeliot: https://bento.me/zeliotofficial
+Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1
+Proven Adoption: Condense is already trusted in production by leading automotive and mobility organizations, including TVS Motor, Eicher Motors, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield.
+If helpful, I'd be glad to share a brief overview focused on how Condense supports internal product platforms, AI readiness, and continuous process excellence.
+Looking forward to connecting.
+
+═══ INSTRUCTIONS — MATCH THESE EXAMPLES ═══
+- Pick the example MOST similar to the prospect's industry and adapt it
+- Keep the same paragraph order, tone, and closing style as the matching example
+- Replace company names, use cases, and tech stack with ones specific to the prospect from research
+- Use "Greetings [Name]," opener always
+- Links must always be exactly:
+  Condense Overview: https://docs.zeliot.in/condense
+  Case Studies: https://www.zeliot.in/case-studies
+  About Zeliot: https://bento.me/zeliotofficial
+  Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1
+- Total length: 350-500 words
+- No asterisks, no markdown, no bold in email body
+- Numbered use cases only — never bullet points in email
+
+REMINDER: Para 1 = Condense intro only. Para 2 = their role + company. This order is MANDATORY.
 
 Return ONLY this JSON:
 {
@@ -450,7 +537,6 @@ Return ONLY this JSON:
   "email_body": "...",
   "email_followup1": "...",
   "email_followup2": "...",
-  "key_points": [
   "key_points": [
     "Why this message was written this way — what research was used",
     "What pain point was targeted and why",
