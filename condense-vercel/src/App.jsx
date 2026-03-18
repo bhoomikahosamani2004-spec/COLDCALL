@@ -206,7 +206,7 @@ if (parsed.email_body) {
   parsed.email_body = parsed.email_body.replace(/\n{3,}/g, "\n\n");
 }
 return parsed;
-
+}
 
 function stripCites(text) {
   if (!text) return text;
