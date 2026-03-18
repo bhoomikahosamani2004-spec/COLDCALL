@@ -251,12 +251,12 @@ Provide detailed research across ALL these areas:
 8. WHY CONDENSE FITS: 2-3 sentence pitch tied to their specific tech signals and open roles
 9. CONVERSATION HOOKS: 2 specific hooks based on open roles OR news OR tech signals
 10. CONDENSE FIT: Score as "high", "medium", or "low". High = active Kafka/streaming usage + scale + data engineering roles. Medium = some signals but unclear. Low = small company or no data infra signals.
-11. JOB POSTINGS: Search "${company} jobs site:linkedin.com/jobs" OR "${company} data engineer jobs 2025". Only include ACTIVE postings. Extract exact posting date shown. If posted >90 days ago set is_active: false. If date not found write "date unknown".
+11. JOB POSTINGS: Search "${company} jobs site:linkedin.com/jobs" OR "${company} site:indeed.com jobs" OR "${company} site:naukri.com jobs". For each job found, include the EXACT URL of the job posting, the EXACT date shown on the listing page (e.g. "Posted 3 days ago" = write that exactly as found). If you cannot find the actual URL or date, do NOT invent them — write url: "not found" and posted_date: "date unknown". Only include jobs you actually found on a real job site.
 Respond with ONLY this JSON:
 {
   "company_overview": "2-3 sentence summary",
   "tech_stack_signals": ["signal 1", "signal 2", "signal 3"],
-  "open_positions": [{"title": "Data Engineer", "signal": "signals Kafka investment", "urgency": "high", "posted_date": "actual date found on job site or date unknown", "is_active": true}],
+  "open_positions": [{"title": "Data Engineer", "signal": "signals Kafka investment", "urgency": "high", "posted_date": "exact date as shown on job site or date unknown", "is_active": true, "url": "https://linkedin.com/jobs/... or not found"}],
   "condense_fit": {"score": "high", "reason": "2-3 sentence explanation"},
   "persona_context": {"focus_areas": ["area1","area2"], "kpis": ["kpi1","kpi2"], "pain_areas": ["pain1","pain2"]},
   "pain_points": ["pain 1", "pain 2", "pain 3", "pain 4"],
@@ -2070,6 +2070,9 @@ if (!dbLoaded) return (
                               {pos.posted_date && (
                                 <div style={{ fontSize: 10, fontFamily: MONO, marginTop: 3, color: pos.is_active === false ? C.red : C.green }}>
                                   {pos.is_active === false ? "⚠️ May be filled" : "✅ Active"} · Posted: {pos.posted_date}
+                                  {pos.url && pos.url !== "not found" && (
+                                      <a href={pos.url} target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: C.gold, fontSize: 10, fontFamily: MONO }}>↗ View Job</a>
+                                  )}
                               </div>
                             )}
                             </div>
