@@ -1032,12 +1032,12 @@ const handleFileUpload = (e) => {
 
 const companyIdx = idx(["company name","company","organization","org","employer"]);
 const nameIdx = idx(["name"]);
-const firstNameIdx = idx(["first name","firstname"]);
-const lastNameIdx = idx(["last name","lastname"]);
-const titleIdx = idx(["title","job","position","designation","role"]);
-const emailIdx = idx(["email","mail"]);
-const phoneIdx = idx(["phone","mobile","whatsapp"]);
-const linkedinIdx = idx(["linkedin","person linkedin url","profile url","url"]);
+const firstNameIdx = idx(["first name","firstname","first_name"]);
+const lastNameIdx = idx(["last name","lastname","last_name"]);
+const titleIdx = idx(["title","job","position","designation","role","job title"]);
+const emailIdx = idx(["email","mail","email address"]);
+const phoneIdx = idx(["phone","mobile","whatsapp","phone number"]);
+const linkedinIdx = idx(["person linkedin url","linkedin","profile url","url","linkedin url"]);
     const added = [];
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
