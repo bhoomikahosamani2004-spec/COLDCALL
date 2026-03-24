@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   const API_KEY = process.env.GEMINI_API_KEY;
   if (!API_KEY) return res.status(500).json({ error: "GEMINI_API_KEY not set" });
 
-  const { model = "gemini-2.5-flash", ...body } = req.body;
+  const { model = "gemini-2.5-flash-lite", ...body } = req.body;
 
   body.generationConfig = {
     ...(body.generationConfig || {}),
