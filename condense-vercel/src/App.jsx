@@ -528,10 +528,10 @@ Enable real-time visibility and continuous optimization – Observe process perf
 Accelerate AI, analytics, and intelligent automation – Provide AI/ML models, dashboards, and automation workflows with live data streams for faster learning, proactive decisioning, and real-time responsiveness.
 Reduce integration sprawl – Replace fragmented, point-to-point integrations with a scalable streaming layer that simplifies operations and supports long-term platform and product evolution.
 As a pre-read, sharing the below information on Condense.
-Condense Overview: https://docs.zeliot.in/condense
-Case Studies: https://www.zeliot.in/case-studies
-About Zeliot: https://bento.me/zeliotofficial
-Get Started with Condense: https://bit.ly/3NmxJpe
+- Condense Overview: https://docs.zeliot.in/condense
+- Case Studies: https://www.zeliot.in/case-studies
+- About Zeliot: https://bento.me/zeliotofficial
+- Get Started with Condense: https://bit.ly/3NmxJpe
 Proven Adoption: Condense is already trusted in production by leading automotive and mobility organizations, including TVS Motor, Eicher Motors, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield.
 If helpful, I'd be glad to share a brief overview focused on how Condense supports internal product platforms, AI readiness, and continuous process excellence.
 Looking forward to connecting.
@@ -554,7 +554,7 @@ Zeliot
   Get Started with Condense: https://bit.ly/3NmxJpe
 - Total length: 350-500 words
 - No asterisks, no markdown, no bold in email body
-- Numbered use cases only — never bullet points in email
+- Use bullet points (- ) for use cases only — never numbered lists in email
 - Sign-off: Always end email with "Best regards," on its own line, then on separate lines: sender name, title, company, phone. If senderProfile is provided use those details, otherwise default to:
 Best regards,
 Veera Raghavan
