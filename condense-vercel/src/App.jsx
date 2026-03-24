@@ -920,6 +920,7 @@ const [showMapper, setShowMapper] = useState(false);
 });
 const [showProfile, setShowProfile] = useState(false);
 const [activeView, setActiveView] = useState("prospects"); // prospects | dashboard | training
+const [searchQuery, setSearchQuery] = useState("");
 const [ratings, setRatings] = useState({});
 const [ratingFeedback, setRatingFeedback] = useState({});
 const [trainingExamples, setTrainingExamples] = useState([]);
@@ -1652,16 +1653,36 @@ if (!dbLoaded) return (
 
             {/* Prospect List */}
             <div style={{ flex: 1, overflowY: "auto" }}>
-              <div style={{ padding: "10px 12px 4px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #EEF2F7" }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: DISPLAY }}>Prospects ({prospects.length})</span>
-                {prospects.length > 0 && <span style={{ fontSize: 10, color: C.textDim }}>{prospects.filter(p=>p.status==="ready"||p.status==="following").length} active</span>}
-              </div>
+              <div style={{ padding: "10px 12px 4px", borderBottom: "1px solid #EEF2F7" }}>
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+    <span style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: DISPLAY }}>Prospects ({prospects.length})</span>
+    {prospects.length > 0 && <span style={{ fontSize: 10, color: C.textDim }}>{prospects.filter(p=>p.status==="ready"||p.status==="following").length} active</span>}
+  </div>
+  <div style={{ position: "relative" }}>
+    <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.textDim, pointerEvents: "none" }}>🔍</span>
+    <input
+      value={searchQuery}
+      onChange={e => setSearchQuery(e.target.value)}
+      placeholder="Search name or company..."
+      style={{ width: "100%", background: "#F8FAFC", border: "1px solid #E4ECF4", color: C.text, borderRadius: 6, padding: "7px 10px 7px 28px", fontSize: 11, fontFamily: FONT, outline: "none", boxSizing: "border-box" }}
+    />
+    {searchQuery && (
+      <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.textDim, fontSize: 13, lineHeight: 1, padding: 0 }}>✕</button>
+    )}
+  </div>
+</div>
               {prospects.length === 0 ? (
                 <div style={{ padding: "40px 20px", textAlign: "center" }}>
                   <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.25 }}>👤</div>
                   <div style={{ fontSize: 12, color: C.textDim, lineHeight: 1.7, fontFamily: FONT }}>Add your first prospect above<br/>or upload a CSV file</div>
                 </div>
-              ) : prospects.map(p => (
+             ) : prospects.filter(p => {
+                  if (!searchQuery.trim()) return true;
+                  const q = searchQuery.toLowerCase();
+                  return (p.name || "").toLowerCase().includes(q) ||
+                         (p.company || "").toLowerCase().includes(q) ||
+                         (p.jobTitle || "").toLowerCase().includes(q);
+                }).map(p => (
                 <div key={p.id} className="card-enter prospect-card" onClick={() => setSelected(p.id)} style={{ padding: "11px 14px", marginBottom: 0, background: selected === p.id ? "#EEF5FF" : "#FFFFFF", borderBottom: "1px solid #F0F4F8", borderLeft: selected === p.id ? "3px solid #1B6EF3" : "3px solid transparent" }}>
                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
   <div style={{ fontWeight: 600, fontSize: 13, color: selected === p.id ? C.navy : C.text, lineHeight: 1.3, fontFamily: FONT }}>{p.name}</div>
@@ -1976,10 +1997,33 @@ if (!dbLoaded) return (
                           <textarea value={text} onChange={e => setEdits(prev => ({ ...prev, [editKey]: e.target.value }))} style={{ width: "100%", background: "#F8FAFC", border: "1px solid #E4ECF4", color: C.navy, borderRadius: 8, padding: "14px 16px", fontSize: 13, fontFamily: FONT, lineHeight: 1.9, resize: "vertical", outline: "none", minHeight: isEmail ? 220 : activeMsg === "day0_message" ? 180 : 130, transition: "all 0.2s" }} />
                           
                           {/* Send Buttons */}
-                          <div style={{ marginTop: 14, padding: "14px 0", borderTop: "1px solid #EEF2F7" }}>
-                            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, letterSpacing: "0.04em", marginBottom: 8 }}>SEND DIRECTLY →</div>
-                            <SendButtons prospect={sel} messageText={text} messageType={activeMsg} emailSubject={selMessages.email_subject} senderProfile={senderProfile} />
-                          </div>
+                         <div style={{ marginTop: 14, padding: "14px 0", borderTop: "1px solid #EEF2F7" }}>
+  <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, letterSpacing: "0.04em", marginBottom: 8 }}>SEND DIRECTLY →</div>
+  <SendButtons prospect={sel} messageText={text} messageType={activeMsg} emailSubject={selMessages.email_subject} senderProfile={senderProfile} />
+  <div style={{ marginTop: 10 }}>
+    {edits[`${sel.id}_sent_${activeMsg}`] ? (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 6 }}>
+        <span style={{ fontSize: 14 }}>✅</span>
+        <span style={{ fontSize: 12, color: C.green, fontFamily: FONT, fontWeight: 500 }}>
+          Marked as sent · {new Date(edits[`${sel.id}_sent_${activeMsg}`].sentAt).toLocaleDateString()}
+        </span>
+        <button
+          onClick={() => setEdits(prev => { const n = {...prev}; delete n[`${sel.id}_sent_${activeMsg}`]; return n; })}
+          style={{ marginLeft: "auto", fontSize: 10, color: C.textDim, background: "none", border: "none", cursor: "pointer", fontFamily: MONO }}
+        >undo</button>
+      </div>
+    ) : (
+      <button
+        onClick={() => setEdits(prev => ({ ...prev, [`${sel.id}_sent_${activeMsg}`]: { sentAt: new Date().toISOString() } }))}
+        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 6, border: "1px solid #B8EDD3", background: "#F0FBF5", color: C.green, fontSize: 12, fontFamily: FONT, fontWeight: 500, cursor: "pointer", transition: "all 0.15s" }}
+        onMouseEnter={e => e.currentTarget.style.background = "#D8F5E8"}
+        onMouseLeave={e => e.currentTarget.style.background = "#F0FBF5"}
+      >
+        <span style={{ fontSize: 14 }}>✓</span> Mark this message as sent
+      </button>
+    )}
+  </div>
+</div>
 
                          <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
   <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>
