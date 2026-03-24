@@ -920,6 +920,8 @@ const [showMapper, setShowMapper] = useState(false);
 });
 const [showProfile, setShowProfile] = useState(false);
 const [activeView, setActiveView] = useState("prospects"); // prospects | dashboard | training
+const [zohoPushing, setZohoPushing] = useState(false);      
+const [zohoPushStatus, setZohoPushStatus] = useState({});
 const [searchQuery, setSearchQuery] = useState("");
 const [ratings, setRatings] = useState({});
 const [ratingFeedback, setRatingFeedback] = useState({});
@@ -1176,6 +1178,16 @@ const extraCtx = extraContext[id] || "";
   const markSent = (id) => {
     setProspects(prev => prev.map(p => p.id === id ? { ...p, status: "following", sentAt: new Date().toISOString() } : p));
   };
+  async function pushToZoho(prospect, messages) {
+  const res = await fetch("/api/zoho-push", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prospect, messages })
+  });
+  const data = await res.json();
+  if (data.data?.[0]?.status === "success") return true;
+  throw new Error(data.message || "Push failed");
+}
 
   const saveReply = () => {
     if (!replyText.trim()) return;
@@ -1884,6 +1896,48 @@ if (!dbLoaded) return (
                         </GlowButton>
                       )}
                       {sel.status === "ready" && <GlowButton onClick={() => markSent(sel.id)} color={C.green} primary>✓ Mark Sent</GlowButton>}
+                      {sel.status === "ready" && <GlowButton onClick={() => markSent(sel.id)} color={C.green} primary>✓ Mark Sent</GlowButton>}
+
+{/* ← ADD THIS BLOCK HERE */}
+{selMessages && (
+  <button
+    onClick={async () => {
+      setZohoPushing(true);
+      setZohoPushStatus(prev => ({ ...prev, [sel.id]: null }));
+      try {
+        await pushToZoho(sel, selMessages);
+        setZohoPushStatus(prev => ({ ...prev, [sel.id]: "success" }));
+        setTimeout(() => setZohoPushStatus(prev => ({ ...prev, [sel.id]: null })), 4000);
+      } catch (err) {
+        setZohoPushStatus(prev => ({ ...prev, [sel.id]: "error" }));
+        setTimeout(() => setZohoPushStatus(prev => ({ ...prev, [sel.id]: null })), 4000);
+      }
+      setZohoPushing(false);
+    }}
+    disabled={zohoPushing}
+    style={{
+      padding: "8px 14px", borderRadius: 6,
+      border: `1px solid ${zohoPushStatus[sel.id] === "success" ? "#B8EDD3" : zohoPushStatus[sel.id] === "error" ? "#FFCCCC" : "#E4629444"}`,
+      background: zohoPushStatus[sel.id] === "success" ? "#F0FBF5" : zohoPushStatus[sel.id] === "error" ? "#FFF5F5" : "#FFF0F5",
+      color: zohoPushStatus[sel.id] === "success" ? C.green : zohoPushStatus[sel.id] === "error" ? C.red : "#E46294",
+      fontSize: 11, fontFamily: FONT, fontWeight: 500,
+      cursor: zohoPushing ? "not-allowed" : "pointer",
+      display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s"
+    }}
+  >
+    {zohoPushing ? (
+      <><Spinner /> Pushing to Zoho...</>
+    ) : zohoPushStatus[sel.id] === "success" ? (
+      "✅ Pushed to Zoho!"
+    ) : zohoPushStatus[sel.id] === "error" ? (
+      "❌ Push Failed"
+    ) : (
+      "☁️ Push to Zoho CRM"
+    )}
+  </button>
+)}
+
+{sel.status === "following" && <GlowButton ...
                       {sel.status === "following" && <GlowButton onClick={() => setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, status: "done" } : p))} color={C.green} small>✓ Complete</GlowButton>}
                     </div>
                   </div>
