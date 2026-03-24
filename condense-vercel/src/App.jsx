@@ -430,10 +430,10 @@ Some relevant use cases where Condense can add value include:
 - BYOC (Bring Your Own Cloud) – Condense can be deployed within your own cloud environment (AWS/Azure/GCP), ensuring complete control over data, security, and compliance while benefiting from a fully managed real-time processing platform.
 Unlike traditional streaming stacks that require heavy infrastructure management, Condense abstracts scaling, operations, and monitoring, allowing engineering teams to focus on building mobility applications rather than managing data infrastructure.
 As a pre-read, sharing the below information on Condense.
-Condense Overview: https://docs.zeliot.in/condense
-Case Studies: https://www.zeliot.in/case-studies
-About Zeliot: https://bento.me/zeliotofficial
-Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1
+- Condense Overview: https://docs.zeliot.in/condense
+- Case Studies: https://www.zeliot.in/case-studies
+- About Zeliot: https://bento.me/zeliotofficial
+- Get Started with Condense: https://bit.ly/3NmxJpe
 Zeliot supports leading mobility and automotive companies such as TVS Motor, Volvo, Montra Electric, Bosch, Eicher, CEAT, Royal Enfield, Tata Motors, Adani Ports & Logistics, SML ISUZU, and Ashok Leyland helping them build large-scale connected vehicle platforms, process high-frequency telematics data, and enable real-time mobility intelligence services.
 I would be happy to walk you through how leading mobility platforms are using Condense. Please let me know a convenient time for a short discussion next week.
 Looking forward to your guidance on a suitable time for the discussion.
@@ -458,10 +458,10 @@ Fraud and anomaly detection – Streaming transaction and activity data to ident
 Operational intelligence for logistics and fulfillment – Enabling real-time monitoring of logistics events, delivery pipelines, and fulfillment operations to quickly detect bottlenecks or service disruptions.
 Many teams we work with have been able to reduce their streaming infrastructure and data pipeline costs by 40–50%, while significantly simplifying the engineering effort required to maintain these pipelines.
 As a pre-read, sharing the below information on Condense.
-Condense Overview: https://docs.zeliot.in/condense
-Case Studies: https://www.zeliot.in/case-studies
-About Zeliot: https://bento.me/zeliotofficial
-Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1
+- Condense Overview: https://docs.zeliot.in/condense
+- Case Studies: https://www.zeliot.in/case-studies
+- About Zeliot: https://bento.me/zeliotofficial
+- Get Started with Condense: https://bit.ly/3NmxJpe
 I would love to explore whether there might be an opportunity to support [Company]'s analytics platform with real-time data capabilities or help optimize parts of the current streaming architecture.
 Would you be open to a 30 minute conversation sometime next week?
 Looking forward to connecting.
@@ -478,18 +478,18 @@ It was a pleasure connecting with you. I wanted to introduce Zeliot Condense, a 
 Condense is a backend, cloud-native data foundation that operates beneath existing enterprise systems, analytics platforms, and AI/ML workflows. Its primary role is to standardize, govern, and reliably move high-velocity operational data across vehicles, devices, and infrastructure — without requiring changes to existing applications, models, or business logic.
 Given your role as a GCP Data Engineer at AutoZone, I believe Condense can complement your existing GCP architecture by acting as a scalable, low-latency streaming backbone that integrates seamlessly with services such as BigQuery, GCS, Pub/Sub, and analytics layers.
 Below are a few relevant use cases where Condense can add value:
-1. Real-Time Inventory & Stock Visibility – Stream updates from POS systems, warehouse systems, and distribution centers into a unified pipeline to enable near real-time inventory reconciliation, low-stock alerts, and cross-location availability tracking.
-2. Supply Chain & Logistics Monitoring – Ingest telemetry and order-status updates from multiple systems to provide live tracking of shipments, SLA monitoring, and exception handling with event-driven alerts.
-3. Pricing & Promotion Intelligence – Enable real-time price updates, campaign triggers, and rule-based adjustments by streaming transactional and competitive pricing data directly into analytics systems.
-4. Customer & Order Analytics – Capture order events, browsing behavior, and transaction streams in real time to power recommendation engines, fraud detection, and operational dashboards.
-5. Simplified Streaming Operations on GCP – Instead of managing complex Kafka clusters or stitching together multiple Pub/Sub flows, Condense provides: managed topic and retention control, built-in transformation and enrichment layer, easier connector deployment, better observability across throughput and pipeline performance.
-6. Streaming to BigQuery / Data Lake – Condense can write structured, partitioned data directly to analytics storage layers, enabling both real-time analytics and historical processing without additional ETL overhead.
+- Real-Time Inventory & Stock Visibility – Stream updates from POS systems, warehouse systems, and distribution centers into a unified pipeline to enable near real-time inventory reconciliation, low-stock alerts, and cross-location availability tracking.
+- Supply Chain & Logistics Monitoring – Ingest telemetry and order-status updates from multiple systems to provide live tracking of shipments, SLA monitoring, and exception handling with event-driven alerts.
+- Pricing & Promotion Intelligence – Enable real-time price updates, campaign triggers, and rule-based adjustments by streaming transactional and competitive pricing data directly into analytics systems.
+- Customer & Order Analytics – Capture order events, browsing behavior, and transaction streams in real time to power recommendation engines, fraud detection, and operational dashboards.
+- Simplified Streaming Operations on GCP – Instead of managing complex Kafka clusters or stitching together multiple Pub/Sub flows, Condense provides: managed topic and retention control, built-in transformation and enrichment layer, easier connector deployment, better observability across throughput and pipeline performance.
+- Streaming to BigQuery / Data Lake – Condense can write structured, partitioned data directly to analytics storage layers, enabling both real-time analytics and historical processing without additional ETL overhead.
 By reducing operational complexity and centralizing real-time ingestion and transformation, Condense helps data engineering teams focus on building reliable, scalable data products rather than maintaining streaming infrastructure.
 As a pre-read, sharing the below information on Condense.
-Condense Overview: https://docs.zeliot.in/condense
-Case Studies: https://www.zeliot.in/case-studies
-About Zeliot: https://bento.me/zeliotofficial
-Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1
+- Condense Overview: https://docs.zeliot.in/condense
+- Case Studies: https://www.zeliot.in/case-studies
+- About Zeliot: https://bento.me/zeliotofficial
+- Get Started with Condense: https://bit.ly/3NmxJpe
 Proven Adoption: Condense is already trusted in production by leading organizations, including TVS, Volvo Eicher, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield — supporting real-time vehicle data, manufacturing visibility, and digital platform initiatives at scale.
 I would welcome 30 minutes at your convenience to understand your current GCP streaming architecture and explore whether Condense could optimize performance, cost, or operational efficiency in your setup.
 Looking forward to connecting.
@@ -531,7 +531,7 @@ As a pre-read, sharing the below information on Condense.
 Condense Overview: https://docs.zeliot.in/condense
 Case Studies: https://www.zeliot.in/case-studies
 About Zeliot: https://bento.me/zeliotofficial
-Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1
+Get Started with Condense: https://bit.ly/3NmxJpe
 Proven Adoption: Condense is already trusted in production by leading automotive and mobility organizations, including TVS Motor, Eicher Motors, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield.
 If helpful, I'd be glad to share a brief overview focused on how Condense supports internal product platforms, AI readiness, and continuous process excellence.
 Looking forward to connecting.
@@ -551,7 +551,7 @@ Zeliot
   Condense Overview: https://docs.zeliot.in/condense
   Case Studies: https://www.zeliot.in/case-studies
   About Zeliot: https://bento.me/zeliotofficial
-  Get Started with Condense: https://console.condense.zeliot.in/try-for-free?utm_source=Outreach&utm_medium=email&utm_campaign=try-for-free-p1
+  Get Started with Condense: https://bit.ly/3NmxJpe
 - Total length: 350-500 words
 - No asterisks, no markdown, no bold in email body
 - Numbered use cases only — never bullet points in email
@@ -864,7 +864,13 @@ useEffect(() => {
   dbLoad('edits'), dbLoad('replies'), dbLoad('notifications'),
   dbLoad('ratings'), dbLoad('training'),
 ]);
-    setProspects(Object.values(p));
+    setProspects(Object.values(p).sort((a, b) => {
+  // Ready/Following first, then by newest created
+  const statusOrder = { ready: 0, following: 1, replied: 2, generating: 3, researching: 4, done: 5, error: 6, idle: 7 };
+  const statusDiff = (statusOrder[a.status] ?? 7) - (statusOrder[b.status] ?? 7);
+  if (statusDiff !== 0) return statusDiff;
+  return new Date(b.createdAt) - new Date(a.createdAt);
+}));
     setResearch(r);
     setMessages(m);
     setEdits(e);
