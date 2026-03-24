@@ -1178,11 +1178,11 @@ const extraCtx = extraContext[id] || "";
   const markSent = (id) => {
     setProspects(prev => prev.map(p => p.id === id ? { ...p, status: "following", sentAt: new Date().toISOString() } : p));
   };
-  async function pushToZoho(prospect, messages) {
+ async function pushToZoho(prospect, messages, description) {
   const res = await fetch("/api/zoho-push", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prospect, messages })
+    body: JSON.stringify({ prospect, messages, description }) // 👈 add description
   });
   const data = await res.json();
   if (data.data?.[0]?.status === "success") return true;
@@ -1899,10 +1899,11 @@ if (!dbLoaded) return (
 {selMessages && (
   <button
     onClick={async () => {
-      setZohoPushing(true);
-      setZohoPushStatus(prev => ({ ...prev, [sel.id]: null }));
-      try {
-        await pushToZoho(sel, selMessages);
+  setZohoPushing(true);
+  setZohoPushStatus(prev => ({ ...prev, [sel.id]: null }));
+  try {
+    const description = selResearch?.why_condense_fits || ""; // 
+    await pushToZoho(sel, selMessages, description);          
         setZohoPushStatus(prev => ({ ...prev, [sel.id]: "success" }));
         setTimeout(() => setZohoPushStatus(prev => ({ ...prev, [sel.id]: null })), 4000);
       } catch (err) {
