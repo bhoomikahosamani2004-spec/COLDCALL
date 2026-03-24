@@ -36,7 +36,8 @@ export default async function handler(req, res) {
         Company: prospect.company || "",
         Designation: prospect.jobTitle || "",
         Lead_Source: "Condense Outreach App",
-        Description: messages?.email_body
+        Description: description || `Status: ${prospect.status}`,
+        Individual_LinkedIn: prospect.linkedinUrl || "",  // 👈 replace with your actual field API name
           ? `Subject: ${messages.email_subject || ""}\n\n${messages.email_body.slice(0, 1000)}`
           : `Status: ${prospect.status}`,
       }]
