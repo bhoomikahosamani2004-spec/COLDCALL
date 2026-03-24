@@ -547,11 +547,15 @@ Zeliot
 - Keep the same paragraph order, tone, and closing style as the matching example
 - Replace company names, use cases, and tech stack with ones specific to the prospect from research
 - Use "Greetings [Name]," opener always
-- Links must always be exactly:
-  Condense Overview: https://docs.zeliot.in/condense
-  Case Studies: https://www.zeliot.in/case-studies
-  About Zeliot: https://bento.me/zeliotofficial
-  Get Started with Condense: https://bit.ly/3NmxJpe
+- MANDATORY: Every email_body MUST include this exact pre-read block, word for word, after the use cases and before the social proof paragraph:
+
+As a pre-read, sharing the below information on Condense.
+- Condense Overview: https://docs.zeliot.in/condense
+- Case Studies: https://www.zeliot.in/case-studies
+- About Zeliot: https://bento.me/zeliotofficial
+- Get Started with Condense: https://bit.ly/3NmxJpe
+
+Omitting this block is a HARD ERROR. It must appear in every email_body without exception.
 - Total length: 350-500 words
 - No asterisks, no markdown, no bold in email body
 - Use bullet points (- ) for use cases only — never numbered lists in email
