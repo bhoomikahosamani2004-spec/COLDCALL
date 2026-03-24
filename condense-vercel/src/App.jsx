@@ -1895,10 +1895,7 @@ if (!dbLoaded) return (
                           {running === sel.id ? <><Spinner /> Running...</> : "⚡  Run Agent"}
                         </GlowButton>
                       )}
-                      {sel.status === "ready" && <GlowButton onClick={() => markSent(sel.id)} color={C.green} primary>✓ Mark Sent</GlowButton>}
-                      {sel.status === "ready" && <GlowButton onClick={() => markSent(sel.id)} color={C.green} primary>✓ Mark Sent</GlowButton>}
-
-{/* ← ADD THIS BLOCK HERE */}
+{sel.status === "ready" && <GlowButton onClick={() => markSent(sel.id)} color={C.green} primary>✓ Mark Sent</GlowButton>}
 {selMessages && (
   <button
     onClick={async () => {
@@ -1936,9 +1933,7 @@ if (!dbLoaded) return (
     )}
   </button>
 )}
-
-{sel.status === "following" && <GlowButton ...
-                      {sel.status === "following" && <GlowButton onClick={() => setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, status: "done" } : p))} color={C.green} small>✓ Complete</GlowButton>}
+{sel.status === "following" && <GlowButton onClick={() => setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, status: "done" } : p))} color={C.green} small>✓ Complete</GlowButton>}
                     </div>
                   </div>
                 </div>
