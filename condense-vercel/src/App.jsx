@@ -864,12 +864,41 @@ export default function App() {
   // Load persisted state
  const [prospects, setProspects] = useState([]);
 const [research, setResearch] = useState({});
+const [enriching, setEnriching] = useState(null);
 const [messages, setMessages] = useState({});
 const [edits, setEdits] = useState({});
 const [replies, setReplies] = useState([]);
 const [notifications, setNotifications] = useState([]);
 const [dbLoaded, setDbLoaded] = useState(false);
+const enrichProspect = async (prospect) => {
+  if (!prospect.name || !prospect.company) return;
+  setEnriching(prospect.id);
+  addLog(prospect.id, "🔍 Searching Apollo/Lusha for contact info...");
 
+  try {
+    const res = await fetch("/api/enrich", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: prospect.name,
+        company: prospect.company,
+        jobTitle: prospect.jobTitle,
+        linkedinUrl: prospect.linkedinUrl,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    setProspects(prev => prev.map(p =>
+      p.id === prospect.id ? { ...p, email: data.email || p.email, phone: data.phone || p.phone } : p
+    ));
+    addLog(prospect.id, `✅ Enriched via ${data.source}: ${data.email || "No email"}`);
+  } catch (err) {
+    addLog(prospect.id, `⚠️ Enrichment: ${err.message}`);
+  } finally {
+    setEnriching(null);
+  }
+};
 useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
@@ -896,6 +925,12 @@ useEffect(() => {
   }
   loadAll();
 }, []);
+  useEffect(() => {
+  const sel = prospects.find(p => p.id === selected);
+  if (sel && !sel.email && !enriching && !logs[sel.id]?.some(l => l.includes("Enriched"))) {
+    enrichProspect(sel);
+  }
+}, [selected, prospects]);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(() => {
     const p = new URLSearchParams(window.location.search);
@@ -1733,7 +1768,15 @@ if (!dbLoaded) return (
 </div>
                   <div style={{ fontSize: 11, color: C.textMid, marginTop: 2, fontFamily: FONT }}>{p.company}</div>
                   {p.email && <div style={{ fontSize: 10, color: C.textDim, marginTop: 1 }}>✉️ {p.email}</div>}
-                  <div style={{ marginTop: 6 }}><Badge status={p.status} /></div>
+                  <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Badge status={p.status} />
+                      {enriching === p.id && <Spinner />}
+                     {!p.email && p.status !== "researching" && enriching !== p.id && (
+                         <span style={{ fontSize: 9, color: C.red, fontWeight: 700, fontFamily: MONO, background: C.redDim, padding: '2px 6px', borderRadius: 4 }}>
+                          ⚠️ NO EMAIL
+                         </span>
+                      )}
+        </div>
                   {p.status === "following" && (
                     <div style={{ marginTop: 5, display: "flex", flexWrap: "wrap", gap: 3 }}>
                       {[3, 7, 14].map(day => {
@@ -1784,7 +1827,13 @@ if (!dbLoaded) return (
                 <div style={{ fontSize: 12, fontWeight: 500, color: C.text, fontFamily: FONT }}>{p.name}</div>
                 <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{p.company}</div>
               </div>
-              <Badge status={p.status} />
+              <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+  <Badge status={p.status} />
+  {enriching === p.id && <Spinner />}
+  {!p.email && p.status !== "researching" && enriching !== p.id && (
+    <span style={{ fontSize: 9, color: C.red, fontWeight: 700, fontFamily: MONO, background: C.redDim, padding: '2px 6px', borderRadius: 4 }}>⚠️ NO EMAIL</span>
+  )}
+</div>
             </div>
           ))
         }
@@ -1906,6 +1955,24 @@ if (!dbLoaded) return (
                         </GlowButton>
                       )}
 {sel.status === "ready" && <GlowButton onClick={() => markSent(sel.id)} color={C.green} primary>✓ Mark Sent</GlowButton>}
+                      {/* ENRICH BUTTON */}
+{!sel.email && (
+  <button
+    onClick={() => enrichProspect(sel)}
+    disabled={enriching === sel.id}
+    style={{
+      padding: "8px 14px", borderRadius: 6,
+      border: "1px solid #7C3AED44",
+      background: "#FAF5FF",
+      color: "#7C3AED",
+      fontSize: 11, fontFamily: FONT, fontWeight: 500,
+      cursor: enriching === sel.id ? "not-allowed" : "pointer",
+      display: "flex", alignItems: "center", gap: 6,
+    }}
+  >
+    {enriching === sel.id ? <><Spinner /> Finding...</> : "🔍 Find Email"}
+  </button>
+)}
 {selMessages && (
   <button
     onClick={async () => {
