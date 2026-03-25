@@ -153,10 +153,20 @@ async function dbSave(table, id, data) {
 async function dbLoad(table) {
   if (!supabase) return {};
   try {
-    const { data } = await supabase.from(table).select('id, data').range(0, 9999);
-
-    if (!data) return {};
-    return Object.fromEntries(data.map(r => [r.id, r.data]));
+    let allData = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await supabase
+        .from(table)
+        .select('id, data')
+        .range(from, from + pageSize - 1);
+      if (error || !data || data.length === 0) break;
+      allData = [...allData, ...data];
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    return Object.fromEntries(allData.map(r => [r.id, r.data]));
   } catch(e) { console.error('Load error:', e); return {}; }
 }
 
