@@ -1771,11 +1771,11 @@ if (!dbLoaded) return (
                   <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
                       <Badge status={p.status} />
                       {enriching === p.id && <Spinner />}
-                     {!p.email && p.status !== "researching" && enriching !== p.id && (
-                         <span style={{ fontSize: 9, color: C.red, fontWeight: 700, fontFamily: MONO, background: C.redDim, padding: '2px 6px', borderRadius: 4 }}>
-                          ⚠️ NO EMAIL
-                         </span>
-                      )}
+                    {!p.email && p.status !== "researching" && enriching !== p.id && (
+  <span style={{ fontSize: 9, color: C.red, fontWeight: 700, fontFamily: MONO, background: C.redDim, padding: '2px 6px', borderRadius: 4 }}>
+    ⚠️ NO EMAIL
+  </span>
+)}
         </div>
                   {p.status === "following" && (
                     <div style={{ marginTop: 5, display: "flex", flexWrap: "wrap", gap: 3 }}>
@@ -1831,9 +1831,10 @@ if (!dbLoaded) return (
   <Badge status={p.status} />
   {enriching === p.id && <Spinner />}
   {!p.email && p.status !== "researching" && enriching !== p.id && (
-    <span style={{ fontSize: 9, color: C.red, fontWeight: 700, fontFamily: MONO, background: C.redDim, padding: '2px 6px', borderRadius: 4 }}>⚠️ NO EMAIL</span>
-  )}
-</div>
+  <span style={{ fontSize: 9, color: C.red, fontWeight: 700, fontFamily: MONO, background: C.redDim, padding: '2px 6px', borderRadius: 4 }}>
+    ⚠️ NO EMAIL
+  </span>
+)}
             </div>
           ))
         }
