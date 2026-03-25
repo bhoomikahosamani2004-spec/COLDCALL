@@ -150,11 +150,11 @@ async function dbSave(table, id, data) {
     await supabase.from(table).upsert({ id, data, updated_at: new Date().toISOString() });
   } catch(e) { console.error('Save error:', e); }
 }
-
 async function dbLoad(table) {
   if (!supabase) return {};
   try {
-    const { data } = await supabase.from(table).select('id, data');
+    const { data } = await supabase.from(table).select('id, data').range(0, 9999);
+
     if (!data) return {};
     return Object.fromEntries(data.map(r => [r.id, r.data]));
   } catch(e) { console.error('Load error:', e); return {}; }
