@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { exportProposalPDF } from "./exportProposal";
 import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_SUPABASE_URL 
   || process.env.REACT_APP_SUPABASE_URL 
@@ -869,7 +870,7 @@ const [edits, setEdits] = useState({});
 const [replies, setReplies] = useState([]);
 const [notifications, setNotifications] = useState([]);
 const [dbLoaded, setDbLoaded] = useState(false);
-
+const [exportingPDF, setExportingPDF] = useState(false);
 useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
@@ -1953,6 +1954,20 @@ if (!dbLoaded) return (
   </button>
 )}
 {sel.status === "ready" && <GlowButton onClick={() => markSent(sel.id)} color={C.green} primary>✓ Mark Sent</GlowButton>}
+                      {selMessages && (
+  <GlowButton
+    onClick={() => exportProposalPDF({
+      sel, selResearch, selMessages, selMatchedStories, findIndustryUseCases,
+      onStart: () => setExportingPDF(true),
+      onDone: () => setExportingPDF(false),
+      onError: () => setExportingPDF(false),
+    })}
+    disabled={exportingPDF}
+    color="#7C3AED"
+  >
+    {exportingPDF ? <><Spinner /> Generating PDF...</> : "📄 Export Proposal"}
+  </GlowButton>
+)}
 {selMessages && (
   <button
     onClick={async () => {
