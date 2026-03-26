@@ -5,11 +5,7 @@
     "CI": "false",
     "DISABLE_ESLINT_PLUGIN": "true"
   },
-  "functions": {
-    "api/estimate.py": {
-      "runtime": "@vercel/python@4.0.0"
-    }
-  },
+
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
