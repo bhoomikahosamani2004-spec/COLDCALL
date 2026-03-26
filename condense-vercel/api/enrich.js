@@ -1,47 +1,54 @@
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
-  const { name, company } = req.body;
-  
+  const { name, company, jobTitle, linkedinUrl } = req.body;
+
+  // TRY APOLLO FIRST
   try {
-    // 1. Try Apollo
     const apolloRes = await fetch("https://api.apollo.io/v1/people/match", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
       body: JSON.stringify({
         api_key: process.env.APOLLO_API_KEY,
         first_name: name.split(" ")[0],
         last_name: name.split(" ").slice(1).join(" "),
         organization_name: company,
-        reveal_personal_emails: true
+        title: jobTitle || "",
+        linkedin_url: linkedinUrl || undefined,
+        reveal_personal_emails: true,
       }),
     });
     const apolloData = await apolloRes.json();
-    
-    if (apolloData.person?.email) {
-      return res.status(200).json({
-        source: "Apollo",
-        email: apolloData.person.email,
-        phone: apolloData.person.phone_numbers?.[0]?.sanitized_number || ""
+    const person = apolloData?.person;
+    if (person && (person.email || person.linkedin_url)) {
+      return res.json({
+        source: "apollo",
+        email: person.email || "",
+        linkedinUrl: person.linkedin_url || linkedinUrl || "",
+        phone: person.phone_numbers?.[0]?.sanitized_number || "",
+        title: person.title || jobTitle || "",
+        company: person.organization?.name || company,
       });
     }
+  } catch (err) { console.error("Apollo error:", err.message); }
 
-    // 2. Fallback to Lusha if Apollo fails
+  // FALLBACK TO LUSHA
+  try {
     const lushaRes = await fetch(
-      `https://api.lusha.com/person?firstName=${name.split(" ")[0]}&lastName=${name.split(" ").slice(1).join(" ")}&company=${company}`,
-      { headers: { "api_key": process.env.LUSHA_API_KEY } }
+      `https://api.lusha.com/person?firstName=${encodeURIComponent(name.split(" ")[0])}&lastName=${encodeURIComponent(name.split(" ").slice(1).join(" "))}&company=${encodeURIComponent(company)}`,
+      { method: "GET", headers: { "api_key": process.env.LUSHA_API_KEY } }
     );
     const lushaData = await lushaRes.json();
-
-    if (lushaData.emailAddresses?.[0]?.emailAddress) {
-      return res.status(200).json({
-        source: "Lusha",
-        email: lushaData.emailAddresses[0].emailAddress,
-        phone: lushaData.phoneNumbers?.[0]?.internationalNumber || ""
+    if (lushaData && (lushaData.emailAddresses?.length || lushaData.phoneNumbers?.length)) {
+      return res.json({
+        source: "lusha",
+        email: lushaData.emailAddresses?.[0]?.emailAddress || "",
+        linkedinUrl: linkedinUrl || "",
+        phone: lushaData.phoneNumbers?.[0]?.localNumber || "",
+        title: lushaData.title || jobTitle || "",
+        company: lushaData.company || company,
       });
     }
+  } catch (err) { console.error("Lusha error:", err.message); }
 
-    return res.status(404).json({ error: "No data found" });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
+  return res.status(404).json({ error: "No data found from Apollo or Lusha" });
 }
