@@ -2,6 +2,8 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   const { name, company, jobTitle, linkedinUrl } = req.body;
 
+  console.log("ENRICH REQUEST:", { name, company, jobTitle });
+
   // TRY APOLLO FIRST
   try {
     const apolloRes = await fetch("https://api.apollo.io/v1/people/match", {
@@ -18,6 +20,9 @@ export default async function handler(req, res) {
       }),
     });
     const apolloData = await apolloRes.json();
+    console.log("APOLLO STATUS:", apolloRes.status);
+    console.log("APOLLO RESPONSE:", JSON.stringify(apolloData).slice(0, 500));
+
     const person = apolloData?.person;
     if (person && (person.email || person.linkedin_url)) {
       return res.json({
@@ -38,6 +43,9 @@ export default async function handler(req, res) {
       { method: "GET", headers: { "api_key": process.env.LUSHA_API_KEY } }
     );
     const lushaData = await lushaRes.json();
+    console.log("LUSHA STATUS:", lushaRes.status);
+    console.log("LUSHA RESPONSE:", JSON.stringify(lushaData).slice(0, 500));
+
     if (lushaData && (lushaData.emailAddresses?.length || lushaData.phoneNumbers?.length)) {
       return res.json({
         source: "lusha",
@@ -50,5 +58,12 @@ export default async function handler(req, res) {
     }
   } catch (err) { console.error("Lusha error:", err.message); }
 
-  return res.status(404).json({ error: "No data found from Apollo or Lusha" });
+  // Return partial success even if no email found
+  return res.status(404).json({ 
+    error: "No data found from Apollo or Lusha",
+    debug: {
+      apollo_key_set: !!process.env.APOLLO_API_KEY,
+      lusha_key_set: !!process.env.LUSHA_API_KEY,
+    }
+  });
 }
