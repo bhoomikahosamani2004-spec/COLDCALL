@@ -8,9 +8,12 @@ export default async function handler(req, res) {
   try {
     const apolloRes = await fetch("https://api.apollo.io/v1/people/match", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+      headers: { 
+            "Content-Type": "application/json", 
+            "Cache-Control": "no-cache",
+            "X-Api-Key": process.env.APOLLO_API_KEY
+        },
       body: JSON.stringify({
-        api_key: process.env.APOLLO_API_KEY,
         first_name: name.split(" ")[0],
         last_name: name.split(" ").slice(1).join(" "),
         organization_name: company,
@@ -38,10 +41,10 @@ export default async function handler(req, res) {
 
   // FALLBACK TO LUSHA
   try {
-    const lushaRes = await fetch(
-      `https://api.lusha.com/person?firstName=${encodeURIComponent(name.split(" ")[0])}&lastName=${encodeURIComponent(name.split(" ").slice(1).join(" "))}&company=${encodeURIComponent(company)}`,
-      { method: "GET", headers: { "api_key": process.env.LUSHA_API_KEY } }
-    );
+   const lushaRes = await fetch(
+  `https://api.lusha.com/v2/person?firstName=${encodeURIComponent(name.split(" ")[0])}&lastName=${encodeURIComponent(name.split(" ").slice(1).join(" "))}&company=${encodeURIComponent(company)}`,
+  { method: "GET", headers: { "api_key": process.env.LUSHA_API_KEY } }
+);
     const lushaData = await lushaRes.json();
     console.log("LUSHA STATUS:", lushaRes.status);
     console.log("LUSHA RESPONSE:", JSON.stringify(lushaData).slice(0, 500));
