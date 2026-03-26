@@ -7,6 +7,7 @@ from AWS.aws import estimate_msk_provisioned, estimate_msk_express, estimate_msk
 from schema import EstimateRequestProvisioned, EstimateRequestExpress, EstimateRequestServerless
 
 class handler(BaseHTTPRequestHandler):
+
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -38,15 +39,3 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
-```
-
----
-
-**Step 6 — Create `requirements.txt` in root**
-
-Click **Add file → Create new file** → name it `requirements.txt` → paste:
-```
-boto3
-pydantic
-python-dotenv
-fastapi
