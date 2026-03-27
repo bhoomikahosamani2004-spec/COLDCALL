@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import emailjs from '@emailjs/browser';
 import { exportProposalPDF } from "./exportProposal";
 import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_SUPABASE_URL 
@@ -802,35 +801,13 @@ function SendButtons({ prospect, messageText, messageType, emailSubject, senderP
   navigator.clipboard.writeText(messageText);
   window.open(linkedinUrl, "_blank");
 };
- const sendEmail = async () => {
-  if (!email) {
-    alert("No email address saved for this prospect.");
-    return;
-  }
-
-  const signature = senderProfile.signature 
-    ? `\n\n${senderProfile.signature}` 
-    : "\n\nBest regards,\nVeera Raghavan\nEnterprise Business (India)\nZeliot\n+91 935-309-4136";
-
-  const fullBody = messageText + signature;
-
-  try {
-    await emailjs.send(
-      "service_service_oj5iawe",   // 👈 replace with your Service ID
-      "template_template_m0o0srn",  // 👈 replace with your Template ID
-      {
-        to_email: email,
-        subject: emailSubject || `Zeliot Condense — ${prospect.company}`,
-        message: fullBody,
-      },
-      "ZHU1TMD202jANWfkJ"    // 👈 replace with your Public Key
-    );
-    alert(`✅ Email sent to ${email}!`);
-  } catch (err) {
-    console.error("EmailJS error:", err);
-    alert("❌ Failed to send email. Check console for details.");
-  }
-};
+  const sendEmail = () => {
+    const signature = senderProfile.signature ? `\n\n${senderProfile.signature}` : "";
+    const fullBody = messageText + signature;
+    const subject = encodeURIComponent(emailSubject || `Zeliot Condense — ${prospect.company}`);
+    const body = encodeURIComponent(fullBody);
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_blank");
+  };
 
   return (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
