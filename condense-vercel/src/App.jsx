@@ -1788,6 +1788,65 @@ if (!dbLoaded) return (
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}>Dashboard</div>
       <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Engagement tracking & batch analytics</div>
     </div>
+    {/* FOLLOW-UP DUE TODAY */}
+{(() => {
+  const followUps = [
+  { day: 3, label: "Email Follow-Up 1 Due", color: C.amber, key: "email_followup1" },
+  { day: 7, label: "Email Follow-Up 2 Due", color: C.red, key: "email_followup2" },
+].map(fu => ({
+  ...fu,
+  prospects: prospects.filter(p => {
+    if (!p.sentAt || p.status === "done") return false;
+    const d = getDaysUntilFollowup(p, fu.day);
+    return d !== null && d <= 0;
+  })
+})).filter(fu => fu.prospects.length > 0);
+
+  if (followUps.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 12 }}>
+        🔔 Follow-Ups Due Now
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {followUps.map(fu => (
+          <div key={fu.day} style={{ background: "#FFFFFF", border: `1px solid ${fu.color}33`, borderRadius: 10, padding: "14px 18px", boxShadow: "0 1px 4px rgba(10,37,64,0.06)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 16 }}>📨</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: fu.color, fontFamily: FONT }}>{fu.label}</span>
+                <span style={{ fontSize: 11, fontFamily: MONO, color: fu.color, background: `${fu.color}15`, padding: "2px 8px", borderRadius: 10, border: `1px solid ${fu.color}33` }}>
+                  {fu.prospects.length} prospect{fu.prospects.length > 1 ? "s" : ""}
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {fu.prospects.map(p => (
+                <div
+                  key={p.id}
+                  onClick={() => { setActiveView("prospects"); setSelected(p.id); setActiveTab("messages"); setActiveMsg(fu.key); }}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#F8FAFC", borderRadius: 6, border: "1px solid #E4ECF4", cursor: "pointer", transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#EEF5FF"; e.currentTarget.style.borderColor = "#B8CCFF"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.borderColor = "#E4ECF4"; }}
+                >
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT }}>{p.name}</div>
+                    <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{p.company} · {p.jobTitle || "—"}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 10, fontFamily: MONO, color: fu.color, fontWeight: 600 }}>OVERDUE</span>
+                    <span style={{ fontSize: 11, color: C.gold, fontFamily: FONT }}>View →</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+})()}
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
       {[
         { label: "Messages Generated", value: prospects.filter(p => p.status !== "idle").length, icon: "✉️", color: C.blue },
