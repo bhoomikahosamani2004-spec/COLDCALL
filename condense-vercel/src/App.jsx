@@ -934,6 +934,7 @@ const [activeView, setActiveView] = useState("prospects"); // prospects | dashbo
 const [zohoPushing, setZohoPushing] = useState(false);      
 const [zohoPushStatus, setZohoPushStatus] = useState({});
 const [searchQuery, setSearchQuery] = useState("");
+const [sidebarFilter, setSidebarFilter] = useState("all");
 const [ratings, setRatings] = useState({});
 const [ratingFeedback, setRatingFeedback] = useState({});
 const [trainingExamples, setTrainingExamples] = useState([]);
@@ -1710,6 +1711,43 @@ if (!dbLoaded) return (
     <span style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: DISPLAY }}>Prospects ({prospects.length})</span>
     {prospects.length > 0 && <span style={{ fontSize: 10, color: C.textDim }}>{prospects.filter(p=>p.status==="ready"||p.status==="following").length} active</span>}
   </div>
+                {/* FOLLOW-UP FILTER BUTTONS */}
+<div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+  {[
+    { label: "All", value: "all" },
+    { label: "📧 E+3 Due", value: "followup1" },
+    { label: "📧 E+7 Due", value: "followup2" },
+  ].map(f => {
+    const count = f.value === "all" ? prospects.length
+      : prospects.filter(p => {
+          if (!p.sentAt || p.status === "done") return false;
+          const day = f.value === "followup1" ? 3 : 7;
+          const d = getDaysUntilFollowup(p, day);
+          return d !== null && d <= 0;
+        }).length;
+    const isActive = (sidebarFilter || "all") === f.value;
+    return (
+      <button
+        key={f.value}
+        onClick={() => setSidebarFilter(f.value)}
+        style={{
+          padding: "4px 10px", borderRadius: 20, border: `1px solid ${isActive ? C.gold : "#E4ECF4"}`,
+          background: isActive ? C.goldDim : "#F8FAFC",
+          color: isActive ? C.gold : C.textDim,
+          fontSize: 10, fontFamily: MONO, cursor: "pointer", fontWeight: isActive ? 700 : 400,
+          display: "flex", alignItems: "center", gap: 4
+        }}
+      >
+        {f.label}
+        {count > 0 && (
+          <span style={{ background: isActive ? C.gold : "#E4ECF4", color: isActive ? "#fff" : C.textMid, borderRadius: 8, padding: "0px 5px", fontSize: 9, fontWeight: 700 }}>
+            {count}
+          </span>
+        )}
+      </button>
+    );
+  })}
+</div>
   <div style={{ position: "relative" }}>
     <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.textDim, pointerEvents: "none" }}>🔍</span>
     <input
@@ -1729,12 +1767,28 @@ if (!dbLoaded) return (
                   <div style={{ fontSize: 12, color: C.textDim, lineHeight: 1.7, fontFamily: FONT }}>Add your first prospect above<br/>or upload a CSV file</div>
                 </div>
              ) : prospects.filter(p => {
-                  if (!searchQuery.trim()) return true;
-                  const q = searchQuery.toLowerCase();
-                  return (p.name || "").toLowerCase().includes(q) ||
-                         (p.company || "").toLowerCase().includes(q) ||
-                         (p.jobTitle || "").toLowerCase().includes(q);
-                }).map(p => (
+  // Search filter
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    if (!(
+      (p.name || "").toLowerCase().includes(q) ||
+      (p.company || "").toLowerCase().includes(q) ||
+      (p.jobTitle || "").toLowerCase().includes(q)
+    )) return false;
+  }
+  // Follow-up filter
+  if (sidebarFilter === "followup1") {
+    if (!p.sentAt || p.status === "done") return false;
+    const d = getDaysUntilFollowup(p, 3);
+    return d !== null && d <= 0;
+  }
+  if (sidebarFilter === "followup2") {
+    if (!p.sentAt || p.status === "done") return false;
+    const d = getDaysUntilFollowup(p, 7);
+    return d !== null && d <= 0;
+  }
+  return true;
+}).map(p => (
                 <div key={p.id} className="card-enter prospect-card" onClick={() => setSelected(p.id)} style={{ padding: "11px 14px", marginBottom: 0, background: selected === p.id ? "#EEF5FF" : "#FFFFFF", borderBottom: "1px solid #F0F4F8", borderLeft: selected === p.id ? "3px solid #1B6EF3" : "3px solid transparent" }}>
                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
   <div style={{ fontWeight: 600, fontSize: 13, color: selected === p.id ? C.navy : C.text, lineHeight: 1.3, fontFamily: FONT }}>{p.name}</div>
