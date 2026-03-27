@@ -875,9 +875,9 @@ useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
   const [p, r, m, e, rep, n, rat, tr] = await Promise.all([
-  dbLoad('prospects'), dbLoad('research'), dbLoad('messages'),
-  dbLoad('edits'), dbLoad('replies'), dbLoad('notifications'),
-  dbLoad('ratings'), dbLoad('training'),
+  dbLoad('v2_prospects'), dbLoad('v2_research'), dbLoad('v2_messages'),
+  dbLoad('v2_edits'), dbLoad('v2_replies'), dbLoad('v2_notifications'),
+  dbLoad('v2_ratings'), dbLoad('v2_training'),
 ]);
     setProspects(Object.values(p).sort((a, b) => {
   // Ready/Following first, then by newest created
