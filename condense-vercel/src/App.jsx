@@ -945,42 +945,42 @@ const [enrichedData, setEnrichedData] = useState({});
   // Persist state changes
   useEffect(() => {
   if (!dbLoaded) return;
-  prospects.forEach(p => dbSave('prospects', p.id, p));
+  prospects.forEach(p => dbSave('v2_prospects', p.id, p));
 }, [prospects, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(research).forEach(([id, val]) => dbSave('research', id, val));
+  Object.entries(research).forEach(([id, val]) => dbSave('v2_research', id, val));
 }, [research, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(messages).forEach(([id, val]) => dbSave('messages', id, val));
+  Object.entries(messages).forEach(([id, val]) => dbSave('v2_messages', id, val));
 }, [messages, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(edits).forEach(([id, val]) => dbSave('edits', id, val));
+  Object.entries(edits).forEach(([id, val]) => dbSave('v2_edits', id, val));
 }, [edits, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  replies.forEach(r => dbSave('replies', r.id, r));
+  replies.forEach(r => dbSave('v2_replies', r.id, r));
 }, [replies, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  notifications.forEach(n => dbSave('notifications', n.id || `n_${Date.now()}`, n));
+  notifications.forEach(n => dbSave('v2_notifications', n.id || `n_${Date.now()}`, n));
 }, [notifications, dbLoaded]);
   
   useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(ratings).forEach(([id, val]) => dbSave('ratings', id, val));
+  Object.entries(ratings).forEach(([id, val]) => dbSave('v2_ratings', id, val));
 }, [ratings, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  trainingExamples.forEach(t => dbSave('training', t.id, t));
+  trainingExamples.forEach(t => dbSave('v2_training', t.id, t));
 }, [trainingExamples, dbLoaded]);
   
   useEffect(() => {
@@ -1800,10 +1800,10 @@ if (!dbLoaded) return (
         if (selected === p.id) setSelected(null);
         setProspects(prev => prev.filter(pr => pr.id !== p.id));
         if (supabase) {
-          supabase.from('prospects').delete().eq('id', p.id);
-          supabase.from('research').delete().eq('id', p.id);
-          supabase.from('messages').delete().eq('id', p.id);
-          supabase.from('edits').delete().eq('id', p.id);
+          supabase.from('v2_prospects').delete().eq('id', p.id);
+          supabase.from('v2_research').delete().eq('id', p.id);
+          supabase.from('v2_messages').delete().eq('id', p.id);
+          supabase.from('v2_edits').delete().eq('id', p.id);
         }
         setResearch(prev => { const n = {...prev}; delete n[p.id]; return n; });
         setMessages(prev => { const n = {...prev}; delete n[p.id]; return n; });
