@@ -442,8 +442,8 @@ Some relevant use cases where Condense can add value include:
 Unlike traditional streaming stacks that require heavy infrastructure management, Condense abstracts scaling, operations, and monitoring, allowing engineering teams to focus on building mobility applications rather than managing data infrastructure.
 As a pre-read, sharing the below information on Condense.
 - Condense Overview: https://docs.zeliot.in/condense
-- Case Studies: https://www.zeliot.in/case-studies
-- About Zeliot: https://bento.me/zeliotofficial
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot:  www.zeliot.in/quick-links
 - Get Started with Condense: https://bit.ly/3NmxJpe
 Zeliot supports leading mobility and automotive companies such as TVS Motor, Volvo, Montra Electric, Bosch, Eicher, CEAT, Royal Enfield, Tata Motors, Adani Ports & Logistics, SML ISUZU, and Ashok Leyland helping them build large-scale connected vehicle platforms, process high-frequency telematics data, and enable real-time mobility intelligence services.
 I would be happy to walk you through how leading mobility platforms are using Condense. Please let me know a convenient time for a short discussion next week.
@@ -470,8 +470,8 @@ Operational intelligence for logistics and fulfillment – Enabling real-time mo
 Many teams we work with have been able to reduce their streaming infrastructure and data pipeline costs by 40–50%, while significantly simplifying the engineering effort required to maintain these pipelines.
 As a pre-read, sharing the below information on Condense.
 - Condense Overview: https://docs.zeliot.in/condense
-- Case Studies: https://www.zeliot.in/case-studies
-- About Zeliot: https://bento.me/zeliotofficial
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot:  www.zeliot.in/quick-links
 - Get Started with Condense: https://bit.ly/3NmxJpe
 I would love to explore whether there might be an opportunity to support [Company]'s analytics platform with real-time data capabilities or help optimize parts of the current streaming architecture.
 Would you be open to a 30 minute conversation sometime next week?
@@ -498,8 +498,8 @@ Below are a few relevant use cases where Condense can add value:
 By reducing operational complexity and centralizing real-time ingestion and transformation, Condense helps data engineering teams focus on building reliable, scalable data products rather than maintaining streaming infrastructure.
 As a pre-read, sharing the below information on Condense.
 - Condense Overview: https://docs.zeliot.in/condense
-- Case Studies: https://www.zeliot.in/case-studies
-- About Zeliot: https://bento.me/zeliotofficial
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot:  www.zeliot.in/quick-links
 - Get Started with Condense: https://bit.ly/3NmxJpe
 Proven Adoption: Condense is already trusted in production by leading organizations, including TVS, Volvo Eicher, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield — supporting real-time vehicle data, manufacturing visibility, and digital platform initiatives at scale.
 I would welcome 30 minutes at your convenience to understand your current GCP streaming architecture and explore whether Condense could optimize performance, cost, or operational efficiency in your setup.
@@ -540,8 +540,8 @@ Accelerate AI, analytics, and intelligent automation – Provide AI/ML models, d
 Reduce integration sprawl – Replace fragmented, point-to-point integrations with a scalable streaming layer that simplifies operations and supports long-term platform and product evolution.
 As a pre-read, sharing the below information on Condense.
 - Condense Overview: https://docs.zeliot.in/condense
-- Case Studies: https://www.zeliot.in/case-studies
-- About Zeliot: https://bento.me/zeliotofficial
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot:  www.zeliot.in/quick-links
 - Get Started with Condense: https://bit.ly/3NmxJpe
 Proven Adoption: Condense is already trusted in production by leading automotive and mobility organizations, including TVS Motor, Eicher Motors, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield.
 If helpful, I'd be glad to share a brief overview focused on how Condense supports internal product platforms, AI readiness, and continuous process excellence.
@@ -562,10 +562,9 @@ Zeliot
 
 As a pre-read, sharing the below information on Condense.
 - Condense Overview: https://docs.zeliot.in/condense
-- Case Studies: https://www.zeliot.in/case-studies
-- About Zeliot: https://bento.me/zeliotofficial
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot:  www.zeliot.in/quick-links
 - Get Started with Condense: https://bit.ly/3NmxJpe
-
 Omitting this block is a HARD ERROR. It must appear in every email_body without exception.
 - Total length: 350-500 words
 - No asterisks, no markdown, no bold in email body
