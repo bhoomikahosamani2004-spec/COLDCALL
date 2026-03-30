@@ -1307,7 +1307,7 @@ STYLE — follow this EXACT Dream11 email format:
 
 Subject: Condense — Complementing ${company}'s ${stack.includes("Kafka") ? "Kafka" : "event streaming"} data platform for scale and cost efficiency
 
-Dear ${persona},
+Greetings! ${persona},
 
 Greetings! I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch. Condense is built for modern data engineering and analytics teams that need to operationalize real-time data across products, analytics platforms, and AI systems without the heavy operational complexity of managing distributed streaming infrastructure.
 
