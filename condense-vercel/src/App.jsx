@@ -297,7 +297,117 @@ Provide detailed research across ALL these areas:
   onLog("✅ Research complete — " + (clean.pain_points?.length || 0) + " pain points, " + (clean.conversation_hooks?.length || 0) + " conversation hooks found");
   return clean;
 }
+// ─── V3: DATA STACK SIGNAL EMAIL GENERATOR ───────────────────────────────────
+const TOOL_DESCRIPTIONS = {
+  Fivetran: "Fivetran for automated data ingestion",
+  Hevo: "Hevo Data for pipeline orchestration",
+  Rudderstack: "RudderStack for customer data and event pipelines",
+  Striim: "Striim for real-time data integration and CDC",
+  Airbyte: "Airbyte for open-source ELT pipelines",
+};
 
+const STACK_DESCRIPTIONS = {
+  "Kafka + BigQuery": "Apache Kafka for real-time event streaming with BigQuery as the analytical warehouse",
+  "Kafka + Databricks": "Apache Kafka for real-time event streaming with Databricks for stream processing and ML workloads",
+  "Kafka + Snowflake": "Apache Kafka for real-time event streaming with Snowflake as the cloud data warehouse",
+  "Kafka + Redshift": "Apache Kafka for real-time event streaming with Amazon Redshift as the data warehouse",
+  "Event Streaming + Warehouse": "an event streaming backbone combined with a modern cloud data warehouse",
+};
+
+const INTEGRATION_BULLETS = {
+  "Real-time Analytics": [
+    "Optimize high-throughput Kafka workloads and reduce streaming infrastructure costs — Condense is designed to efficiently handle very large event volumes while minimizing compute, storage, and data movement overhead. This allows teams running high-throughput Kafka environments to significantly reduce cloud infrastructure costs while maintaining performance at scale.",
+    "Enable real-time transformations closer to the data stream — Instead of moving raw data across multiple processing layers, Condense allows transformations, filtering, and enrichment to happen directly within the streaming pipeline. This improves latency and reduces unnecessary downstream processing workloads.",
+    "Simplify complex ingestion and pipeline layers — Modern data architectures often rely on several tools such as Kafka Connect, CDC pipelines, ELT tools, and event streaming systems. Condense helps streamline this architecture by consolidating ingestion, transformation, and delivery pipelines into a unified real-time data platform.",
+    "Deliver reliable, low-latency data pipelines for analytics and operational systems — Condense ensures consistent and reliable data delivery across downstream systems such as data warehouses, analytics platforms, operational services, and AI/ML pipelines — enabling teams to build applications that rely on real-time data.",
+    "Handle massive event spikes reliably — For platforms experiencing sudden spikes in user activity, Condense enables streaming pipelines to scale seamlessly without bottlenecks, ensuring data pipelines remain stable and performant during peak loads.",
+  ],
+  "Event Streaming": [
+    "Handle massive event spikes reliably — For platforms experiencing sudden spikes in user activity, Condense enables streaming pipelines to scale seamlessly without bottlenecks, ensuring data pipelines remain stable during peak loads.",
+    "Optimize high-throughput Kafka workloads and reduce streaming infrastructure costs — Condense is designed to efficiently handle very large event volumes while minimizing compute, storage, and data movement overhead.",
+    "Enable real-time transformations and stream processing closer to the data stream — Condense allows transformations, filtering, and enrichment to happen directly within the streaming pipeline, improving latency and reducing unnecessary downstream processing.",
+    "Simplify complex ingestion and pipeline layers — Condense consolidates ingestion, transformation, and delivery pipelines into a unified real-time data platform.",
+    "Deliver reliable, low-latency data pipelines for analytics and operational systems — Condense ensures consistent and reliable data delivery across data warehouses, analytics platforms, and AI/ML pipelines.",
+  ],
+  "Warehouse Sync": [
+    "Simplify complex ingestion and pipeline layers — Modern data architectures often rely on Kafka Connect, CDC pipelines, ELT tools, and event streaming systems. Condense helps streamline this into a unified platform.",
+    "Optimize warehouse sync performance and reduce infrastructure costs — Condense handles large event volumes efficiently while minimizing compute and data movement between operational systems and warehouses.",
+    "Enable real-time transformations before warehouse ingestion — Condense allows filtering and enrichment within the streaming pipeline, reducing downstream processing workloads.",
+    "Deliver reliable, consistent data pipelines — Condense ensures reliable data delivery across data warehouses and analytics platforms.",
+    "Handle massive event spikes reliably — Condense enables streaming pipelines to scale seamlessly without bottlenecks during peak loads, ensuring warehouse sync stays current even during traffic surges.",
+  ],
+  "CDC Pipelines": [
+    "Simplify CDC and complex pipeline layers — Condense consolidates CDC, ingestion, and delivery pipelines into a unified real-time data platform, reducing complexity.",
+    "Enable real-time transformations closer to the data stream — Condense allows filtering and enrichment to happen within the CDC pipeline itself rather than downstream.",
+    "Deliver reliable, low-latency data pipelines — Condense ensures consistent delivery across data warehouses, operational services, and AI/ML pipelines.",
+    "Optimize high-throughput workloads and reduce streaming infrastructure costs — Condense handles very large CDC event volumes efficiently.",
+    "Handle massive event spikes reliably — Condense enables streaming pipelines to scale seamlessly without bottlenecks, ensuring CDC pipelines stay stable during peak operational loads.",
+  ],
+  "AI/Agent Data Pipelines": [
+    "Deliver reliable, low-latency data pipelines for AI and ML systems — Condense ensures consistent delivery across AI/ML pipelines, analytics platforms, and operational services.",
+    "Enable real-time transformations and enrichment closer to the data stream — Condense allows feature engineering, filtering, and enrichment directly within the streaming pipeline.",
+    "Optimize high-throughput Kafka workloads and reduce infrastructure costs — Condense efficiently handles very large event volumes while minimizing compute overhead for AI data pipelines.",
+    "Simplify complex ingestion and pipeline layers — Condense consolidates ingestion, transformation, and delivery into a unified real-time data platform, accelerating AI/ML deployment.",
+    "Handle massive event spikes reliably — Condense enables AI data pipelines to scale seamlessly without bottlenecks during peak loads, ensuring models always receive fresh, complete data.",
+  ],
+};
+
+function generateDataStackEmail(row) {
+  const company = row["Company"] || row.company || "";
+  const stack = row["Data Stack Signal"] || "";
+  const tool = row["Tool Used"] || "";
+  const useCase = row["Use Case"] || "";
+  const cloud = row["Cloud Provider"] || "";
+  const warehouse = row["Data Warehouse"] || "";
+  const persona = row["Buying Persona"] || "Data Engineering Team";
+  const integration = row["Integration Opportunity"] || "Real-time Analytics";
+
+  const stackDesc = STACK_DESCRIPTIONS[stack] || stack;
+  const toolDesc = TOOL_DESCRIPTIONS[tool] || tool;
+  const bullets = INTEGRATION_BULLETS[integration] || INTEGRATION_BULLETS["Real-time Analytics"];
+
+  const subject = `Condense — Complementing ${company}'s ${stack.includes("Kafka") ? "Kafka" : "event streaming"} data platform for scale and cost efficiency`;
+
+  const body = `Dear ${persona},
+
+Greetings! I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch. Condense is built for modern data engineering and analytics teams that need to operationalize real-time data across products, analytics platforms, and AI systems without the heavy operational complexity of managing distributed streaming infrastructure.
+
+Platforms like ${company} typically operate a modern data architecture built around ${stackDesc}${tool ? `, with ${toolDesc} complementing the pipeline` : ""}. ${cloud ? `Teams running on ${cloud}` : "Engineering teams"} leverage ${warehouse || "cloud data warehouses"} as the analytical layer, with microservices generating large volumes of ${useCase.toLowerCase() || "operational"} events across the platform.
+
+In addition, many teams complement this with tools like ${toolDesc} for ${integration.toLowerCase()}, along with Kafka Connect or Debezium for CDC pipelines to move data across systems.
+
+While this architecture is powerful, it can also introduce operational complexity, multiple pipeline layers, and increasing infrastructure costs as event volumes grow. Condense is designed to complement this ecosystem by providing a high-performance Kafka-native data platform that simplifies and optimizes streaming data pipelines.
+
+Teams typically leverage Condense to:
+
+- ${bullets[0]}
+
+- ${bullets[1]}
+
+- ${bullets[2]}
+
+- ${bullets[3]}
+
+- ${bullets[4]}
+
+As a pre-read, sharing the below information on Condense.
+* Condense Overview: https://docs.zeliot.in/condense
+* Case Studies: https://www.zeliot.in/blog
+* About Zeliot: www.zeliot.in/quick-links
+* Get Started with Condense: https://www.zeliot.in/try-now
+
+Given ${company}'s focus on ${integration.toLowerCase()}, I thought this could be relevant to your data platform initiatives.
+
+Would you be open to a 30-minute discussion to explore how Condense could complement your existing ${stack.includes("Kafka") ? "Kafka, " : ""}${tool ? tool + ", " : ""}and streaming architecture?
+
+Thanks & Regards,
+Veera Raghavan
+Head of Enterprise Sales
+📞 9353094136
+✉️ veera.raghavan@zeliot.in`;
+
+  return { subject, body };
+}
 // ─── MESSAGE GENERATION AGENT (ENHANCED) ──────────────────────────────────────
   async function generateMessages(person, research, matchedStories, jdText, replyTrainingData, industryContext, extraContext, onLog) {
   onLog("✍️ Crafting personalized messages with JD context + success stories...");
@@ -870,13 +980,19 @@ const [replies, setReplies] = useState([]);
 const [notifications, setNotifications] = useState([]);
 const [dbLoaded, setDbLoaded] = useState(false);
 const [exportingPDF, setExportingPDF] = useState(false);
+const [excelRows, setExcelRows] = useState([]);
+const [excelGenerated, setExcelGenerated] = useState({});
+const [excelSelected, setExcelSelected] = useState(null);
+const [excelEditedBody, setExcelEditedBody] = useState({});
+
 useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
   const [p, r, m, e, rep, n, rat, tr] = await Promise.all([
-  dbLoad('v2_prospects'), dbLoad('v2_research'), dbLoad('v2_messages'),
-  dbLoad('v2_edits'), dbLoad('v2_replies'), dbLoad('v2_notifications'),
-  dbLoad('v2_ratings'), dbLoad('v2_training'),
+  dbLoad('v3_prospects'), dbLoad('v3_research'), dbLoad('v3_messages'),
+  dbLoad('v3_edits'), dbLoad('v3_replies'), dbLoad('v3_notifications'),
+  dbLoad('v3_ratings'), dbLoad('v3_training'),
+dbLoad('v3_excel_rows'), dbLoad('v3_excel_generated'), dbLoad('v3_excel_edits'),
 ]);
     setProspects(Object.values(p).sort((a, b) => {
   // Ready/Following first, then by newest created
@@ -892,7 +1008,14 @@ useEffect(() => {
     setNotifications(Object.values(n));
     setRatings(rat);
     setTrainingExamples(Object.values(tr));
-    setDbLoaded(true);    
+    const restoredRows = Object.values(exRows).sort((a, b) => a._id - b._id);
+    if (restoredRows.length > 0) {
+      setExcelRows(restoredRows);
+      setExcelSelected(restoredRows[0]._id);
+    }
+    setExcelGenerated(Object.fromEntries(Object.entries(exGen).map(([k, v]) => [Number(k), v])));
+    setExcelEditedBody(Object.fromEntries(Object.entries(exEdits).map(([k, v]) => [k, v])));
+    setDbLoaded(true);  
   }
   loadAll();
 }, []);
@@ -944,43 +1067,57 @@ const [enrichedData, setEnrichedData] = useState({});
   // Persist state changes
   useEffect(() => {
   if (!dbLoaded) return;
-  prospects.forEach(p => dbSave('v2_prospects', p.id, p));
+  prospects.forEach(p => dbSave('v3_prospects', p.id, p));
 }, [prospects, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(research).forEach(([id, val]) => dbSave('v2_research', id, val));
+  Object.entries(research).forEach(([id, val]) => dbSave('v3_research', id, val));
 }, [research, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(messages).forEach(([id, val]) => dbSave('v2_messages', id, val));
+  Object.entries(messages).forEach(([id, val]) => dbSave('v3_messages', id, val));
 }, [messages, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(edits).forEach(([id, val]) => dbSave('v2_edits', id, val));
+  Object.entries(edits).forEach(([id, val]) => dbSave('v3_edits', id, val));
 }, [edits, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  replies.forEach(r => dbSave('v2_replies', r.id, r));
+  replies.forEach(r => dbSave('v3_replies', r.id, r));
 }, [replies, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  notifications.forEach(n => dbSave('v2_notifications', n.id || `n_${Date.now()}`, n));
+  notifications.forEach(n => dbSave('v3_notifications', n.id || `n_${Date.now()}`, n));
 }, [notifications, dbLoaded]);
   
   useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(ratings).forEach(([id, val]) => dbSave('v2_ratings', id, val));
+  Object.entries(ratings).forEach(([id, val]) => dbSave('v3_ratings', id, val));
 }, [ratings, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  trainingExamples.forEach(t => dbSave('v2_training', t.id, t));
+  trainingExamples.forEach(t => dbSave('v3_training', t.id, t));
 }, [trainingExamples, dbLoaded]);
+  useEffect(() => {
+  if (!dbLoaded) return;
+  excelRows.forEach(r => dbSave('v3_excel_rows', String(r._id), r));
+}, [excelRows, dbLoaded]);
+
+useEffect(() => {
+  if (!dbLoaded) return;
+  Object.entries(excelGenerated).forEach(([id, val]) => dbSave('v3_excel_generated', String(id), val));
+}, [excelGenerated, dbLoaded]);
+
+useEffect(() => {
+  if (!dbLoaded) return;
+  Object.entries(excelEditedBody).forEach(([id, val]) => dbSave('v3_excel_edits', id, val));
+}, [excelEditedBody, dbLoaded]);
   
   useEffect(() => {
   localStorage.setItem('sender_profile', JSON.stringify(senderProfile));
@@ -1118,7 +1255,36 @@ const linkedinIdx = idx(["person linkedin url", "linkedin url", "linkedin", "pro
   } else { setUploadStatus("❌ Please upload a .csv or .xlsx file"); }
   e.target.value = "";
 }; 
+const handleExcelUpload = (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const XLSX = window.XLSX;
+    if (!XLSX) { alert("SheetJS not loaded"); return; }
+    const wb = XLSX.read(ev.target.result, { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    const withIds = data.map((row, i) => ({ ...row, _id: i, _status: "idle" }));
+    setExcelRows(withIds);
+    setExcelSelected(0);
+    setActiveView("excel");
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = "";
+};
 
+const generateExcelEmail = (row) => {
+  const result = generateDataStackEmail(row);
+  setExcelGenerated(prev => ({ ...prev, [row._id]: result }));
+  setExcelRows(prev => prev.map(r => r._id === row._id ? { ...r, _status: "ready" } : r));
+};
+
+const generateAllExcel = async () => {
+  for (const row of excelRows.filter(r => r._status === "idle")) {
+    generateExcelEmail(row);
+    await new Promise(r => setTimeout(r, 20)); // small delay for UI updates
+  }
+};
 const applyMapping = () => {
   const added = [];
   csvRows.forEach((row, i) => {
@@ -1313,6 +1479,7 @@ if (!dbLoaded) return (
             </div>
             {[
             { key: "prospects", label: "🎯 Prospects" },
+            { key: "excel", label: "📊 GTM Excel" },
             { key: "dashboard", label: "📊 Dashboard" },
             { key: "training", label: "🧠 Training" },
 ].map(v => (
@@ -1799,10 +1966,10 @@ if (!dbLoaded) return (
         if (selected === p.id) setSelected(null);
         setProspects(prev => prev.filter(pr => pr.id !== p.id));
         if (supabase) {
-          supabase.from('v2_prospects').delete().eq('id', p.id);
-          supabase.from('v2_research').delete().eq('id', p.id);
-          supabase.from('v2_messages').delete().eq('id', p.id);
-          supabase.from('v2_edits').delete().eq('id', p.id);
+          supabase.from('v3_prospects').delete().eq('id', p.id);
+          supabase.from('v3_research').delete().eq('id', p.id);
+          supabase.from('v3_messages').delete().eq('id', p.id);
+          supabase.from('v3_edits').delete().eq('id', p.id);
         }
         setResearch(prev => { const n = {...prev}; delete n[p.id]; return n; });
         setMessages(prev => { const n = {...prev}; delete n[p.id]; return n; });
@@ -1997,7 +2164,155 @@ if (!dbLoaded) return (
     </div>
   </div>
 )}
+{activeView === "excel" && (
+  <div style={{ maxWidth: 1100, margin: "0 auto" }} className="card-enter">
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div>
+        <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.navy }}>GTM Excel Engine</div>
+        <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>
+          Upload India GTM Excel → instant personalized emails based on data stack signals
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 10 }}>
+        {excelRows.length > 0 && (
+          <button onClick={generateAllExcel} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
+            ⚡ Generate All ({excelRows.filter(r => r._status === "idle").length} pending)
+          </button>
+        )}
+        <label style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 12, fontFamily: FONT, fontWeight: 500, cursor: "pointer" }}>
+          📊 Upload Excel
+          <input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} style={{ display: "none" }} />
+        </label>
+      </div>
+    </div>
 
+    {excelRows.length === 0 ? (
+      <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 12, padding: "60px 32px", textAlign: "center" }}>
+        <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>📊</div>
+        <div style={{ fontSize: 15, color: C.textMid, marginBottom: 20 }}>Upload your India GTM Excel file</div>
+        <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, marginBottom: 24, lineHeight: 1.8 }}>
+          Required columns: Company · Data Stack Signal · Tool Used · Use Case<br/>
+          Cloud Provider · Data Warehouse · Buying Persona · Integration Opportunity
+        </div>
+        <label style={{ padding: "12px 28px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 14, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
+          📊 Upload Excel to Begin
+          <input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} style={{ display: "none" }} />
+        </label>
+      </div>
+    ) : (
+      <div style={{ display: "flex", gap: 16, height: "calc(100vh - 200px)" }}>
+
+        {/* LEFT — company list */}
+        <div style={{ width: 280, background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, overflow: "hidden", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+          <div style={{ padding: "10px 12px", borderBottom: "1px solid #EEF2F7", fontSize: 11, color: C.textDim, fontFamily: MONO }}>
+            {excelRows.length} companies · {excelRows.filter(r => r._status === "ready").length} ready
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {excelRows.map(row => (
+              <div key={row._id} onClick={() => setExcelSelected(row._id)}
+                style={{ padding: "10px 12px", borderBottom: "1px solid #F0F4F8", cursor: "pointer", background: excelSelected === row._id ? "#EEF5FF" : "#fff", borderLeft: excelSelected === row._id ? "3px solid #1B6EF3" : "3px solid transparent", transition: "all 0.1s" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div style={{ fontWeight: 600, fontSize: 12, color: C.text }}>{row.Company}</div>
+                  {row._status === "ready"
+                    ? <span style={{ fontSize: 8, color: C.green, fontFamily: MONO, background: C.greenDim, padding: "2px 6px", borderRadius: 10 }}>READY</span>
+                    : <span style={{ fontSize: 8, color: C.textDim, fontFamily: MONO, background: "#EEF2F7", padding: "2px 6px", borderRadius: 10 }}>PENDING</span>}
+                </div>
+                <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>{row.HQ} · {row.Employees}</div>
+                <div style={{ fontSize: 9, color: C.gold, fontFamily: MONO, marginTop: 3 }}>{row["Data Stack Signal"]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* RIGHT — email preview */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, overflow: "hidden" }}>
+          {(() => {
+            const row = excelRows.find(r => r._id === excelSelected);
+            if (!row) return null;
+            const gen = excelGenerated[row._id];
+            const editKey = `excel_${row._id}`;
+            const body = excelEditedBody[editKey] !== undefined ? excelEditedBody[editKey] : gen?.body || "";
+
+            return (
+              <>
+                {/* Signal chips */}
+                <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, padding: "14px 18px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: C.navy }}>{row.Company}</div>
+                    {!gen && (
+                      <button onClick={() => generateExcelEmail(row)} style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
+                        ⚡ Generate Email
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {[
+                      { v: row["Data Stack Signal"], c: "#1B6EF3" },
+                      { v: row["Tool Used"], c: "#7C3AED" },
+                      { v: row["Use Case"], c: "#D97706" },
+                      { v: row["Cloud Provider"], c: "#0D9E6E" },
+                      { v: row["Data Warehouse"], c: "#0A2540" },
+                      { v: row["Buying Persona"], c: "#E53E3E" },
+                      { v: row["Integration Opportunity"], c: "#1B6EF3" },
+                    ].filter(c => c.v).map(chip => (
+                      <span key={chip.v} style={{ fontSize: 10, fontFamily: MONO, color: chip.c, background: `${chip.c}11`, padding: "3px 10px", borderRadius: 20, border: `1px solid ${chip.c}22` }}>{chip.v}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {gen ? (
+                  <>
+                    {/* Subject */}
+                    <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontSize: 9, fontFamily: MONO, color: C.textDim, marginBottom: 4 }}>SUBJECT</div>
+                        <div style={{ fontSize: 13, color: C.navy, fontWeight: 500 }}>{gen.subject}</div>
+                      </div>
+                      <button onClick={() => navigator.clipboard.writeText(gen.subject)} style={{ fontSize: 11, color: C.gold, background: "none", border: "none", cursor: "pointer", fontFamily: FONT, fontWeight: 500, flexShrink: 0, marginLeft: 16 }}>Copy</button>
+                    </div>
+
+                    {/* Body */}
+                    <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, overflow: "hidden", flex: 1, display: "flex", flexDirection: "column" }}>
+                      <div style={{ padding: "10px 18px", borderBottom: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+                        <div style={{ fontSize: 9, fontFamily: MONO, color: C.textDim }}>EMAIL BODY — EDIT THEN SEND</div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          {excelEditedBody[editKey] !== undefined && (
+                            <button onClick={() => setExcelEditedBody(prev => { const n = {...prev}; delete n[editKey]; return n; })} style={{ fontSize: 11, color: C.textDim, background: "none", border: "none", cursor: "pointer" }}>↺ Reset</button>
+                          )}
+                          <button onClick={() => navigator.clipboard.writeText(body)} style={{ fontSize: 11, color: C.gold, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>📋 Copy</button>
+                          <button onClick={() => window.open(`mailto:?subject=${encodeURIComponent(gen.subject)}&body=${encodeURIComponent(body)}`, "_blank")} style={{ fontSize: 11, color: C.amber, background: C.amberDim, border: `1px solid ${C.amber}33`, padding: "4px 12px", borderRadius: 6, cursor: "pointer", fontWeight: 500, fontFamily: FONT }}>✉️ Open in Mail</button>
+                        </div>
+                      </div>
+                      <textarea
+                        value={body}
+                        onChange={e => setExcelEditedBody(prev => ({ ...prev, [editKey]: e.target.value }))}
+                        style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }}
+                      />
+                    </div>
+
+                    {/* Next button */}
+                    <button onClick={() => {
+                      const idx = excelRows.findIndex(r => r._id === excelSelected);
+                      const next = excelRows[idx + 1];
+                      if (next) setExcelSelected(next._id);
+                    }} style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 12, fontFamily: FONT, cursor: "pointer", alignSelf: "flex-end" }}>
+                      Next Company →
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, padding: "48px 32px", textAlign: "center", flex: 1 }}>
+                    <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.3 }}>✉️</div>
+                    <div style={{ fontSize: 14, color: C.textMid }}>Click "Generate Email" to create a personalized outreach for {row.Company}</div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      </div>
+    )}
+  </div>
+)}
 {activeView === "prospects" && !sel ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 20 }}>
                 <div style={{ width: 72, height: 72, borderRadius: 16, background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 32px rgba(27,110,243,0.25)" }}>
