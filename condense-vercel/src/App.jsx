@@ -616,14 +616,24 @@ export default function App() {
     const parseRows = (rows) => {
       const headers = rows[0].map(h => (h || "").toString().toLowerCase().trim());
       const idx = (keys) => headers.findIndex(h => keys.some(k => h.includes(k.toLowerCase())));
-      const companyIdx = idx(["company name","company","organization","org"]);
-      const nameIdx = idx(["full name","contact name","person name"]);
-      const firstNameIdx = idx(["first name","firstname"]);
-      const lastNameIdx = idx(["last name","lastname"]);
-      const titleIdx = idx(["title","job title","position","designation","role"]);
-      const emailIdx = idx(["email","mail"]);
-      const phoneIdx = idx(["phone","mobile","whatsapp"]);
-      const linkedinIdx = idx(["person linkedin url","linkedin url","linkedin","profile url"]);
+      const companyIdx = idx(["company name", "company", "organization", "org", "employer"]);
+const nameIdx = idx(["full name", "contact name", "person name"]);
+const firstNameIdx = idx(["first name", "firstname", "first_name"]);
+const lastNameIdx = idx(["last name", "lastname", "last_name"]);
+const titleIdx = idx(["title", "job title", "position", "designation", "role"]);
+const emailIdx = idx(["email", "mail"]);
+const phoneIdx = idx(["phone", "mobile", "whatsapp"]);
+const linkedinIdx = idx(["person linkedin url", "linkedin url", "linkedin", "profile url"]);
+const hqIdx = idx(["hq", "headquarters", "location", "city", "office"]);
+const employeesIdx = idx(["employees", "employee count", "company size", "headcount", "size"]);
+const dataStackIdx = idx(["data stack signal", "data stack", "stack signal", "tech stack"]);
+const toolUseIdx = idx(["tool use", "tool used", "tools", "current tool", "etl tool"]);
+const useCaseIdx = idx(["use case", "usecase", "primary use case", "main use case"]);
+const cloudProviderIdx = idx(["cloud provider", "cloud platform", "cloud", "cloud infra"]);
+const dataWarehouseIdx = idx(["data warehouse", "warehouse", "dwh", "data store"]);
+const buyingPersonaIdx = idx(["buying persona", "persona", "persona type", "target persona"]);
+const integrationIdx = idx(["integration opportunity", "integration", "opportunity", "integration type"]);
+
       const added = [];
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
@@ -631,8 +641,28 @@ export default function App() {
         const name = get(nameIdx) || [get(firstNameIdx), get(lastNameIdx)].filter(Boolean).join(" ");
         const company = get(companyIdx);
         if (!name && !company) continue;
-        added.push({ id: `p_${Date.now()}_${i}`, name: name || "Unknown", jobTitle: get(titleIdx), company: company || "Unknown", email: get(emailIdx), phone: get(phoneIdx), linkedinUrl: get(linkedinIdx), status: "idle", createdAt: new Date().toISOString(), sentAt: null });
-      }
+        added.push({
+  id: `p_${Date.now()}_${i}`,
+  name: name || "Unknown",
+  jobTitle: get(titleIdx) || get(buyingPersonaIdx),
+  company: company || "Unknown",
+  email: get(emailIdx),
+  phone: get(phoneIdx),
+  linkedinUrl: get(linkedinIdx),
+  hq: get(hqIdx),
+  employees: get(employeesIdx),
+  dataStack: get(dataStackIdx),
+  toolUse: get(toolUseIdx),
+  useCase: get(useCaseIdx),
+  cloudProvider: get(cloudProviderIdx),
+  dataWarehouse: get(dataWarehouseIdx),
+  buyingPersona: get(buyingPersonaIdx),
+  integrationOpportunity: get(integrationIdx),
+  status: "idle",
+  createdAt: new Date().toISOString(),
+  sentAt: null,
+});
+
       setProspects(prev => [...added, ...prev]);
       setUploadStatus(`✅ ${added.length} prospects imported!`);
       if (added.length > 0) { setSelected(added[0].id); setBatchFrom(1); setBatchTo(Math.min(30, added.length)); setTimeout(() => setBatchOpen(true), 600); }
