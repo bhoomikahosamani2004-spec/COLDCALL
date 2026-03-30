@@ -939,10 +939,11 @@ const [ratingFeedback, setRatingFeedback] = useState({});
 const [trainingExamples, setTrainingExamples] = useState([]);
 const [enriching, setEnriching] = useState(null);
 const [enrichedData, setEnrichedData] = useState({});
-  const [gtmRows, setGtmRows] = useState([]);
+const [gtmRows, setGtmRows] = useState([]);
 const [gtmGenerated, setGtmGenerated] = useState({});
 const [gtmSelected, setGtmSelected] = useState(null);
 const [gtmEdited, setGtmEdited] = useState({});
+const [activeGtmTab, setActiveGtmTab] = useState("email_body");
 const [gtmRunning, setGtmRunning] = useState(null);
 const [gtmBatchRunning, setGtmBatchRunning] = useState(false);
 const [gtmBatchProgress, setGtmBatchProgress] = useState(0);
@@ -2097,7 +2098,7 @@ if (!dbLoaded) return (
                     { key: "day7_followup", label: "Day 7", icon: "📨" },
                     { key: "day14_followup", label: "Day 14", icon: "📨" },
                   ];
-                  const [activeGtmTab, setActiveGtmTab] = React.useState("email_body");
+                 
                   const editKey = `gtm_${row._id}_${activeGtmTab}`;
                   const text = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
 
