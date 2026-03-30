@@ -1344,18 +1344,21 @@ ALSO generate:
 - day3_followup: 50-80 words, different angle — reference ${warehouse} or ${cloud}
 - day7_followup: 30-50 words, reference a Condense metric (40% TCO reduction or 99.95% uptime)
 - day14_followup: 20-35 words, final nudge
+- email_followup1: 3-4 short paragraphs, send 3 days after first email. Different angle — reference ${warehouse} or ${cloud} or a specific Condense metric (40% TCO reduction, 99.95% uptime). Same Veera sign-off. End with soft CTA for 30 mins.
+- email_followup2: 2-3 short paragraphs, final nudge 7 days after first email. Reference one Condense outcome metric. Keep door open. Same Veera sign-off.
 
 Return ONLY valid JSON:
 {
   "email_subject": "...",
   "email_body": "...",
+  "email_followup1": "...",
+  "email_followup2": "...",
   "connection_note": "...",
   "day0_message": "...",
   "day3_followup": "...",
   "day7_followup": "...",
   "day14_followup": "..."
-}`;
-
+}
   try {
     const data = await callClaude({
       system: "You are Veera Raghavan. Return ONLY valid JSON. Start with { and end with }. No markdown.",
@@ -2079,16 +2082,92 @@ if (!dbLoaded) return (
                 {/* Signal chips */}
                 <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, padding: "14px 18px", flexShrink: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: C.navy }}>{row.Company}</div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      {row._status === "generating" && <><Spinner /><span style={{ fontSize: 11, color: C.gold, fontFamily: MONO }}>Generating...</span></>}
-                      {(row._status === "idle" || row._status === "error") && (
-                        <button onClick={() => generateGtmEmail(row)} disabled={gtmRunning !== null} style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
-                          ⚡ Generate Email
-                        </button>
-                      )}
-                    </div>
-                  </div>
+  <div>
+    <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: C.navy }}>{row.Company}</div>
+    {row.email && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>✉️ {row.email}</div>}
+  </div>
+  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    {row._status === "generating" && <><Spinner /><span style={{ fontSize: 11, color: C.gold, fontFamily: MONO }}>Generating...</span></>}
+
+    {/* ENRICH BUTTON */}
+    <button
+      onClick={async () => {
+        setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: true } : r));
+        try {
+          const res = await fetch("/api/enrich", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: row["Buying Persona"] || "",
+              company: row.Company,
+              jobTitle: row["Buying Persona"] || "",
+            }),
+          });
+          const data = await res.json();
+          if (data.email || data.phone) {
+            setGtmRows(prev => prev.map(r =>
+              r._id === row._id
+                ? { ...r, email: data.email || r.email, phone: data.phone || r.phone, _enriching: false, _enriched: data.source }
+                : r
+            ));
+            dbSave('v3_gtm_rows', String(row._id), { ...row, email: data.email, phone: data.phone });
+          } else {
+            setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
+          }
+        } catch {
+          setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
+        }
+      }}
+      disabled={row._enriching}
+      style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: row._enriching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}
+    >
+      {row._enriching ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enriched}` : "🔍 Enrich"}
+    </button>
+
+    {/* ZOHO PUSH BUTTON */}
+    {gen && (
+      <button
+        onClick={async () => {
+          setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: true, _zohoStatus: null } : r));
+          try {
+            await pushToZoho(
+              { name: row["Buying Persona"], company: row.Company, jobTitle: row["Buying Persona"], email: row.email || "", phone: row.phone || "" },
+              gen,
+              `Data Stack: ${row["Data Stack Signal"]} | Tool: ${row["Tool Used"]} | Integration: ${row["Integration Opportunity"]}`
+            );
+            setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: false, _zohoStatus: "success" } : r));
+            setTimeout(() => setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoStatus: null } : r)), 4000);
+          } catch {
+            setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: false, _zohoStatus: "error" } : r));
+            setTimeout(() => setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoStatus: null } : r)), 4000);
+          }
+        }}
+        disabled={row._zohoPushing}
+        style={{
+          padding: "6px 12px", borderRadius: 6, fontSize: 11, fontFamily: FONT, fontWeight: 500,
+          border: `1px solid ${row._zohoStatus === "success" ? "#B8EDD3" : row._zohoStatus === "error" ? "#FFCCCC" : "#E4629444"}`,
+          background: row._zohoStatus === "success" ? "#F0FBF5" : row._zohoStatus === "error" ? "#FFF5F5" : "#FFF0F5",
+          color: row._zohoStatus === "success" ? C.green : row._zohoStatus === "error" ? C.red : "#E46294",
+          cursor: row._zohoPushing ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5
+        }}
+      >
+        {row._zohoPushing ? <><Spinner /> Pushing...</> : row._zohoStatus === "success" ? "✅ Pushed!" : row._zohoStatus === "error" ? "❌ Failed" : "☁️ Zoho"}
+      </button>
+    )}
+
+    {/* GENERATE BUTTON */}
+    {(row._status === "idle" || row._status === "error") && (
+      <button onClick={() => generateGtmEmail(row)} disabled={gtmRunning !== null} style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
+        ⚡ Generate
+      </button>
+    )}
+    {row._status === "ready" && (
+      <button onClick={() => generateGtmEmail(row)} disabled={gtmRunning !== null} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 11, fontFamily: FONT, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
+        ↺ Regenerate
+      </button>
+    )}
+  </div>
+</div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {[
                       { v: row["Data Stack Signal"], c: "#1B6EF3" },
@@ -2106,14 +2185,16 @@ if (!dbLoaded) return (
 
                 {gen ? (() => {
                   // Message tabs for GTM
-                  const GTM_TABS = [
-                    { key: "email_body", label: "Email", icon: "✉️" },
-                    { key: "connection_note", label: "Connection", icon: "🔗" },
-                    { key: "day0_message", label: "Day 0", icon: "💬" },
-                    { key: "day3_followup", label: "Day 3", icon: "📨" },
-                    { key: "day7_followup", label: "Day 7", icon: "📨" },
-                    { key: "day14_followup", label: "Day 14", icon: "📨" },
-                  ];
+                 const GTM_TABS = [
+  { key: "email_body", label: "Email", icon: "✉️" },
+  { key: "email_followup1", label: "Email F/U 1", icon: "📧" },
+  { key: "email_followup2", label: "Email F/U 2", icon: "📧" },
+  { key: "connection_note", label: "Connection", icon: "🔗" },
+  { key: "day0_message", label: "Day 0", icon: "💬" },
+  { key: "day3_followup", label: "Day 3", icon: "📨" },
+  { key: "day7_followup", label: "Day 7", icon: "📨" },
+  { key: "day14_followup", label: "Day 14", icon: "📨" },
+];
                  
                   const editKey = `gtm_${row._id}_${activeGtmTab}`;
                   const text = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
@@ -2137,9 +2218,16 @@ if (!dbLoaded) return (
                             <button onClick={() => setGtmEdited(prev => { const n = {...prev}; delete n[editKey]; return n; })} style={{ fontSize: 10, color: C.textDim, background: "none", border: "none", cursor: "pointer" }}>↺</button>
                           )}
                           <button onClick={() => navigator.clipboard.writeText(text)} style={{ fontSize: 11, color: C.gold, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: FONT }}>📋 Copy</button>
-                          {activeGtmTab === "email_body" && (
-                            <button onClick={() => window.open(`mailto:?subject=${encodeURIComponent(gen.email_subject || "")}&body=${encodeURIComponent(text)}`, "_blank")} style={{ fontSize: 11, color: C.amber, background: C.amberDim, border: `1px solid ${C.amber}33`, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✉️ Mail</button>
-                          )}
+                          {(activeGtmTab === "email_body" || activeGtmTab === "email_followup1" || activeGtmTab === "email_followup2") && (
+  <button onClick={() => {
+    const subj = activeGtmTab === "email_body" 
+      ? (gen.email_subject || "") 
+      : activeGtmTab === "email_followup1" 
+        ? `Re: ${gen.email_subject || ""}` 
+        : `Following up: ${gen.email_subject || ""}`;
+    window.open(`mailto:${row.email || ""}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`, "_blank");
+  }} style={{ fontSize: 11, color: C.amber, background: C.amberDim, border: `1px solid ${C.amber}33`, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✉️ Mail</button>
+)}
                         </div>
                       </div>
                       {/* Text area */}
