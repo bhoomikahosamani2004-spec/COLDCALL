@@ -2115,7 +2115,7 @@ if (!dbLoaded) return (
     style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
     🔍 Enrich All ({gtmRows.filter(r => !r._enriched).length} pending)
   </button>
-)}
+      
 {gtmEnrichAll && (
   <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44" }}>
     <Spinner />
