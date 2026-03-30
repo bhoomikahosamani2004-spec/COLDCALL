@@ -1347,6 +1347,8 @@ ALSO generate:
 - email_followup1: 3-4 short paragraphs, send 3 days after first email. Different angle — reference ${warehouse} or ${cloud} or a specific Condense metric (40% TCO reduction, 99.95% uptime). Same Veera sign-off. End with soft CTA for 30 mins.
 - email_followup2: 2-3 short paragraphs, final nudge 7 days after first email. Reference one Condense outcome metric. Keep door open. Same Veera sign-off.
 
+- email_followup2: 2-3 short paragraphs, final nudge 7 days after first email. Reference one Condense outcome metric. Keep door open. Same Veera sign-off.
+
 Return ONLY valid JSON:
 {
   "email_subject": "...",
@@ -1358,7 +1360,8 @@ Return ONLY valid JSON:
   "day3_followup": "...",
   "day7_followup": "...",
   "day14_followup": "..."
-}
+}`;
+
   try {
     const data = await callClaude({
       system: "You are Veera Raghavan. Return ONLY valid JSON. Start with { and end with }. No markdown.",
@@ -1391,6 +1394,7 @@ const runGtmBatch = async () => {
   }
   setGtmBatchRunning(false);
 };
+
 
   const saveReply = () => {
     if (!replyText.trim()) return;
