@@ -952,6 +952,9 @@ const [gtmSelected, setGtmSelected] = useState(null);
 const [gtmEdited, setGtmEdited] = useState({});
 const [activeGtmTab, setActiveGtmTab] = useState("email_body");
 const [gtmRunning, setGtmRunning] = useState(null);
+const [gtmEnriching, setGtmEnriching] = useState(null); // _id of row being enriched
+const [gtmEnrichAll, setGtmEnrichAll] = useState(false); // bulk enriching
+const gtmEnrichCancelRef = useRef(false);
 const [gtmBatchRunning, setGtmBatchRunning] = useState(false);
 const [gtmBatchProgress, setGtmBatchProgress] = useState(0);
 const gtmFileRef = useRef();
@@ -1307,9 +1310,9 @@ STYLE — follow this EXACT Dream11 email format:
 
 Subject: Condense — Complementing ${company}'s ${stack.includes("Kafka") ? "Kafka" : "event streaming"} data platform for scale and cost efficiency
 
-Greetings! ${persona},
+Greetings! 
 
-Greetings! I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch. Condense is built for modern data engineering and analytics teams that need to operationalize real-time data across products, analytics platforms, and AI systems without the heavy operational complexity of managing distributed streaming infrastructure.
+ I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch. Condense is built for modern data engineering and analytics teams that need to operationalize real-time data across products, analytics platforms, and AI systems without the heavy operational complexity of managing distributed streaming infrastructure.
 
 Platforms like ${company} typically operate a modern data architecture built around [describe their stack: ${stack}], with [${tool}] complementing the pipeline. Teams running on ${cloud} leverage ${warehouse} as the analytical layer, with microservices generating large volumes of ${useCase.toLowerCase()} events across the platform.
 
@@ -1394,7 +1397,80 @@ const runGtmBatch = async () => {
   }
   setGtmBatchRunning(false);
 };
+const enrichGtmRow = async (row) => {
+  setGtmEnriching(row._id);
+  setGtmRows(prev => prev.map(r => r._id === row._id
+    ? { ...r, _enriching: true, _enrichError: null } : r));
+  try {
+    const res = await fetch("/api/enrich", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        company: row.Company,
+        jobTitle: row["Buying Persona"], // e.g. "VP Data" — Apollo searches by title at company
+        name: "",                         // empty so Apollo finds the person, not looks them up
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
 
+    const foundName  = data.name  || "";
+    const foundEmail = data.email || "";
+    const foundPhone = data.phone || "";
+    const foundLI    = data.linkedinUrl || "";
+    const source     = data.source || "apollo";
+
+    const updatedRow = {
+      ...row,
+      _enrichedName:  foundName,
+      _enrichedEmail: foundEmail,
+      _enrichedPhone: foundPhone,
+      _enrichedLI:    foundLI,
+      _enriched:      source,
+      _enriching:     false,
+    };
+    setGtmRows(prev => prev.map(r => r._id === row._id ? updatedRow : r));
+    dbSave('v3_gtm_rows', String(row._id), updatedRow);
+
+    // Auto-patch email opener if we have a name and generated email exists
+    if (foundName && gtmGenerated[row._id]) {
+      const firstName = foundName.split(" ")[0];
+      const patch = (body) => body
+        ? body
+            .replace(/^Greetings!$/m,     `Greetings ${firstName},`)
+            .replace(/^Greetings,$/m,      `Greetings ${firstName},`)
+            .replace(/^Greetings!\s*$/m,   `Greetings ${firstName},`)
+            .replace(/^Dear [^,\n]+,/m,    `Greetings ${firstName},`)
+        : body;
+      const gen = gtmGenerated[row._id];
+      const patched = {
+        ...gen,
+        email_body:      patch(gen.email_body),
+        email_followup1: patch(gen.email_followup1),
+        email_followup2: patch(gen.email_followup2),
+        day0_message:    patch(gen.day0_message),
+      };
+      setGtmGenerated(prev => ({ ...prev, [row._id]: patched }));
+      dbSave('v3_gtm_messages', String(row._id), patched);
+    }
+  } catch (err) {
+    setGtmRows(prev => prev.map(r =>
+      r._id === row._id ? { ...r, _enriching: false, _enrichError: err.message } : r));
+  }
+  setGtmEnriching(null);
+};
+
+const enrichAllGtmRows = async () => {
+  setGtmEnrichAll(true);
+  gtmEnrichCancelRef.current = false;
+  const queue = gtmRows.filter(r => !r._enriched && !r._enriching);
+  for (let i = 0; i < queue.length; i++) {
+    if (gtmEnrichCancelRef.current) break;
+    await enrichGtmRow(queue[i]);
+    if (i < queue.length - 1) await new Promise(r => setTimeout(r, 1200));
+  }
+  setGtmEnrichAll(false);
+};
 
   const saveReply = () => {
     if (!replyText.trim()) return;
@@ -2013,8 +2089,43 @@ if (!dbLoaded) return (
         <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Upload India GTM Excel → Gemini generates Dream11-style emails per data stack signal</div>
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        {/* ENRICH ALL */}
+        {gtmRows.length > 0 && !gtmEnrichAll && !gtmBatchRunning && (
+          <button onClick={enrichAllGtmRows}
+            style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            🔍 Enrich All ({gtmRows.filter(r => !r._enriched).length} pending)
+          </button>
+        )}
+        {gtmEnrichAll && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44" }}>
+            <Spinner />
+            <span style={{ fontSize: 11, fontFamily: MONO, color: "#7C3AED" }}>
+              Enriching... {gtmRows.filter(r => r._enriched).length}/{gtmRows.length}
+            </span>
+            <button onClick={() => { gtmEnrichCancelRef.current = true; setGtmEnrichAll(false); }}
+              style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
+          </div>
+        )}
+        {/* GENERATE ALL */}
         {gtmRows.length > 0 && gtmRows.filter(r => r._status === "idle").length > 0 && !gtmBatchRunning && (
           <button onClick={runGtmBatch} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
+          </button>
+        )}
+    style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+    🔍 Enrich All ({gtmRows.filter(r => !r._enriched).length} pending)
+  </button>
+)}
+{gtmEnrichAll && (
+  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44" }}>
+    <Spinner />
+    <span style={{ fontSize: 11, fontFamily: MONO, color: "#7C3AED" }}>
+      Enriching... {gtmRows.filter(r => r._enriched).length}/{gtmRows.length}
+    </span>
+    <button onClick={() => { gtmEnrichCancelRef.current = true; setGtmEnrichAll(false); }}
+      style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
+  </div>
+)}
             ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
           </button>
         )}
@@ -2068,6 +2179,11 @@ if (!dbLoaded) return (
                   <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>{row.HQ} · {row.Employees}</div>
                   <div style={{ fontSize: 9, color: C.gold, fontFamily: MONO, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row["Data Stack Signal"]}</div>
                   <div style={{ fontSize: 9, color: C.purple, fontFamily: MONO, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row["Integration Opportunity"]}</div>
+                  {row._enrichedName && (
+                    <div style={{ fontSize: 9, color: C.green, fontFamily: MONO, marginTop: 2 }}>
+                      👤 {row._enrichedName}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -2092,41 +2208,23 @@ if (!dbLoaded) return (
   </div>
   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
     {row._status === "generating" && <><Spinner /><span style={{ fontSize: 11, color: C.gold, fontFamily: MONO }}>Generating...</span></>}
-
-    {/* ENRICH BUTTON */}
+ {/* ENRICH BUTTON */}
     <button
-      onClick={async () => {
-        setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: true } : r));
-        try {
-          const res = await fetch("/api/enrich", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: row["Buying Persona"] || "",
-              company: row.Company,
-              jobTitle: row["Buying Persona"] || "",
-            }),
-          });
-          const data = await res.json();
-          if (data.email || data.phone) {
-            setGtmRows(prev => prev.map(r =>
-              r._id === row._id
-                ? { ...r, email: data.email || r.email, phone: data.phone || r.phone, _enriching: false, _enriched: data.source }
-                : r
-            ));
-            dbSave('v3_gtm_rows', String(row._id), { ...row, email: data.email, phone: data.phone });
-          } else {
-            setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
-          }
-        } catch {
-          setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
-        }
-      }}
-      disabled={row._enriching}
-      style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: row._enriching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}
+      onClick={() => enrichGtmRow(row)}
+      disabled={gtmEnriching === row._id || gtmEnrichAll}
+      style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44",
+        background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED",
+        fontSize: 11, fontFamily: FONT, fontWeight: 500,
+        cursor: (gtmEnriching === row._id || gtmEnrichAll) ? "not-allowed" : "pointer",
+        display: "flex", alignItems: "center", gap: 5 }}
     >
-      {row._enriching ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enriched}` : "🔍 Enrich"}
+      {gtmEnriching === row._id
+        ? <><Spinner /> Enriching...</>
+        : row._enriched
+          ? `✅ ${row._enrichedName || row._enriched}`
+          : "🔍 Enrich"}
     </button>
+   
 
     {/* ZOHO PUSH BUTTON */}
     {gen && (
@@ -2186,6 +2284,19 @@ if (!dbLoaded) return (
                     ))}
                   </div>
                 </div>
+                {(row._enrichedName || row._enrichedEmail) && (
+  <div style={{ marginTop: 10, padding: "10px 14px", background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 8, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+    <span style={{ fontSize: 10, fontFamily: MONO, color: C.green, fontWeight: 600 }}>✅ CONTACT via {row._enriched}</span>
+    {row._enrichedName  && <span style={{ fontSize: 12, color: C.navy, fontWeight: 600 }}>{row._enrichedName}</span>}
+    {row._enrichedEmail && <span style={{ fontSize: 11, color: C.textMid, fontFamily: MONO }}>✉️ {row._enrichedEmail}</span>}
+    {row._enrichedPhone && <span style={{ fontSize: 11, color: C.textMid, fontFamily: MONO }}>📱 {row._enrichedPhone}</span>}
+    {row._enrichedLI    && (
+      <a href={row._enrichedLI.startsWith("http") ? row._enrichedLI : "https://" + row._enrichedLI}
+        target="_blank" rel="noreferrer"
+        style={{ fontSize: 11, color: "#0077B5", fontFamily: MONO, textDecoration: "none" }}>💼 LinkedIn ↗</a>
+    )}
+  </div>
+)}
 
                 {gen ? (() => {
                   // Message tabs for GTM
