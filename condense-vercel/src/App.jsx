@@ -988,11 +988,11 @@ const [excelEditedBody, setExcelEditedBody] = useState({});
 useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
-  const [p, r, m, e, rep, n, rat, tr] = await Promise.all([
+ const [p, r, m, e, rep, n, rat, tr, exRows, exGen, exEdits] = await Promise.all([
   dbLoad('v3_prospects'), dbLoad('v3_research'), dbLoad('v3_messages'),
   dbLoad('v3_edits'), dbLoad('v3_replies'), dbLoad('v3_notifications'),
   dbLoad('v3_ratings'), dbLoad('v3_training'),
-dbLoad('v3_excel_rows'), dbLoad('v3_excel_generated'), dbLoad('v3_excel_edits'),
+  dbLoad('v3_excel_rows'), dbLoad('v3_excel_generated'), dbLoad('v3_excel_edits'),
 ]);
     setProspects(Object.values(p).sort((a, b) => {
   // Ready/Following first, then by newest created
