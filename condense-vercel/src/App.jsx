@@ -873,10 +873,11 @@ const [exportingPDF, setExportingPDF] = useState(false);
 useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
-  const [p, r, m, e, rep, n, rat, tr] = await Promise.all([
+const [p, r, m, e, rep, n, rat, tr, gtmR, gtmM] = await Promise.all([
   dbLoad('v3_prospects'), dbLoad('v3_research'), dbLoad('v3_messages'),
   dbLoad('v3_edits'), dbLoad('v3_replies'), dbLoad('v3_notifications'),
   dbLoad('v3_ratings'), dbLoad('v3_training'),
+  dbLoad('v3_gtm_rows'), dbLoad('v3_gtm_messages'),
 ]);
     setProspects(Object.values(p).sort((a, b) => {
   // Ready/Following first, then by newest created
@@ -892,6 +893,12 @@ useEffect(() => {
     setNotifications(Object.values(n));
     setRatings(rat);
     setTrainingExamples(Object.values(tr));
+    const loadedGtmRows = Object.values(gtmR);
+     if (loadedGtmRows.length > 0) {
+        setGtmRows(loadedGtmRows);
+        setGtmSelected(loadedGtmRows[0]._id);
+     }
+setGtmGenerated(gtmM);
     setDbLoaded(true);    
   }
   loadAll();
@@ -991,6 +998,15 @@ useEffect(() => {
   if (!dbLoaded) return;
   trainingExamples.forEach(t => dbSave('v3_training', t.id, t));
 }, [trainingExamples, dbLoaded]);
+  useEffect(() => {
+  if (!dbLoaded) return;
+  gtmRows.forEach(r => dbSave('v3_gtm_rows', String(r._id), r));
+}, [gtmRows, dbLoaded]);
+
+useEffect(() => {
+  if (!dbLoaded) return;
+  Object.entries(gtmGenerated).forEach(([id, val]) => dbSave('v3_gtm_messages', id, val));
+}, [gtmGenerated, dbLoaded]);
   
   useEffect(() => {
   localStorage.setItem('sender_profile', JSON.stringify(senderProfile));
