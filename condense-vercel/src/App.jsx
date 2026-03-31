@@ -2093,43 +2093,26 @@ if (!dbLoaded) return (
         {/* ENRICH ALL */}
         {gtmRows.length > 0 && !gtmEnrichAll && !gtmBatchRunning && (
           <button onClick={enrichAllGtmRows}
-
-      {/* FULL AGENT BUTTON */}
-{(row._status === "idle" || row._status === "error") && (
-  <button
-    onClick={() => {
-      // Convert GTM row to a prospect and run full agent
-      const newProspect = {
-        id: `p_gtm_${row._id}_${Date.now()}`,
-        name: row._enrichedName || row["Buying Persona"],
-        jobTitle: row["Buying Persona"],
-        company: row.Company,
-        email: row._enrichedEmail || "",
-        phone: row._enrichedPhone || "",
-        linkedinUrl: row._enrichedLI || "",
-        industry: row["Data Stack Signal"] || "",
-        seniority: "",
-        region: row.HQ || "India",
-        jdText: `Data Stack: ${row["Data Stack Signal"]}. Tool: ${row["Tool Used"]}. Use Case: ${row["Use Case"]}. Cloud: ${row["Cloud Provider"]}. Warehouse: ${row["Data Warehouse"]}. Integration: ${row["Integration Opportunity"]}.`,
-        status: "idle",
-        createdAt: new Date().toISOString(),
-        sentAt: null,
-      };
-      setProspects(prev => [newProspect, ...prev]);
-      setActiveView("prospects");
-      setSelected(newProspect.id);
-      // Small delay then run agent
-      setTimeout(() => runAgent(newProspect), 300);
-    }}
-    style={{
-      padding: "7px 14px", borderRadius: 6, border: "1px solid #0D9E6E44",
-      background: "#F0FBF5", color: C.green, fontSize: 11, fontFamily: FONT,
-      fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5
-    }}
-  >
-    🔍 Full Research
-  </button>
-)}
+            style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            🔍 Enrich All ({gtmRows.filter(r => !r._enriched).length} pending)
+          </button>
+        )}
+        {gtmEnrichAll && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44" }}>
+            <Spinner />
+            <span style={{ fontSize: 11, fontFamily: MONO, color: "#7C3AED" }}>
+              Enriching... {gtmRows.filter(r => r._enriched).length}/{gtmRows.length}
+            </span>
+            <button onClick={() => { gtmEnrichCancelRef.current = true; setGtmEnrichAll(false); }}
+              style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
+          </div>
+        )}
+        {/* GENERATE ALL */}
+        {gtmRows.filter(r => r._status === "idle").length > 0 && !gtmBatchRunning && (
+          <button onClick={runGtmBatch} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
+          </button>
+        )}
 
 feat: add Full Research button to GTM rows — runs V2 agent pipeline
             ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
