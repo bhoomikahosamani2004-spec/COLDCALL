@@ -895,7 +895,13 @@ const [p, r, m, e, rep, n, rat, tr, gtmR, gtmM] = await Promise.all([
     setTrainingExamples(Object.values(tr));
     const loadedGtmRows = Object.values(gtmR);
      if (loadedGtmRows.length > 0) {
-        setGtmRows(loadedGtmRows);
+        const gtmStatusOrder = { ready: 0, generating: 1, error: 2, idle: 3 };
+setGtmRows(
+  loadedGtmRows.sort((a, b) => {
+    const diff = (gtmStatusOrder[a._status] ?? 3) - (gtmStatusOrder[b._status] ?? 3);
+    return diff !== 0 ? diff : b._id - a._id;
+  })
+);
         setGtmSelected(loadedGtmRows[0]._id);
      }
 setGtmGenerated(gtmM);
@@ -2209,7 +2215,11 @@ if (!dbLoaded) return (
     </div>
   </div>
   <div style={{ flex: 1, overflowY: "auto" }}>
-    {gtmRows.filter(row => {
+    {[...gtmRows].sort((a, b) => {
+  const o = { ready: 0, generating: 1, error: 2, idle: 3 };
+  const diff = (o[a._status] ?? 3) - (o[b._status] ?? 3);
+  return diff !== 0 ? diff : b._id - a._id;
+}).filter(row => {
       if (gtmSearchQuery.trim()) {
         const q = gtmSearchQuery.toLowerCase();
         if (!((row.Company || "").toLowerCase().includes(q) || (row["Buying Persona"] || "").toLowerCase().includes(q) || (row._discoveredName || "").toLowerCase().includes(q))) return false;
