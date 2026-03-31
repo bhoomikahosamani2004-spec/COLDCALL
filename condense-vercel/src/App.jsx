@@ -2250,6 +2250,16 @@ if (!dbLoaded) return (
   </div>
 </div>
                  <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>{row.HQ} · {row.Employees}</div>
+                  {(row["Full Name"] || row["Prospect Name"]) && (
+  <div style={{ fontSize: 11, color: C.navy, fontFamily: FONT, fontWeight: 600, marginTop: 2 }}>
+    👤 {row["Full Name"] || row["Prospect Name"]}
+  </div>
+)}
+{row["Job Title"] && (
+  <div style={{ fontSize: 10, color: C.textMid, fontFamily: FONT, marginTop: 1 }}>
+    {row["Job Title"]}
+  </div>
+)}
 {row._discoveredName && <div style={{ fontSize: 10, color: C.navy, fontFamily: FONT, fontWeight: 600, marginTop: 2 }}>👤 {row._discoveredName}</div>}
 {row.email && <div style={{ fontSize: 9, color: C.green, fontFamily: MONO, marginTop: 1 }}>✉️ {row.email}</div>}
 {row.phone && <div style={{ fontSize: 9, color: C.textDim, fontFamily: MONO, marginTop: 1 }}>📱 {row.phone}</div>}
