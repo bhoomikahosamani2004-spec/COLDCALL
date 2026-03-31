@@ -49,14 +49,15 @@ export default async function handler(req, res) {
 
       const apolloData = await apolloRes.json();
       console.log("APOLLO STATUS:", apolloRes.status);
-      console.log("APOLLO RESPONSE:", JSON.stringify(apolloData).slice(0, 600));
+      console.log("APOLLO FULL RESPONSE:", JSON.stringify(apolloData));
 
       // Handle search response (array of people)
-      if (looksLikeTitle) {
+     if (looksLikeTitle) {
         const person = apolloData?.people?.[0];
         if (person) {
+          // Return whatever we have — even name-only if email is gated on paid plan
           return res.json({
-            source: "Apollo",
+            source: person.email ? "Apollo" : "Apollo (name only)",
             found: true,
             name: `${person.first_name || ""} ${person.last_name || ""}`.trim(),
             email: person.email || "",
@@ -66,6 +67,7 @@ export default async function handler(req, res) {
             company: person.organization?.name || company,
           });
         }
+        console.log("APOLLO: No people found for this title/company — trying Lusha");
       } else {
         // Handle match response (single person)
         const person = apolloData?.person;
@@ -81,9 +83,9 @@ export default async function handler(req, res) {
             company: person.organization?.name || company,
           });
         }
+        console.log("APOLLO: Match found no email/phone — trying Lusha");
       }
 
-      console.log("APOLLO: No result — trying Lusha");
     } catch (err) {
       console.error("Apollo error:", err.message);
     }
