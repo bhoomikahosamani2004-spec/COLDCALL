@@ -1288,6 +1288,7 @@ const generateGtmEmail = async (row) => {
   const cloud = row["Cloud Provider"] || "";
   const warehouse = row["Data Warehouse"] || "";
   const persona = row["Buying Persona"] || "";
+  const personName = row._personName || row.name || persona;
   const integration = row["Integration Opportunity"] || "";
   const hq = row["HQ"] || "";
   const employees = row["Employees"] || "";
@@ -1310,9 +1311,9 @@ STYLE — follow this EXACT Dream11 email format:
 
 Subject: Condense — Complementing ${company}'s ${stack.includes("Kafka") ? "Kafka" : "event streaming"} data platform for scale and cost efficiency
 
-Greetings! 
+Greetings! ${personName}, 
 
- I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch. Condense is built for modern data engineering and analytics teams that need to operationalize real-time data across products, analytics platforms, and AI systems without the heavy operational complexity of managing distributed streaming infrastructure.
+I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch. Condense is built for modern data engineering and analytics teams that need to operationalize real-time data across products, analytics platforms, and AI systems without the heavy operational complexity of managing distributed streaming infrastructure.
 
 Platforms like ${company} typically operate a modern data architecture built around [describe their stack: ${stack}], with [${tool}] complementing the pipeline. Teams running on ${cloud} leverage ${warehouse} as the analytical layer, with microservices generating large volumes of ${useCase.toLowerCase()} events across the platform.
 
@@ -2126,6 +2127,44 @@ if (!dbLoaded) return (
       style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
   </div>
 )}
+      {/* FULL AGENT BUTTON */}
+{(row._status === "idle" || row._status === "error") && (
+  <button
+    onClick={() => {
+      // Convert GTM row to a prospect and run full agent
+      const newProspect = {
+        id: `p_gtm_${row._id}_${Date.now()}`,
+        name: row._enrichedName || row["Buying Persona"],
+        jobTitle: row["Buying Persona"],
+        company: row.Company,
+        email: row._enrichedEmail || "",
+        phone: row._enrichedPhone || "",
+        linkedinUrl: row._enrichedLI || "",
+        industry: row["Data Stack Signal"] || "",
+        seniority: "",
+        region: row.HQ || "India",
+        jdText: `Data Stack: ${row["Data Stack Signal"]}. Tool: ${row["Tool Used"]}. Use Case: ${row["Use Case"]}. Cloud: ${row["Cloud Provider"]}. Warehouse: ${row["Data Warehouse"]}. Integration: ${row["Integration Opportunity"]}.`,
+        status: "idle",
+        createdAt: new Date().toISOString(),
+        sentAt: null,
+      };
+      setProspects(prev => [newProspect, ...prev]);
+      setActiveView("prospects");
+      setSelected(newProspect.id);
+      // Small delay then run agent
+      setTimeout(() => runAgent(newProspect), 300);
+    }}
+    style={{
+      padding: "7px 14px", borderRadius: 6, border: "1px solid #0D9E6E44",
+      background: "#F0FBF5", color: C.green, fontSize: 11, fontFamily: FONT,
+      fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5
+    }}
+  >
+    🔍 Full Research
+  </button>
+)}
+
+feat: add Full Research button to GTM rows — runs V2 agent pipeline
             ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
           </button>
         )}
@@ -2233,7 +2272,7 @@ if (!dbLoaded) return (
           setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: true, _zohoStatus: null } : r));
           try {
             await pushToZoho(
-              { name: row["Buying Persona"], company: row.Company, jobTitle: row["Buying Persona"], email: row.email || "", phone: row.phone || "" },
+             { name: row._personName || row["Buying Persona"], company: row.Company, jobTitle: row["Buying Persona"],email: row.email || "", phone: row.phone || "" },
               gen,
               `Data Stack: ${row["Data Stack Signal"]} | Tool: ${row["Tool Used"]} | Integration: ${row["Integration Opportunity"]}`
             );
