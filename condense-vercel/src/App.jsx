@@ -2109,6 +2109,7 @@ if (!dbLoaded) return (
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
   <div>
     <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: C.navy }}>{row.Company}</div>
+   {row._discoveredName && <div style={{ fontSize: 11, color: C.navy, fontFamily: FONT, fontWeight: 600, marginTop: 2 }}>👤 {row._discoveredName}</div>}
     {row.email && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>✉️ {row.email}</div>}
   </div>
   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -2130,14 +2131,14 @@ if (!dbLoaded) return (
       }),
     });
     const data = await res.json();
-    if (data.email || data.phone) {
+   if (data.found && (data.email || data.phone || data.name)) {
       setGtmRows(prev => prev.map(r =>
         r._id === row._id
-          ? { ...r, email: data.email || r.email, phone: data.phone || r.phone, _enriching: false, _enriched: data.source }
+          ? { ...r, email: data.email || r.email, phone: data.phone || r.phone, _discoveredName: data.name || r._discoveredName, _enriching: false, _enriched: data.source }
           : r
       ));
-      dbSave('v3_gtm_rows', String(row._id), { ...row, email: data.email, phone: data.phone, _enriched: data.source });
-      showGtmToast(`✅ ${data.source}: ${data.email || "no email"} ${data.phone ? "· " + data.phone : ""}`, "success");
+      dbSave('v3_gtm_rows', String(row._id), { ...row, email: data.email, phone: data.phone, _discoveredName: data.name, _enriched: data.source });
+      showGtmToast(`✅ ${data.source}: ${data.name ? data.name + " · " : ""}${data.email || "no email"} ${data.phone ? "· " + data.phone : ""}`, "success");
     } else {
       setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
       showGtmToast(`❌ Nothing found for "${row["Buying Persona"] || row.Company}" — check your API keys`, "error");
