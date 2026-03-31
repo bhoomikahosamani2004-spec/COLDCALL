@@ -1456,10 +1456,10 @@ const runGtmBulkEnrich = async () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-  name: (row["Full Name"] || row["Prospect Name"] || "").trim(),
-  company: (row.Company || "").trim(),
-  jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(),
-  linkedinUrl: row.linkedinUrl || row.linkedinURL || "",
+      name: (row["Full Name"] || row["Prospect Name"] || "").trim(),
+      company: (row.Company || "").trim(),
+      jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(),
+      linkedinUrl: row.linkedinUrl || row.linkedinURL || "",
 }),
       });
       const data = await res.json();
@@ -2292,10 +2292,10 @@ if (!dbLoaded) return (
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-  name: (row["Full Name"] || row["Prospect Name"] || "").trim(),
-  company: (row.Company || "").trim(),
-  jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(),
-  linkedinUrl: row.linkedinUrl || row.linkedinURL || "",
+     name: (row["Full Name"] || row["Prospect Name"] || "").trim(),
+     company: (row.Company || "").trim(),
+     jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(),
+     linkedinUrl: row.linkedinUrl || row.linkedinURL || "",
 }),
     });
     const data = await res.json();
