@@ -958,7 +958,7 @@ const gtmFileRef = useRef();
 const gtmCancelRef = useRef(false);
 const [gtmToast, setGtmToast] = useState(null);
 const [showGtmForm, setShowGtmForm] = useState(false);
-const [gtmForm, setGtmForm] = useState({ Company: "", HQ: "", Employees: "", "Data Stack Signal": "", "Tool Used": "", "Use Case": "", "Cloud Provider": "", "Data Warehouse": "", "Buying Persona": "", "Integration Opportunity": "", email: "", phone: "" });
+const [gtmForm, setGtmForm] = useState({ Company: "", HQ: "", Employees: "", "Data Stack Signal": "", "Tool Used": "", "Use Case": "", "Cloud Provider": "", "Data Warehouse": "", "Buying Persona": "", "Prospect Name": "", "Integration Opportunity": "", email: "", phone: "" });
   
 
   // Persist state changes
@@ -1394,7 +1394,7 @@ const addGtmRow = () => {
   setGtmSelected(newRow._id);
   dbSave('v3_gtm_rows', String(newRow._id), newRow);
   setShowGtmForm(false);
-  setGtmForm({ Company: "", HQ: "", Employees: "", "Data Stack Signal": "", "Tool Used": "", "Use Case": "", "Cloud Provider": "", "Data Warehouse": "", "Buying Persona": "", "Integration Opportunity": "", email: "", phone: "" });
+  setGtmForm({ Company: "", HQ: "", Employees: "", "Data Stack Signal": "", "Tool Used": "", "Use Case": "", "Cloud Provider": "", "Data Warehouse": "", "Buying Persona": "", "Prospect Name": "", "Integration Opportunity": "", email: "", phone: "" });
   showGtmToast(`✅ ${gtmForm.Company} added to GTM list`, "success");
 };
 
@@ -2125,10 +2125,10 @@ if (!dbLoaded) return (
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: row["Buying Persona"] || "",
-        company: row.Company,
-        jobTitle: row["Buying Persona"] || "",
-      }),
+      name: row["Prospect Name"] || "",
+      company: row.Company,
+     jobTitle: row["Buying Persona"] || "",
+}),
     });
     const data = await res.json();
    if (data.found && (data.email || data.phone || data.name)) {
@@ -3111,7 +3111,8 @@ if (!dbLoaded) return (
                   { key: "Company", label: "Company *", placeholder: "Dream11", full: false },
                   { key: "HQ", label: "HQ / Location", placeholder: "Mumbai, India", full: false },
                   { key: "Employees", label: "Employee Count", placeholder: "1000–5000", full: false },
-                  { key: "Buying Persona", label: "Buying Persona / Name", placeholder: "VP Data Engineering", full: false },
+                  { key: "Buying Persona", label: "Buying Persona / Title", placeholder: "VP Data Engineering", full: false }, 
+                  { key: "Prospect Name", label: "Prospect Name (if known)", placeholder: "Rahul Sharma", full: false },
                   { key: "Data Stack Signal", label: "Data Stack Signal", placeholder: "Kafka, Flink, Spark", full: false },
                   { key: "Tool Used", label: "Tool Used", placeholder: "Kafka Connect, Debezium", full: false },
                   { key: "Cloud Provider", label: "Cloud Provider", placeholder: "AWS", full: false },
