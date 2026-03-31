@@ -2093,29 +2093,7 @@ if (!dbLoaded) return (
         {/* ENRICH ALL */}
         {gtmRows.length > 0 && !gtmEnrichAll && !gtmBatchRunning && (
           <button onClick={enrichAllGtmRows}
-            style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            🔍 Enrich All ({gtmRows.filter(r => !r._enriched).length} pending)
-          </button>
-        )}
-        {gtmEnrichAll && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44" }}>
-            <Spinner />
-            <span style={{ fontSize: 11, fontFamily: MONO, color: "#7C3AED" }}>
-              Enriching... {gtmRows.filter(r => r._enriched).length}/{gtmRows.length}
-            </span>
-            <button onClick={() => { gtmEnrichCancelRef.current = true; setGtmEnrichAll(false); }}
-              style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
-          </div>
-        )}
-        {/* GENERATE ALL */}
-        {gtmRows.length > 0 && gtmRows.filter(r => r._status === "idle").length > 0 && !gtmBatchRunning && (
-          <button onClick={runGtmBatch} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
-          </button>
-        )}
-    style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-    🔍 Enrich All ({gtmRows.filter(r => !r._enriched).length} pending)
-  </button>
+ )}
       
 {gtmEnrichAll && (
   <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44" }}>
