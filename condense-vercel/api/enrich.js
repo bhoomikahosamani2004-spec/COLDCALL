@@ -1,12 +1,19 @@
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   const { name, company, jobTitle, linkedinUrl } = req.body;
+const cleanName = (name || "").trim();
+const firstName = cleanName.split(" ")[0];
+const lastName = cleanName.split(" ").slice(1).join(" ");
 
-  const firstName = (name || "").split(" ")[0];
-  const lastName = (name || "").split(" ").slice(1).join(" ");
+// A real name: 2-4 words, no title keywords, no special chars like &/
+// A job title: contains role words, OR has & / - in it, OR is very long
+const titleKeywords = ["VP", "Head", "Director", "Manager", "Lead", "Chief", "CTO", "CEO", "CIO", "President", "Engineer", "Analyst", "Architect", "Officer", "Founder", "Partner", "Consultant", "Associate", "Senior", "Junior", "Software", "Product", "Data", "Cloud", "Platform", "Enterprise", "Customer", "Business", "Technical", "Principal"];
+const wordCount = cleanName.split(" ").filter(Boolean).length;
+const hasTitleKeyword = titleKeywords.some(t => cleanName.includes(t));
+const hasSpecialChars = /[&\/\|]/.test(cleanName);
+const looksLikeTitle = !cleanName || hasTitleKeyword || hasSpecialChars || wordCount > 5;
 
-  // Detect if "name" is actually a job title (e.g. "VP Data Engineering")
- const titleWords = ["VP", "Head", "Director", "Manager", "Lead", "Chief", "CTO", "CEO", "CIO", "President", "Engineer", "Analyst", "Architect", "Officer", "Founder", "Partner", "Consultant"];
+console.log("ENRICH REQUEST:", { name: cleanName, company, jobTitle, looksLikeTitle, wordCount, hasTitleKeyword });
 // Only treat as title if: no name provided, OR name contains a title word AND has no typical name structure
 const wordCount = (name || "").split(" ").filter(Boolean).length;
 const containsTitleWord = titleWords.some(t => (name || "").includes(t));
