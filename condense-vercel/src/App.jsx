@@ -2220,6 +2220,8 @@ if (!dbLoaded) return (
                 </div>
 
                 {(() => {
+                  return (
+                    <>
                 {/* RIGHT PANEL TABS */}
 <div style={{ display: "flex", borderBottom: "1px solid #EEF2F7", background: "#fff", borderRadius: "8px 8px 0 0", padding: "0 4px", flexShrink: 0 }}>
   {[
