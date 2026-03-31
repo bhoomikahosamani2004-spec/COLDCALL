@@ -2089,8 +2089,7 @@ if (!dbLoaded) return (
         <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}>GTM Excel Engine</div>
         <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Upload India GTM Excel → Gemini generates Dream11-style emails per data stack signal</div>
       </div>
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        {/* ENRICH ALL */}
+     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {gtmRows.length > 0 && !gtmEnrichAll && !gtmBatchRunning && (
           <button onClick={enrichAllGtmRows}
             style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
@@ -2107,14 +2106,9 @@ if (!dbLoaded) return (
               style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
           </div>
         )}
-        {/* GENERATE ALL */}
-        {gtmRows.filter(r => r._status === "idle").length > 0 && !gtmBatchRunning && (
-          <button onClick={runGtmBatch} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
-          </button>
-        )}
-
-feat: add Full Research button to GTM rows — runs V2 agent pipeline
+        {gtmRows.length > 0 && gtmRows.filter(r => r._status === "idle").length > 0 && !gtmBatchRunning && (
+          <button onClick={runGtmBatch}
+            style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
             ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
           </button>
         )}
@@ -2126,7 +2120,8 @@ feat: add Full Research button to GTM rows — runs V2 agent pipeline
           </div>
         )}
         <input ref={gtmFileRef} type="file" accept=".xlsx,.xls" onChange={handleGtmUpload} style={{ display: "none" }} />
-        <button onClick={() => gtmFileRef.current.click()} style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 12, fontFamily: FONT, fontWeight: 500, cursor: "pointer" }}>
+        <button onClick={() => gtmFileRef.current.click()}
+          style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 12, fontFamily: FONT, fontWeight: 500, cursor: "pointer" }}>
           📊 Upload Excel
         </button>
       </div>
