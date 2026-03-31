@@ -1462,8 +1462,9 @@ const runGtmBulkEnrich = async () => {
       linkedinUrl: row.linkedinUrl || row.linkedinURL || "",
 }),
       });
-      const data = await res.json();
-      if (data.found && (data.email || data.phone || data.name)) {
+      let data;
+    try { data = await res.json(); } catch(e) { throw new Error("Server returned invalid response — check Vercel logs"); }
+    if (data.found && (data.email || data.phone || data.name)) {
         setGtmRows(prev => prev.map(r =>
           r._id === row._id
             ? { ...r, email: data.email || r.email, phone: data.phone || r.phone, linkedinUrl: data.linkedinUrl || r.linkedinUrl, _discoveredName: data.name || r._discoveredName, _enriched: data.source }
@@ -2298,8 +2299,13 @@ if (!dbLoaded) return (
      linkedinUrl: row.linkedinUrl || row.linkedinURL || "",
 }),
     });
-    const data = await res.json();
-   if (data.found && (data.email || data.phone || data.name)) {
+  let data;
+     try { data = await res.json(); } catch(e) { 
+        setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
+        showGtmToast(`❌ Server error — check Vercel logs`, "error");
+        return;
+      }
+      if (data.found && (data.email || data.phone || data.name)) {
       setGtmRows(prev => prev.map(r =>
         r._id === row._id
           ? { ...r, email: data.email || r.email, phone: data.phone || r.phone, _discoveredName: data.name || r._discoveredName, _enriching: false, _enriched: data.source }
