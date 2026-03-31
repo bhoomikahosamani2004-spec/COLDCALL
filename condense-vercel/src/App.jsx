@@ -873,12 +873,11 @@ const [exportingPDF, setExportingPDF] = useState(false);
 useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
-const [p, r, m, e, rep, n, rat, tr, gtmR, gtmM, gtmRes, gtmAM] = await Promise.all([
+const [p, r, m, e, rep, n, rat, tr, gtmR, gtmM] = await Promise.all([
   dbLoad('v3_prospects'), dbLoad('v3_research'), dbLoad('v3_messages'),
   dbLoad('v3_edits'), dbLoad('v3_replies'), dbLoad('v3_notifications'),
   dbLoad('v3_ratings'), dbLoad('v3_training'),
   dbLoad('v3_gtm_rows'), dbLoad('v3_gtm_messages'),
-  dbLoad('v3_gtm_research'), dbLoad('v3_gtm_agent_messages'),
 ]);
     setProspects(Object.values(p).sort((a, b) => {
   // Ready/Following first, then by newest created
@@ -900,8 +899,6 @@ const [p, r, m, e, rep, n, rat, tr, gtmR, gtmM, gtmRes, gtmAM] = await Promise.a
         setGtmSelected(loadedGtmRows[0]._id);
      }
 setGtmGenerated(gtmM);
-setGtmResearch(gtmRes);
-setGtmMessages(gtmAM);
     setDbLoaded(true);    
   }
   loadAll();
@@ -939,7 +936,7 @@ const [showMapper, setShowMapper] = useState(false);
   try { return JSON.parse(localStorage.getItem('sender_profile') || 'null') || {}; } catch { return {}; }
 });
 const [showProfile, setShowProfile] = useState(false);
-const [activeView, setActiveView] = useState("gtm"); 
+const [activeView, setActiveView] = useState("prospects"); // prospects | dashboard | training
 const [zohoPushing, setZohoPushing] = useState(false);      
 const [zohoPushStatus, setZohoPushStatus] = useState({});
 const [searchQuery, setSearchQuery] = useState("");
@@ -959,14 +956,11 @@ const [gtmBatchRunning, setGtmBatchRunning] = useState(false);
 const [gtmBatchProgress, setGtmBatchProgress] = useState(0);
 const gtmFileRef = useRef();
 const gtmCancelRef = useRef(false);
-const [gtmResearch, setGtmResearch] = useState({});
-const [gtmMessages, setGtmMessages] = useState({});
-const [gtmAgentRunning, setGtmAgentRunning] = useState(null);
-const [gtmAgentLogs, setGtmAgentLogs] = useState({});
-const [gtmAgentEdits, setGtmAgentEdits] = useState({});
-const [activeGtmRightTab, setActiveGtmRightTab] = useState("messages");
 const [gtmToast, setGtmToast] = useState(null);
 const [showGtmForm, setShowGtmForm] = useState(false);
+const [gtmBatchEnriching, setGtmBatchEnriching] = useState(false);
+const [gtmEnrichProgress, setGtmEnrichProgress] = useState(0);
+const gtmEnrichCancelRef = useRef(false);
 const [gtmForm, setGtmForm] = useState({ Company: "", HQ: "", Employees: "", "Data Stack Signal": "", "Tool Used": "", "Use Case": "", "Cloud Provider": "", "Data Warehouse": "", "Buying Persona": "", "Prospect Name": "", "Integration Opportunity": "", email: "", phone: "" });
   
 
@@ -1019,15 +1013,6 @@ useEffect(() => {
   if (!dbLoaded) return;
   Object.entries(gtmGenerated).forEach(([id, val]) => dbSave('v3_gtm_messages', id, val));
 }, [gtmGenerated, dbLoaded]);
-  useEffect(() => {
-  if (!dbLoaded) return;
-  Object.entries(gtmResearch).forEach(([id, val]) => dbSave('v3_gtm_research', id, val));
-}, [gtmResearch, dbLoaded]);
-
-useEffect(() => {
-  if (!dbLoaded) return;
-  Object.entries(gtmMessages).forEach(([id, val]) => dbSave('v3_gtm_agent_messages', id, val));
-}, [gtmMessages, dbLoaded]);
   
   useEffect(() => {
   localStorage.setItem('sender_profile', JSON.stringify(senderProfile));
@@ -1284,7 +1269,12 @@ const extraCtx = extraContext[id] || "";
     const wb = XLSX.read(ev.target.result, { type: "array" });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
-    const withIds = data.map((row, i) => ({ ...row, _id: i, _status: "idle" }));
+const withIds = data.map((row, i) => {
+  // Normalize column names (trim whitespace)
+  const cleaned = {};
+  Object.entries(row).forEach(([k, v]) => { cleaned[k.trim()] = v; });
+  return { ...cleaned, _id: i, _status: "idle" };
+});
     setGtmRows(withIds);
     setGtmSelected(0);
     // Save to Supabase
@@ -1415,56 +1405,44 @@ const addGtmRow = () => {
   setGtmForm({ Company: "", HQ: "", Employees: "", "Data Stack Signal": "", "Tool Used": "", "Use Case": "", "Cloud Provider": "", "Data Warehouse": "", "Buying Persona": "", "Prospect Name": "", "Integration Opportunity": "", email: "", phone: "" });
   showGtmToast(`✅ ${gtmForm.Company} added to GTM list`, "success");
 };
-const runGtmAgent = async (row) => {
-  const id = row._id;
-  setGtmAgentRunning(id);
-  setGtmAgentLogs(prev => ({ ...prev, [id]: [] }));
-  const addGtmLog = (msg) => setGtmAgentLogs(prev => ({ ...prev, [id]: [...(prev[id] || []), msg] }));
-  setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _agentStatus: "researching" } : r));
+const runGtmBulkEnrich = async () => {
+  const queue = gtmRows.filter(r => !r._enriched);
+  if (queue.length === 0) return;
+  setGtmBatchEnriching(true);
+  gtmEnrichCancelRef.current = false;
+  setGtmEnrichProgress(0);
 
-  try {
-    const company = row["Company"] || "";
-    const persona = row["Buying Persona"] || "";
-    const prospectName = row["Prospect Name"] || persona;
-    const stack = row["Data Stack Signal"] || "";
-    const integration = row["Integration Opportunity"] || "";
-
-    // Build a JD-like context from GTM signals
-    const jdContext = `Data Stack: ${stack}. Tool Used: ${row["Tool Used"] || ""}. Use Case: ${row["Use Case"] || ""}. Cloud: ${row["Cloud Provider"] || ""}. Warehouse: ${row["Data Warehouse"] || ""}. Integration: ${integration}.`;
-
-    addGtmLog("🔍 Researching " + company + "...");
-    const researchData = await runResearchAgent(
-      company, "", prospectName, persona, jdContext, addGtmLog
-    );
-    setGtmResearch(prev => ({ ...prev, [id]: researchData }));
-
-    setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _agentStatus: "generating" } : r));
-    addGtmLog("⏳ Pausing 30s for rate limits...");
-    await new Promise(r => setTimeout(r, 30000));
-
-    const industryUC = findIndustryUseCases(company, stack, researchData);
-    const useCasesStr = industryUC.use_cases.map(uc => `• ${uc.title} – ${uc.desc}`).join("\n");
-    const industryIntro = industryUC.intro.replace(/\[COMPANY\]/g, company);
-    const industrySocialProof = industryUC.social_proof.replace(/\[COMPANY\]/g, company);
-    const industryClosing = industryUC.closing.replace(/\[COMPANY\]/g, company);
-    const matchedStories = findMatchingStories(company, stack, researchData);
-
-    const fakePerson = { name: prospectName, jobTitle: persona, company, seniority: persona, region: row["HQ"] || "India" };
-    const msgs = await generateMessages(
-      fakePerson, researchData, matchedStories, jdContext, replies,
-      { industryUC, useCasesStr, industryIntro, industrySocialProof, industryClosing },
-      "", addGtmLog
-    );
-
-    setGtmMessages(prev => ({ ...prev, [id]: msgs }));
-    setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _agentStatus: "ready" } : r));
-    setActiveGtmRightTab("messages");
-    addGtmLog("🚀 Agent complete!");
-  } catch (err) {
-    setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _agentStatus: "error" } : r));
-    setGtmAgentLogs(prev => ({ ...prev, [id]: [...(prev[id] || []), "❌ " + err.message] }));
+  for (let i = 0; i < queue.length; i++) {
+    if (gtmEnrichCancelRef.current) break;
+    setGtmEnrichProgress(i + 1);
+    const row = queue[i];
+    try {
+      const res = await fetch("/api/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: (row["Full Name"] || row["Prospect Name"] || "").trim(),
+          company: row.Company || "",
+          jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.found && (data.email || data.phone || data.name)) {
+        setGtmRows(prev => prev.map(r =>
+          r._id === row._id
+            ? { ...r, email: data.email || r.email, phone: data.phone || r.phone, linkedinUrl: data.linkedinUrl || r.linkedinUrl, _discoveredName: data.name || r._discoveredName, _enriched: data.source }
+            : r
+        ));
+        dbSave('v3_gtm_rows', String(row._id), { ...row, email: data.email, phone: data.phone, linkedinUrl: data.linkedinUrl, _discoveredName: data.name, _enriched: data.source });
+      }
+    } catch (err) {
+      console.error("Enrich error for", row.Company, err.message);
+    }
+    // Respect Apollo/Lusha rate limits — 1 request per second
+    if (i < queue.length - 1) await new Promise(r => setTimeout(r, 1200));
   }
-  setGtmAgentRunning(null);
+  setGtmBatchEnriching(false);
+  showGtmToast(`✅ Enrichment complete — ${gtmRows.filter(r => r._enriched).length} contacts found`, "success");
 };
 const runGtmBatch = async () => {
   const queue = gtmRows.filter(r => r._status === "idle");
@@ -1565,6 +1543,7 @@ if (!dbLoaded) return (
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontFamily: MONO, letterSpacing: "0.06em" }}>Trained</span>
             </div>
             {[
+            { key: "prospects", label: "🎯 Prospects" },
             { key: "gtm", label: "📊 GTM Excel" },
             { key: "dashboard", label: "📊 Dashboard" },
             { key: "training", label: "🧠 Training" },
@@ -1895,6 +1874,67 @@ if (!dbLoaded) return (
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden", height: "calc(100vh - 64px)" }}>
 
+         {/* LEFT SIDEBAR */}
+{activeView === "prospects" && <div style={{ width: 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "2px 0 8px rgba(10,37,64,0.04)" }}>
+            {/* Add Prospect Form */}
+            <div style={{ padding: "18px 16px", borderBottom: "1px solid #EEF2F7", overflowY: "auto", maxHeight: "55vh" }}>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, letterSpacing: "-0.01em" }}>Add Prospect</div>
+                <div style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Fill manually or paste a LinkedIn URL</div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {/* LinkedIn */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 500, color: C.textMid, display: "block", marginBottom: 4, fontFamily: FONT }}>LinkedIn URL</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input style={{ flex: 1, background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 6, padding: "8px 11px", fontSize: 12, fontFamily: FONT, outline: "none" }} value={form.linkedinUrl} onChange={e => setForm(p => ({ ...p, linkedinUrl: e.target.value }))} placeholder="linkedin.com/in/..." onKeyDown={e => e.key === "Enter" && lookupProfile()} />
+                    <button onClick={lookupProfile} disabled={!form.linkedinUrl || lookupLoading} style={{ padding: "0 12px", borderRadius: 6, border: "1px solid #D8E2EE", background: !form.linkedinUrl ? "#F5F7FA" : "#EEF5FF", color: !form.linkedinUrl ? C.textFaint : "#1B6EF3", cursor: !form.linkedinUrl || lookupLoading ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 500 }} title="Auto-fill from LinkedIn">{lookupLoading ? "⌛" : "🔍"}</button>
+                  </div>
+                  {lookupStatus && <div style={{ fontSize: 11, fontFamily: FONT, marginTop: 5, padding: "5px 10px", borderRadius: 6, background: lookupStatus.startsWith("✅") ? C.greenDim : lookupStatus.startsWith("⚠") ? C.amberDim : C.goldDimmer, color: lookupStatus.startsWith("✅") ? C.green : lookupStatus.startsWith("⚠") ? C.amber : C.gold }}>{lookupStatus}</div>}
+                </div>
+                <Input label="Full Name *" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="John Smith" />
+                <Input label="Job Title" value={form.jobTitle} onChange={v => setForm(p => ({ ...p, jobTitle: v }))} placeholder="VP Engineering" />
+                <Input label="Company *" value={form.company} onChange={v => setForm(p => ({ ...p, company: v }))} placeholder="Acme Corp" />
+                <Input label="Email" value={form.email} onChange={v => setForm(p => ({ ...p, email: v }))} placeholder="john@acme.com" />
+                <Input label="Phone / WhatsApp" value={form.phone} onChange={v => setForm(p => ({ ...p, phone: v }))} placeholder="+91 9353094136" />
+
+                {/* JD Toggle */}
+                <button onClick={() => setShowJD(s => !s)} style={{ background: showJD ? "#EEF5FF" : "#F8FAFC", border: "1px dashed #D8E2EE", color: "#1B6EF3", fontSize: 11, fontFamily: FONT, padding: "7px 12px", borderRadius: 6, cursor: "pointer", textAlign: "left", width: "100%", fontWeight: 500 }}>
+                  {showJD ? "▼ Hide" : "▶ Add"} JD / Role Context
+                </button>
+                {showJD && (
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 500, color: C.textMid, display: "block", marginBottom: 4, fontFamily: FONT }}>JD / Role Context</label>
+                    <textarea value={form.jdText} onChange={e => setForm(p => ({ ...p, jdText: e.target.value }))} placeholder="Paste job description or key responsibilities. The pitch will be tailored to their specific JD." style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 6, padding: "9px 12px", fontSize: 12, fontFamily: FONT, lineHeight: 1.6, outline: "none", resize: "vertical", minHeight: 90 }} />
+                  </div>
+                )}
+
+                <GlowButton onClick={addProspect} disabled={!form.name || !form.company} primary>+ Add Prospect</GlowButton>
+
+                {/* Bulk Upload */}
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, transparent, ${C.border})` }} />
+                    <span style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: C.textDim, fontFamily: MONO, whiteSpace: "nowrap" }}>Bulk Upload</span>
+                    <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${C.border}, transparent)` }} />
+                  </div>
+                  <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} style={{ display: "none" }} />
+                  <button onClick={() => fileInputRef.current.click()} style={{ width: "100%", padding: "11px", borderRadius: 4, border: `1px solid ${C.gold}44`, background: "rgba(14,165,233,0.05)", color: C.gold, fontSize: 11, fontFamily: MONO, letterSpacing: "0.07em", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.15s" }}>
+                    <span style={{ fontSize: 16 }}>↑</span> Upload CSV / Excel
+                  </button>
+                  <div style={{ fontSize: 9, color: C.textDim, fontFamily: MONO, marginTop: 5, textAlign: "center", lineHeight: 1.6 }}>
+                    Supports .csv · .xlsx · .xls · Columns: Name, Company, Title, Email, Phone, LinkedIn
+                  </div>
+                  {uploadStatus && <div style={{ fontSize: 10, fontFamily: MONO, marginTop: 5, padding: "5px 8px", borderRadius: 3, background: uploadStatus.startsWith("✅") ? C.greenDim : uploadStatus.startsWith("❌") ? C.redDim : C.goldDimmer, color: uploadStatus.startsWith("✅") ? C.green : uploadStatus.startsWith("❌") ? C.red : C.gold }}>{uploadStatus}</div>}
+                  {prospects.filter(p => p.status === "idle").length > 0 && (
+                    <button onClick={() => setBatchOpen(true)} style={{ width: "100%", marginTop: 6, padding: "9px", borderRadius: 4, border: `1px solid ${C.green}44`, background: C.greenDim, color: C.green, fontSize: 11, fontFamily: MONO, letterSpacing: "0.06em", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      ⚡ Select &amp; Generate Scripts ({prospects.filter(p => p.status === "idle").length} ready)
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Prospect List */}
             <div style={{ flex: 1, overflowY: "auto" }}>
               <div style={{ padding: "10px 12px 4px", borderBottom: "1px solid #EEF2F7" }}>
@@ -2056,6 +2096,18 @@ if (!dbLoaded) return (
 <button onClick={() => gtmFileRef.current.click()} style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 12, fontFamily: FONT, fontWeight: 500, cursor: "pointer" }}>
   📊 Upload Excel
 </button>
+{gtmRows.length > 0 && !gtmBatchEnriching && (
+  <button onClick={runGtmBulkEnrich} style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
+    🔍 Enrich All ({gtmRows.filter(r => !r._enriched).length})
+  </button>
+)}
+{gtmBatchEnriching && (
+  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44" }}>
+    <Spinner />
+    <span style={{ fontSize: 11, fontFamily: MONO, color: "#7C3AED" }}>{gtmEnrichProgress}/{gtmRows.length} enriched</span>
+    <button onClick={() => { gtmEnrichCancelRef.current = true; setGtmBatchEnriching(false); }} style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
+  </div>
+)}
       </div>
     </div>
 
@@ -2116,7 +2168,9 @@ if (!dbLoaded) return (
   <div>
     <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: C.navy }}>{row.Company}</div>
    {row._discoveredName && <div style={{ fontSize: 11, color: C.navy, fontFamily: FONT, fontWeight: 600, marginTop: 2 }}>👤 {row._discoveredName}</div>}
-    {row.email && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>✉️ {row.email}</div>}
+   {row.email && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>✉️ {row.email}</div>}
+{row.phone && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 1 }}>📱 {row.phone}</div>}
+{row.linkedinUrl && <div style={{ fontSize: 10, color: "#0077B5", fontFamily: MONO, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>💼 {row.linkedinUrl}</div>} 
   </div>
   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
     {row._status === "generating" && <><Spinner /><span style={{ fontSize: 11, color: C.gold, fontFamily: MONO }}>Generating...</span></>}
@@ -2219,236 +2273,73 @@ if (!dbLoaded) return (
                   </div>
                 </div>
 
-                {(() => {
+                {gen ? (() => {
+                  // Message tabs for GTM
+                 const GTM_TABS = [
+  { key: "email_body", label: "Email", icon: "✉️" },
+  { key: "email_followup1", label: "Email F/U 1", icon: "📧" },
+  { key: "email_followup2", label: "Email F/U 2", icon: "📧" },
+  { key: "connection_note", label: "Connection", icon: "🔗" },
+  { key: "day0_message", label: "Day 0", icon: "💬" },
+  { key: "day3_followup", label: "Day 3", icon: "📨" },
+  { key: "day7_followup", label: "Day 7", icon: "📨" },
+  { key: "day14_followup", label: "Day 14", icon: "📨" },
+];
+                 
+                  const editKey = `gtm_${row._id}_${activeGtmTab}`;
+                  const text = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
+
                   return (
-                    <>
-                {/* RIGHT PANEL TABS */}
-<div style={{ display: "flex", borderBottom: "1px solid #EEF2F7", background: "#fff", borderRadius: "8px 8px 0 0", padding: "0 4px", flexShrink: 0 }}>
-  {[
-    { key: "messages", label: "Messages", icon: "💬" },
-    { key: "agent", label: "AI Agent", icon: "⚡" },
-    { key: "research", label: "Research", icon: "🔍" },
-    { key: "stories", label: "Stories", icon: "🏆" },
-    { key: "keypoints", label: "Key Points", icon: "💡" },
-    { key: "objections", label: "Objections", icon: "🛡️" },
-  ].map(tab => (
-    <button key={tab.key} onClick={() => setActiveGtmRightTab(tab.key)}
-      style={{ padding: "10px 16px", border: "none", background: "transparent", cursor: "pointer", borderBottom: activeGtmRightTab === tab.key ? "2px solid #1B6EF3" : "2px solid transparent", color: activeGtmRightTab === tab.key ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 12, fontWeight: activeGtmRightTab === tab.key ? 600 : 400, whiteSpace: "nowrap" }}>
-      {tab.icon} {tab.label}
-    </button>
-  ))}
-</div>
-
-{/* AI AGENT TAB */}
-{activeGtmRightTab === "agent" && (
-  <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", padding: 20, overflowY: "auto" }}>
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 6 }}>Deep Research Agent</div>
-      <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>Researches {row.Company} and generates fully personalized Veera-style messages</div>
-    </div>
-    {gtmAgentLogs[row._id]?.length > 0 && (
-      <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: "12px 16px", marginBottom: 16, maxHeight: 150, overflowY: "auto" }}>
-        {gtmAgentLogs[row._id].map((log, i) => (
-          <div key={i} style={{ fontSize: 11, fontFamily: MONO, color: log.startsWith("✅") ? C.green : log.startsWith("❌") ? C.red : C.textMid, padding: "2px 0", lineHeight: 1.8 }}>{log}</div>
-        ))}
-        {gtmAgentRunning === row._id && <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}><Spinner /><span style={{ fontSize: 11, fontFamily: MONO, color: C.blue }}>Processing...</span></div>}
-      </div>
-    )}
-    <div style={{ display: "flex", gap: 10 }}>
-      <button
-        onClick={() => runGtmAgent(row)}
-        disabled={gtmAgentRunning !== null}
-        style={{ padding: "10px 24px", borderRadius: 6, border: "none", background: gtmAgentRunning !== null ? "#E4ECF4" : "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: gtmAgentRunning !== null ? C.textDim : "#fff", fontFamily: FONT, fontWeight: 600, fontSize: 13, cursor: gtmAgentRunning !== null ? "not-allowed" : "pointer" }}>
-        {gtmAgentRunning === row._id ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spinner /> Running...</span> : row._agentStatus === "ready" ? "↺ Re-run Agent" : "⚡ Run Deep Research Agent"}
-      </button>
-    </div>
-    {gtmResearch[row._id] && (
-      <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-        {gtmResearch[row._id].condense_fit && (
-          <div style={{ background: gtmResearch[row._id].condense_fit.score === "high" ? C.greenDim : C.amberDim, border: "1px solid #B8EDD3", borderRadius: 8, padding: 14 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: C.navy, marginBottom: 4 }}>{gtmResearch[row._id].condense_fit.score?.toUpperCase()} FIT</div>
-            <div style={{ fontSize: 12, color: C.textMid }}>{gtmResearch[row._id].condense_fit.reason}</div>
-          </div>
-        )}
-        <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: 14 }}>
-          <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 8 }}>PAIN POINTS</div>
-          {(gtmResearch[row._id].pain_points || []).map((pt, i) => (
-            <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}><span style={{ color: C.amber }}>—</span>{pt}</div>
-          ))}
-        </div>
-        <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: 14 }}>
-          <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 8 }}>CONVERSATION HOOKS</div>
-          {(gtmResearch[row._id].conversation_hooks || []).map((h, i) => (
-            <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}><span style={{ color: C.gold }}>→</span>{h}</div>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10 }}>
+                      {/* Tab bar */}
+                      <div style={{ display: "flex", borderBottom: "1px solid #EEF2F7", padding: "0 4px", flexShrink: 0, overflowX: "auto" }}>
+                        {GTM_TABS.map(tab => (
+                          <button key={tab.key} onClick={() => setActiveGtmTab(tab.key)}
+                            style={{ padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", borderBottom: activeGtmTab === tab.key ? "2px solid #1B6EF3" : "2px solid transparent", color: activeGtmTab === tab.key ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 11, fontWeight: activeGtmTab === tab.key ? 600 : 400, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                            {tab.icon} {tab.label}
+                          </button>
+                        ))}
+                        <div style={{ flex: 1 }} />
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "0 12px" }}>
+                          {activeGtmTab === "email_body" && gen.email_subject && (
+                            <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Subj: {gen.email_subject}</span>
+                          )}
+                          {gtmEdited[editKey] !== undefined && (
+                            <button onClick={() => setGtmEdited(prev => { const n = {...prev}; delete n[editKey]; return n; })} style={{ fontSize: 10, color: C.textDim, background: "none", border: "none", cursor: "pointer" }}>↺</button>
+                          )}
+                          <button onClick={() => navigator.clipboard.writeText(text)} style={{ fontSize: 11, color: C.gold, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: FONT }}>📋 Copy</button>
+                          {(activeGtmTab === "email_body" || activeGtmTab === "email_followup1" || activeGtmTab === "email_followup2") && (
+  <button onClick={() => {
+    const subj = activeGtmTab === "email_body" 
+      ? (gen.email_subject || "") 
+      : activeGtmTab === "email_followup1" 
+        ? `Re: ${gen.email_subject || ""}` 
+        : `Following up: ${gen.email_subject || ""}`;
+    window.open(`mailto:${row.email || ""}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`, "_blank");
+  }} style={{ fontSize: 11, color: C.amber, background: C.amberDim, border: `1px solid ${C.amber}33`, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✉️ Mail</button>
 )}
-
-{/* MESSAGES TAB — shows BOTH GTM-generated and agent-generated */}
-{activeGtmRightTab === "messages" && (() => {
-  const agentMsgs = gtmMessages[row._id];
-  const gtmMsgs = gen;
-  const ALL_TABS = [
-    ...(agentMsgs ? [
-      { key: "connection_note", label: "Connection", icon: "🔗", src: "agent" },
-      { key: "day0_message", label: "Day 0", icon: "💬", src: "agent" },
-      { key: "day3_followup", label: "Day 3", icon: "📨", src: "agent" },
-      { key: "day7_followup", label: "Day 7", icon: "📨", src: "agent" },
-      { key: "day14_followup", label: "Day 14", icon: "📨", src: "agent" },
-    ] : []),
-    ...(gtmMsgs || agentMsgs ? [
-      { key: "email_body", label: "Email", icon: "✉️", src: agentMsgs ? "agent" : "gtm" },
-      { key: "email_followup1", label: "Email F/U 1", icon: "📧", src: agentMsgs ? "agent" : "gtm" },
-      { key: "email_followup2", label: "Email F/U 2", icon: "📧", src: agentMsgs ? "agent" : "gtm" },
-    ] : []),
-  ];
-  if (ALL_TABS.length === 0) return (
-    <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 40 }}>
-      <div style={{ fontSize: 40, opacity: 0.2 }}>✉️</div>
-      <div style={{ fontSize: 14, color: C.textMid, fontFamily: FONT, textAlign: "center" }}>No messages yet.<br/>Use <strong>⚡ Generate</strong> for quick email or<br/><strong>AI Agent tab</strong> for full personalized sequence.</div>
-    </div>
-  );
-  const editKey = `gtm_${row._id}_${activeGtmTab}`;
-  const sourceData = activeGtmTab && ALL_TABS.find(t => t.key === activeGtmTab)?.src === "agent" ? agentMsgs : gtmMsgs;
-  const text = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : (sourceData?.[activeGtmTab] || "");
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
-      <div style={{ display: "flex", borderBottom: "1px solid #EEF2F7", padding: "0 4px", flexShrink: 0, overflowX: "auto" }}>
-        {ALL_TABS.map(tab => (
-          <button key={tab.key} onClick={() => setActiveGtmTab(tab.key)}
-            style={{ padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", borderBottom: activeGtmTab === tab.key ? "2px solid #1B6EF3" : "2px solid transparent", color: activeGtmTab === tab.key ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 11, fontWeight: activeGtmTab === tab.key ? 600 : 400, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-            {tab.icon} {tab.label}
-          </button>
-        ))}
-        <div style={{ flex: 1 }} />
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "0 12px" }}>
-          {activeGtmTab === "email_body" && (gtmMsgs?.email_subject || agentMsgs?.email_subject) && (
-            <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Subj: {agentMsgs?.email_subject || gtmMsgs?.email_subject}</span>
-          )}
-          <button onClick={() => navigator.clipboard.writeText(text)} style={{ fontSize: 11, color: C.gold, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: FONT }}>📋 Copy</button>
-          {(activeGtmTab === "email_body" || activeGtmTab === "email_followup1" || activeGtmTab === "email_followup2") && (
-            <button onClick={() => {
-              const subj = agentMsgs?.email_subject || gtmMsgs?.email_subject || "";
-              window.open(`mailto:${row.email || ""}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`, "_blank");
-            }} style={{ fontSize: 11, color: C.amber, background: C.amberDim, border: `1px solid ${C.amber}33`, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✉️ Mail</button>
-          )}
-        </div>
-      </div>
-      <textarea value={text} onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
-        style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }} />
-      <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-        <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{text.split(" ").filter(Boolean).length} words</span>
-        <button onClick={() => { const next = gtmRows.find(r => r._id > row._id); if (next) setGtmSelected(next._id); }} style={{ fontSize: 11, color: C.textMid, background: "none", border: "1px solid #E4ECF4", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT }}>Next →</button>
-      </div>
-    </div>
-  );
-})()}
-
-{/* RESEARCH TAB */}
-{activeGtmRightTab === "research" && gtmResearch[row._id] && (() => {
-  const res = gtmResearch[row._id];
-  return (
-    <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", padding: 20, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <div style={{ background: "#FFF9F0", border: "1px solid #F0D8B0", borderRadius: 8, padding: 14 }}>
-          <div style={{ fontSize: 10, color: C.amber, fontFamily: MONO, marginBottom: 8 }}>PAIN POINTS</div>
-          {(res.pain_points || []).map((pt, i) => <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}><span style={{ color: C.amber }}>—</span>{pt}</div>)}
-        </div>
-        <div style={{ background: "#F0F5FF", border: "1px solid #B8D0FF", borderRadius: 8, padding: 14 }}>
-          <div style={{ fontSize: 10, color: C.gold, fontFamily: MONO, marginBottom: 8 }}>TECH SIGNALS</div>
-          {(res.tech_stack_signals || []).map((s, i) => <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}><span style={{ color: C.gold }}>·</span>{s}</div>)}
-        </div>
-      </div>
-      <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: 14 }}>
-        <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 8 }}>COMPANY OVERVIEW</div>
-        <div style={{ fontSize: 12, color: C.textMid, lineHeight: 1.7 }}>{res.company_overview}</div>
-      </div>
-      <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 8, padding: 14 }}>
-        <div style={{ fontSize: 10, color: C.green, fontFamily: MONO, marginBottom: 8 }}>WHY CONDENSE FITS</div>
-        <div style={{ fontSize: 12, color: C.textMid, lineHeight: 1.7 }}>{res.why_condense_fits}</div>
-      </div>
-      {res.recent_news?.length > 0 && (
-        <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: 14 }}>
-          <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 8 }}>RECENT NEWS</div>
-          {res.recent_news.map((n, i) => <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}><span style={{ color: C.textDim }}>·</span>{n}</div>)}
-        </div>
-      )}
-    </div>
-  );
-})()}
-{activeGtmRightTab === "research" && !gtmResearch[row._id] && (
-  <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", display: "flex", alignItems: "center", justifyContent: "center", color: C.textDim, fontFamily: MONO, fontSize: 12 }}>
-    Run the AI Agent first to see research
-  </div>
-)}
-
-{/* STORIES TAB */}
-{activeGtmRightTab === "stories" && (() => {
-  const res = gtmResearch[row._id];
-  const stories = res ? findMatchingStories(row.Company, row["Data Stack Signal"] || "", res) : findMatchingStories(row.Company, row["Data Stack Signal"] || "", {});
-  return (
-    <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", padding: 20, overflowY: "auto" }}>
-      {stories.length === 0 ? (
-        <div style={{ textAlign: "center", color: C.textDim, fontFamily: MONO, fontSize: 12, padding: "40px 0" }}>No closely matched stories for this industry</div>
-      ) : stories.map((story, i) => (
-        <div key={story.id} style={{ background: i === 0 ? "#F0F5FF" : "#F8FAFC", border: `1px solid ${i === 0 ? "#B8CCFF" : "#E4ECF4"}`, borderRadius: 10, padding: 16, marginBottom: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.navy }}>{story.company}</div>
-            {i === 0 && <span style={{ fontSize: 9, fontFamily: MONO, color: C.gold, background: C.goldDim, padding: "2px 8px", borderRadius: 10 }}>BEST MATCH</span>}
-          </div>
-          <div style={{ fontSize: 12, color: C.textMid, lineHeight: 1.7, marginBottom: 8 }}>{story.summary}</div>
-          <div style={{ padding: "8px 12px", background: C.greenDim, borderRadius: 6, fontSize: 12, color: C.green }}>📈 {story.outcome}</div>
-          <button onClick={() => navigator.clipboard.writeText(`${story.company} — ${story.summary} Result: ${story.outcome}`)}
-            style={{ marginTop: 8, fontSize: 11, color: C.textMid, background: "none", border: "1px solid #E4ECF4", padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: FONT }}>Copy for pitch</button>
-        </div>
-      ))}
-    </div>
-  );
-})()}
-
-{/* KEY POINTS TAB */}
-{activeGtmRightTab === "keypoints" && (() => {
-  const msgs = gtmMessages[row._id];
-  if (!msgs?.key_points) return (
-    <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", display: "flex", alignItems: "center", justifyContent: "center", color: C.textDim, fontFamily: MONO, fontSize: 12 }}>Run the AI Agent to see key points</div>
-  );
-  return (
-    <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", padding: 20, overflowY: "auto" }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 16 }}>💡 Why This Message Was Written This Way</div>
-      {msgs.key_points.map((point, i) => (
-        <div key={i} style={{ display: "flex", gap: 12, padding: "12px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", borderLeft: "3px solid #1B6EF3", marginBottom: 8 }}>
-          <span style={{ color: C.gold, fontFamily: MONO, fontWeight: 700 }}>→</span>
-          <span style={{ fontSize: 13, color: C.textMid, lineHeight: 1.6 }}>{point}</span>
-        </div>
-      ))}
-    </div>
-  );
-})()}
-
-{/* OBJECTIONS TAB */}
-{activeGtmRightTab === "objections" && (() => {
-  const msgs = gtmMessages[row._id];
-  if (!msgs?.objections) return (
-    <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", display: "flex", alignItems: "center", justifyContent: "center", color: C.textDim, fontFamily: MONO, fontSize: 12 }}>Run the AI Agent to see objection handlers</div>
-  );
-  return (
-    <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", padding: 20, overflowY: "auto" }}>
-      {msgs.objections.map((obj, i) => (
-        <div key={i} style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 16, marginBottom: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.amber }}>？ {obj.title}</span>
-            <button onClick={() => navigator.clipboard.writeText(obj.response)} style={{ fontSize: 11, color: C.textMid, background: "none", border: "1px solid #E4ECF4", padding: "3px 10px", borderRadius: 6, cursor: "pointer", fontFamily: FONT }}>Copy</button>
-          </div>
-          <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.7, padding: "10px 14px", background: "#F8FAFC", borderRadius: 6 }}>{obj.response}</div>
-        </div>
-      ))}
-    </div>
-  );
-})()}
-        
+                        </div>
+                      </div>
+                      {/* Text area */}
+                      <textarea
+                        value={text}
+                        onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
+                        style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }}
+                      />
+                      {/* Footer nav */}
+                      <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+                        <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
+                        <button onClick={() => { const next = gtmRows.find(r => r._id > row._id); if (next) setGtmSelected(next._id); }} style={{ fontSize: 11, color: C.textMid, background: "none", border: "1px solid #E4ECF4", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT }}>Next →</button>
+                      </div>
+                    </div>
+                  );
+                })() : (
+                  <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
+                    <div style={{ fontSize: 40, opacity: 0.2 }}>✉️</div>
+                    <div style={{ fontSize: 14, color: C.textMid, fontFamily: FONT }}>Click Generate Email to create a Dream11-style outreach for {row.Company}</div>
+                    <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>Uses Gemini AI · tailored to {row["Data Stack Signal"]} + {row["Integration Opportunity"]}</div>
+                  </div>
+                )}
               </>
             );
           })()}
@@ -2500,7 +2391,7 @@ if (!dbLoaded) return (
               {fu.prospects.map(p => (
                 <div
                   key={p.id}
-                  onClick={() => { setSelected(p.id); setActiveTab("messages"); setActiveMsg(fu.key); }}
+                  onClick={() => { setActiveView("prospects"); setSelected(p.id); setActiveTab("messages"); setActiveMsg(fu.key); }}
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#F8FAFC", borderRadius: 6, border: "1px solid #E4ECF4", cursor: "pointer", transition: "all 0.15s" }}
                   onMouseEnter={e => { e.currentTarget.style.background = "#EEF5FF"; e.currentTarget.style.borderColor = "#B8CCFF"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.borderColor = "#E4ECF4"; }}
@@ -2543,7 +2434,7 @@ if (!dbLoaded) return (
         <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>📋 Recent Prospects</div>
         {prospects.length === 0 ? <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, textAlign: "center", padding: "20px 0" }}>No prospects yet</div> :
           prospects.slice(-5).reverse().map(p => (
-            <div key={p.id} onClick={() => { setSelected(p.id); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #F0F4F8", cursor: "pointer" }}>
+            <div key={p.id} onClick={() => { setActiveView("prospects"); setSelected(p.id); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #F0F4F8", cursor: "pointer" }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 500, color: C.text, fontFamily: FONT }}>{p.name}</div>
                 <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{p.company}</div>
@@ -2619,7 +2510,641 @@ if (!dbLoaded) return (
     </div>
   </div>
 )}
- </div>
+
+{activeView === "prospects" && !sel ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 20 }}>
+                <div style={{ width: 72, height: 72, borderRadius: 16, background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 32px rgba(27,110,243,0.25)" }}>
+                  <span style={{ fontSize: 32 }}>⚡</span>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 22, color: C.navy, marginBottom: 8, fontWeight: 700, letterSpacing: "-0.02em" }}>Select a prospect to begin</div>
+                  <div style={{ fontSize: 14, color: C.textMid, lineHeight: 1.8, maxWidth: 400 }}>
+                    The AI agent researches company, open positions,<br/>persona context, success stories, and crafts<br/>personalized multi-channel scripts.
+                  </div>
+                  {replies.length > 0 && <div style={{ marginTop: 14, fontSize: 12, color: C.amber, background: C.amberDim, padding: "6px 16px", borderRadius: 20, display: "inline-block", fontWeight: 500 }}>🧠 {replies.length} reply pattern{replies.length > 1 ? "s" : ""} trained — pitches improving</div>}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, maxWidth: 480, marginTop: 8 }}>
+                  {[["🔍","Deep Research","Company, tech stack, pain points"],["✍️","AI Drafting","Veera-style personalized scripts"],["📊","Smart Matching","Success stories auto-matched"]].map(([icon,title,desc])=>(
+                    <div key={title} style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: "14px 12px", textAlign: "center", boxShadow: "0 1px 4px rgba(10,37,64,0.06)" }}>
+                      <div style={{ fontSize: 22, marginBottom: 6 }}>{icon}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, marginBottom: 3 }}>{title}</div>
+                      <div style={{ fontSize: 10, color: C.textDim, lineHeight: 1.5 }}>{desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : sel && activeView === "prospects" ? (
+              <div style={{ maxWidth: 900, margin: "0 auto" }}>
+
+                {/* Prospect Header */}
+                <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid #E4ECF4" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <h1 style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em", marginBottom: 6, lineHeight: 1.2 }}>{sel.name}</h1>
+                      <div style={{ fontSize: 12, color: C.textMid, fontFamily: MONO, letterSpacing: "0.02em" }}>
+                        {sel.jobTitle && <span>{sel.jobTitle}</span>}
+                        {sel.jobTitle && sel.company && <span style={{ color: C.textDim, margin: "0 8px" }}>·</span>}
+                        {sel.company && <span style={{ color: C.gold, opacity: 0.8 }}>{sel.company}</span>}
+                      </div>
+                      <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
+                        {sel.linkedinUrl && <a href={sel.linkedinUrl.startsWith("http") ? sel.linkedinUrl : "https://" + sel.linkedinUrl} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: C.gold, textDecoration: "none", fontFamily: MONO, opacity: 0.7, letterSpacing: "0.06em" }}>↗ LINKEDIN</a>}
+                        {sel.email && <span style={{ fontSize: 10, color: C.textMid, fontFamily: MONO }}>✉️ {sel.email}</span>}
+                        {sel.phone && <span style={{ fontSize: 10, color: C.textMid, fontFamily: MONO }}>📱 {sel.phone}</span>}
+                        {sel.jdText && <span style={{ fontSize: 10, color: C.green, fontFamily: MONO }}>📋 JD Context Added</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0, marginLeft: 16 }}>
+                      <Badge status={sel.status} />
+                      {(sel.status === "idle" || sel.status === "error") && (
+                        <GlowButton onClick={() => runAgent(sel)} disabled={running !== null} primary>
+                          {running === sel.id ? <><Spinner /> Running...</> : "⚡  Run Agent"}
+                        </GlowButton>
+                      )}
+                      {(!sel.email || !sel.linkedinUrl) && (
+  <button
+    onClick={() => enrichProspect(sel)}
+    disabled={enriching === sel.id}
+    style={{
+      padding: "8px 14px", borderRadius: 6,
+      border: `1px solid #7C3AED44`,
+      background: enrichedData[sel.id] ? "#F5F0FF" : "#FAF5FF",
+      color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500,
+      cursor: enriching === sel.id ? "not-allowed" : "pointer",
+      display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s"
+    }}
+  >
+    {enriching === sel.id ? <><Spinner /> Enriching...</> 
+     : enrichedData[sel.id] ? `✅ via ${enrichedData[sel.id].source}` 
+     : "🔍 Enrich"}
+  </button>
+)}
+{sel.status === "ready" && <GlowButton onClick={() => markSent(sel.id)} color={C.green} primary>✓ Mark Sent</GlowButton>}
+                      {selMessages && (
+  <GlowButton
+    onClick={() => exportProposalPDF({
+      sel, selResearch, selMessages, selMatchedStories, findIndustryUseCases,
+      onStart: () => setExportingPDF(true),
+      onDone: () => setExportingPDF(false),
+      onError: () => setExportingPDF(false),
+    })}
+    disabled={exportingPDF}
+    color="#7C3AED"
+  >
+    {exportingPDF ? <><Spinner /> Generating PDF...</> : "📄 Export Proposal"}
+  </GlowButton>
+)}
+{selMessages && (
+  <button
+    onClick={async () => {
+  setZohoPushing(true);
+  setZohoPushStatus(prev => ({ ...prev, [sel.id]: null }));
+  try {
+    const description = selResearch?.why_condense_fits || ""; // 
+    await pushToZoho(sel, selMessages, description);          
+        setZohoPushStatus(prev => ({ ...prev, [sel.id]: "success" }));
+        setTimeout(() => setZohoPushStatus(prev => ({ ...prev, [sel.id]: null })), 4000);
+      } catch (err) {
+        setZohoPushStatus(prev => ({ ...prev, [sel.id]: "error" }));
+        setTimeout(() => setZohoPushStatus(prev => ({ ...prev, [sel.id]: null })), 4000);
+      }
+      setZohoPushing(false);
+    }}
+    disabled={zohoPushing}
+    style={{
+      padding: "8px 14px", borderRadius: 6,
+      border: `1px solid ${zohoPushStatus[sel.id] === "success" ? "#B8EDD3" : zohoPushStatus[sel.id] === "error" ? "#FFCCCC" : "#E4629444"}`,
+      background: zohoPushStatus[sel.id] === "success" ? "#F0FBF5" : zohoPushStatus[sel.id] === "error" ? "#FFF5F5" : "#FFF0F5",
+      color: zohoPushStatus[sel.id] === "success" ? C.green : zohoPushStatus[sel.id] === "error" ? C.red : "#E46294",
+      fontSize: 11, fontFamily: FONT, fontWeight: 500,
+      cursor: zohoPushing ? "not-allowed" : "pointer",
+      display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s"
+    }}
+  >
+    {zohoPushing ? (
+      <><Spinner /> Pushing to Zoho...</>
+    ) : zohoPushStatus[sel.id] === "success" ? (
+      "✅ Pushed to Zoho!"
+    ) : zohoPushStatus[sel.id] === "error" ? (
+      "❌ Push Failed"
+    ) : (
+      "☁️ Push to Zoho CRM"
+    )}
+  </button>
+)}
+{sel.status === "following" && <GlowButton onClick={() => setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, status: "done" } : p))} color={C.green} small>✓ Complete</GlowButton>}
+                    </div>
+                  </div>
+                </div>
+                {/* EXTRA CONTEXT BOX */}
+<div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 18, marginBottom: 20 }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+    <div style={{ width: 36, height: 36, borderRadius: 8, background: "linear-gradient(135deg, #F59E0B, #F97316)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✏️</div>
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: C.navy, fontFamily: FONT }}>Extra Context</div>
+      <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>Optional — personalises the message</div>
+    </div>
+  </div>
+  <textarea
+    value={extraContext[sel.id] || ""}
+    onChange={e => setExtraContext(prev => ({ ...prev, [sel.id]: e.target.value }))}
+    placeholder="Met at AutoExpo 2024, uses AWS IoT, recently raised Series B, mentioned pain with Kafka ops..."
+    style={{ width: "100%", background: "#F8FAFC", border: "1px solid #E4ECF4", color: C.text, borderRadius: 8, padding: "10px 14px", fontSize: 12, fontFamily: FONT, lineHeight: 1.7, outline: "none", resize: "vertical", minHeight: 80 }}
+  />
+</div>
+                {/* Agent Log */}
+                {logs[sel.id]?.length > 0 && (
+                  <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: "14px 16px", marginBottom: 20 }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: C.textMid, fontFamily: MONO, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: running === sel.id ? C.amber : C.green }} />
+                      Agent Log
+                    </div>
+                    <div style={{ maxHeight: 120, overflowY: "auto" }}>
+                      {logs[sel.id].map((log, i) => (
+                        <div key={i} className="log-line" style={{ fontSize: 11, fontFamily: MONO, color: log.startsWith("✅") ? C.green : log.startsWith("❌") ? C.red : log.startsWith("🌐") || log.startsWith("🏆") ? C.blue : C.textMid, padding: "2px 0", lineHeight: 1.8 }}>{log}</div>
+                      ))}
+                      {running === sel.id && <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, padding: "6px 0", borderTop: "1px solid #EEF2F7" }}><Spinner /><span style={{ fontSize: 11, fontFamily: MONO, color: C.blue }}>Processing...</span></div>}
+                      <div ref={logsEndRef} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab Navigation */}
+                {(selResearch || selMessages) && (
+                  <div style={{ display: "flex", borderBottom: "2px solid #E4ECF4", marginBottom: 20, gap: 0, background: "#FFFFFF", borderRadius: "8px 8px 0 0", padding: "0 4px" }}>
+                    {[
+                      { key: "messages", label: "Messages", icon: "💬" },
+                      { key: "research", label: "Research", icon: "🔍" },
+                      { key: "stories", label: `Stories${selMatchedStories.length > 0 ? ` (${selMatchedStories.length})` : ""}`, icon: "🏆" },
+                      { key: "reply", label: "Log Reply", icon: "📬" },
+                      { key: "keypoints", label: "Key Points", icon: "💡" },
+                      { key: "objections", label: "Objections", icon: "🛡️" },
+                    ].map(tab => (
+                      <button key={tab.key} className="tab-btn" onClick={() => setActiveTab(tab.key)} style={{ padding: "12px 18px", border: "none", background: "transparent", cursor: "pointer", borderBottom: activeTab === tab.key ? "2px solid #1B6EF3" : "2px solid transparent", marginBottom: "-2px", color: activeTab === tab.key ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 13, fontWeight: activeTab === tab.key ? 600 : 400, display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s", borderRadius: "6px 6px 0 0" }}>
+                        {tab.icon} {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* MESSAGES TAB */}
+                {activeTab === "messages" && selMessages && (
+                  <div className="card-enter">
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, letterSpacing: "-0.01em" }}>Generated Messages</span>
+                      <div style={{ flex: 1, height: 1, background: "#E4ECF4" }} />
+                    </div>
+
+                    {/* Message Tabs */}
+                    <div style={{ display: "flex", borderBottom: "1px solid #E4ECF4", overflowX: "auto", marginBottom: 0, gap: 0, background: "#FFFFFF", borderRadius: "8px 8px 0 0", padding: "0 4px" }}>
+                      {FOLLOWUP_SCHEDULE.map(m => {
+                        const isActive = activeMsg === m.key;
+                        let dayStatus = "future";
+                        if (sel.sentAt && m.key !== "email_body") {
+                          const dayNum = m.key === "connection_note" ? -1 : m.key === "day0_message" ? 0 : parseInt(m.key.replace("day", ""));
+                          if (dayNum <= 0) dayStatus = "due";
+                          else { const d = getDaysUntilFollowup(sel, dayNum); dayStatus = d <= 0 ? "due" : d <= 1 ? "soon" : "future"; }
+                        }
+                        const dotColor = dayStatus === "due" ? C.green : dayStatus === "soon" ? C.amber : C.textDim;
+                        return (
+                          <button key={m.key} className="tab-btn" onClick={() => setActiveMsg(m.key)} style={{ padding: "10px 16px", border: "none", background: isActive ? "rgba(14,165,233,0.06)" : "transparent", cursor: "pointer", borderBottom: isActive ? "2px solid #1B6EF3" : "2px solid transparent", marginBottom: "-1px", color: isActive ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 11, fontWeight: isActive ? 600 : 400, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, minWidth: 80, transition: "all 0.15s", borderRadius: "6px 6px 0 0" }}>
+                            <span style={{ fontSize: 9, color: dotColor, letterSpacing: "0.1em" }}>{m.icon} {m.day}</span>
+                            <span style={{ whiteSpace: "nowrap", textTransform: "uppercase", fontSize: 9 }}>{m.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Active Message */}
+                    {activeMsg && (() => {
+                      const msgDef = FOLLOWUP_SCHEDULE.find(m => m.key === activeMsg);
+                      const editKey = `${sel.id}_${activeMsg}`;
+                      const text = edits[editKey] ?? selMessages[activeMsg] ?? "";
+                      const maxLen = activeMsg === "connection_note" ? 300 : null;
+                      const isEmail = activeMsg === "email_body";
+                      return (
+                        <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 8px 8px", padding: 20, boxShadow: "0 2px 8px rgba(10,37,64,0.04)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                            <div>
+                              <div style={{ fontFamily: DISPLAY, fontWeight: 500, color: C.text, fontSize: 14 }}>{msgDef.label}</div>
+                              <div style={{ fontSize: 10, color: C.textDim, marginTop: 3, fontFamily: MONO, letterSpacing: "0.04em" }}>{msgDef.hint}</div>
+                              {isEmail && selMessages.email_subject && (
+                                <div style={{ marginTop: 8, padding: "6px 10px", background: C.goldDimmer, borderRadius: 3, fontSize: 11, fontFamily: MONO, color: C.goldBright }}>
+                                  Subject: {selMessages.email_subject}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                              {maxLen && <span style={{ fontSize: 10, fontFamily: MONO, color: text.length > maxLen ? C.red : C.textDim }}>{text.length}/{maxLen}</span>}
+                              <GlowButton small onClick={() => navigator.clipboard.writeText(text)} color={C.textMid}>Copy</GlowButton>
+                              {sel.linkedinUrl && !isEmail && (
+                                <GlowButton small color={C.gold} onClick={() => window.open(sel.linkedinUrl.startsWith("http") ? sel.linkedinUrl : "https://" + sel.linkedinUrl, "_blank")}>↗ LinkedIn</GlowButton>
+                              )}
+                            </div>
+                          </div>
+                          <textarea value={text} onChange={e => setEdits(prev => ({ ...prev, [editKey]: e.target.value }))} style={{ width: "100%", background: "#F8FAFC", border: "1px solid #E4ECF4", color: C.navy, borderRadius: 8, padding: "14px 16px", fontSize: 13, fontFamily: FONT, lineHeight: 1.9, resize: "vertical", outline: "none", minHeight: isEmail ? 220 : activeMsg === "day0_message" ? 180 : 130, transition: "all 0.2s" }} />
+                          
+                          {/* Send Buttons */}
+                         <div style={{ marginTop: 14, padding: "14px 0", borderTop: "1px solid #EEF2F7" }}>
+  <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, letterSpacing: "0.04em", marginBottom: 8 }}>SEND DIRECTLY →</div>
+  <SendButtons prospect={sel} messageText={text} messageType={activeMsg} emailSubject={selMessages.email_subject} senderProfile={senderProfile} />
+  <div style={{ marginTop: 10 }}>
+    {edits[`${sel.id}_sent_${activeMsg}`] ? (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 6 }}>
+        <span style={{ fontSize: 14 }}>✅</span>
+        <span style={{ fontSize: 12, color: C.green, fontFamily: FONT, fontWeight: 500 }}>
+          Marked as sent · {new Date(edits[`${sel.id}_sent_${activeMsg}`].sentAt).toLocaleDateString()}
+        </span>
+        <button
+          onClick={() => setEdits(prev => { const n = {...prev}; delete n[`${sel.id}_sent_${activeMsg}`]; return n; })}
+          style={{ marginLeft: "auto", fontSize: 10, color: C.textDim, background: "none", border: "none", cursor: "pointer", fontFamily: MONO }}
+        >undo</button>
+      </div>
+    ) : (
+      <button
+        onClick={() => setEdits(prev => ({ ...prev, [`${sel.id}_sent_${activeMsg}`]: { sentAt: new Date().toISOString() } }))}
+        style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 6, border: "1px solid #B8EDD3", background: "#F0FBF5", color: C.green, fontSize: 12, fontFamily: FONT, fontWeight: 500, cursor: "pointer", transition: "all 0.15s" }}
+        onMouseEnter={e => e.currentTarget.style.background = "#D8F5E8"}
+        onMouseLeave={e => e.currentTarget.style.background = "#F0FBF5"}
+      >
+        <span style={{ fontSize: 14 }}>✓</span> Mark this message as sent
+      </button>
+    )}
+  </div>
+</div>
+
+                         <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+  <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>
+    {isEmail ? "Opens your mail client with message pre-filled" : "Copy → paste into LinkedIn or use send buttons above"}
+  </div>
+  {edits[editKey] !== undefined && (
+    <GlowButton small color={C.textDim} onClick={() => setEdits(prev => { const n = { ...prev }; delete n[editKey]; return n; })}>↺ Reset</GlowButton>
+  )}
+</div>
+
+{/* STAR RATING */}
+<div style={{ marginTop: 16, padding: "16px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+    <span style={{ fontSize: 18 }}>⭐</span>
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT }}>Rate this message</div>
+      <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>5 stars adds it to training data</div>
+    </div>
+  </div>
+  <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+    {[1,2,3,4,5].map(star => {
+      const currentRating = ratings[editKey]?.stars || 0;
+      return (
+        <button key={star} onClick={() => {
+          const newRating = { stars: star, message: text, messageType: activeMsg, prospect: sel.name, company: sel.company, createdAt: new Date().toISOString() };
+          setRatings(prev => ({ ...prev, [editKey]: newRating }));
+          if (star >= 4) {
+            const trainingEx = { id: `t_${Date.now()}`, ...newRating, feedback: ratingFeedback[editKey] || "" };
+            setTrainingExamples(prev => {
+              const exists = prev.find(t => t.id === trainingEx.id);
+              return exists ? prev : [...prev, trainingEx];
+            });
+          }
+        }} style={{ fontSize: 22, background: "none", border: "none", cursor: "pointer", color: star <= currentRating ? "#F5A623" : "#D8E2EE", transition: "all 0.15s", transform: star <= currentRating ? "scale(1.1)" : "scale(1)" }}>★</button>
+      );
+    })}
+    {ratings[editKey]?.stars > 0 && (
+      <span style={{ fontSize: 11, color: ratings[editKey].stars >= 4 ? C.green : C.textDim, fontFamily: MONO, marginLeft: 8, alignSelf: "center" }}>
+        {ratings[editKey].stars >= 4 ? "✅ Added to training!" : "Saved"}
+      </span>
+    )}
+  </div>
+  <textarea
+    value={ratingFeedback[editKey] || ""}
+    onChange={e => setRatingFeedback(prev => ({ ...prev, [editKey]: e.target.value }))}
+    placeholder="Optional: what did you like or want changed?"
+    style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontFamily: FONT, outline: "none", resize: "vertical", minHeight: 60 }}
+  />
+</div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Pre-read Links */}
+                    {selResearch?.pre_read_links?.length > 0 && (
+                      <div style={{ marginTop: 16, background: "rgba(14,165,233,0.03)", border: `1px solid ${C.borderDim}`, borderRadius: 4, padding: 16 }}>
+                        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.gold, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>📎 Pre-Read Links (reference in pitch)</div>
+                        {selResearch.pre_read_links.map((link, i) => (
+                          <div key={i} style={{ marginBottom: 10, padding: "8px 10px", background: "#FFFFFF", borderRadius: 6, borderLeft: "3px solid #1B6EF3" }}>
+                            <a href={link.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.goldBright, textDecoration: "none", fontFamily: FONT, fontWeight: 500 }}>{link.title} ↗</a>
+                            <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO, marginTop: 3 }}>{link.relevance}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+               {/* RESEARCH TAB */}
+{activeTab === "research" && selResearch && (
+  <div className="card-enter">
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+      <div style={{ background: "rgba(14,165,233,0.03)", border: `1px solid rgba(14,165,233,0.12)`, borderRadius: 4, padding: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.amber, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>Pain Points</div>
+        {(selResearch.pain_points || []).map((pt, i) => (
+          <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "5px 0", borderBottom: i < selResearch.pain_points.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none", lineHeight: 1.5, display: "flex", gap: 8 }}>
+            <span style={{ color: C.amber, opacity: 0.5, flexShrink: 0 }}>—</span>{pt}
+          </div>
+        ))}
+      </div>
+      <div style={{ background: "rgba(14,165,233,0.03)", border: `1px solid ${C.borderDim}`, borderRadius: 4, padding: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.gold, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>Tech Signals</div>
+        {(selResearch.tech_stack_signals || []).map((s, i) => (
+          <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "5px 0", borderBottom: i < selResearch.tech_stack_signals.length - 1 ? `1px solid rgba(255,255,255,0.04)` : "none", display: "flex", gap: 8 }}>
+            <span style={{ color: C.gold, opacity: 0.4, flexShrink: 0 }}>·</span>{s}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {selResearch.condense_fit && (
+      <div style={{ background: selResearch.condense_fit.score === "high" ? C.greenDim : selResearch.condense_fit.score === "medium" ? C.amberDim : C.redDim, border: `1px solid ${selResearch.condense_fit.score === "high" ? C.green : selResearch.condense_fit.score === "medium" ? C.amber : C.red}44`, borderRadius: 8, padding: 16, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <span style={{ fontSize: 18 }}>{selResearch.condense_fit.score === "high" ? "🟢" : selResearch.condense_fit.score === "medium" ? "🟡" : "🔴"}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: selResearch.condense_fit.score === "high" ? C.green : selResearch.condense_fit.score === "medium" ? C.amber : C.red, fontFamily: FONT }}>
+            {selResearch.condense_fit.score?.toUpperCase()} FIT for Condense
+          </span>
+        </div>
+        <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.7 }}>{selResearch.condense_fit.reason}</div>
+      </div>
+    )}
+
+    {/* Persona Context */}
+    {selResearch.persona_context && (
+      <div style={{ background: "#FAF5FF", border: "1px solid #DDD0F8", borderRadius: 8, padding: 16, marginBottom: 10 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.purple, fontFamily: MONO, marginBottom: 12, opacity: 0.8 }}>👤 Persona Context</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 6 }}>FOCUS AREAS</div>
+            {(selResearch.persona_context.focus_areas || []).map((f, i) => (
+              <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}>
+                <span style={{ color: C.purple, opacity: 0.5 }}>·</span>{f}
+              </div>
+            ))}
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 6 }}>KPIs</div>
+            {(selResearch.persona_context.kpis || []).map((k, i) => (
+              <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "3px 0", display: "flex", gap: 8 }}>
+                <span style={{ color: C.purple, opacity: 0.5 }}>·</span>{k}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 8, padding: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textDim, fontFamily: MONO, marginBottom: 10 }}>Company Overview</div>
+        <div style={{ fontSize: 12, color: C.textMid, lineHeight: 1.7 }}>{selResearch.company_overview}</div>
+      </div>
+      <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 8, padding: 16 }}>
+        <div style={{ fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: C.textDim, fontFamily: MONO, marginBottom: 10 }}>Recent News</div>
+        {(selResearch.recent_news || []).map((n, i) => (
+          <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "4px 0", lineHeight: 1.5, display: "flex", gap: 8 }}>
+            <span style={{ color: C.textDim, opacity: 0.5, flexShrink: 0 }}>·</span>{n}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* WHY CONDENSE HELPS */}
+    <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 10, padding: 20, marginBottom: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>⚡ Why Condense Helps {sel.company}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {(selResearch.why_condense_fits || "").split(". ").filter(s => s.trim()).map((point, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #B8EDD3" }}>
+            <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, fontFamily: MONO }}>→</span>
+            <span style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.6 }}>{point.trim()}{point.trim().endsWith(".") ? "" : "."}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* INDUSTRY USE CASES */}
+    {(() => {
+      const industryUC = findIndustryUseCases(sel.company, sel.industry || "", selResearch);
+      return (
+        <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20, marginBottom: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 6 }}>🎯 Relevant Use Cases for {sel.company}</div>
+          <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 14 }}>Industry matched: {industryUC.id}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {industryUC.use_cases.map((uc, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", borderLeft: "3px solid #1B6EF3" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT, marginBottom: 3 }}>{i + 1}. {uc.title}</div>
+                  <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.6 }}>{uc.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    })()}
+
+    {/* SOURCES */}
+    <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20, marginBottom: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>🔗 Research Sources</div>
+      {selResearch.pre_read_links?.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {selResearch.pre_read_links.map((link, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4" }}>
+              <span style={{ color: C.gold, fontFamily: MONO, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
+              <div style={{ flex: 1 }}>
+                <a href={link.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 600, color: C.gold, textDecoration: "none", fontFamily: FONT }}>{link.title} ↗</a>
+                <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO, marginTop: 3 }}>{link.relevance}</div>
+                <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{link.url}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, textAlign: "center", padding: "16px 0" }}>
+          No sources found. Run the agent to generate research with sources.
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
+                {/* SUCCESS STORIES TAB */}
+                {activeTab === "stories" && (
+                  <div className="card-enter">
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, color: C.textMid, fontFamily: MONO, lineHeight: 1.8 }}>
+                        Success stories are automatically matched to <span style={{ color: C.gold }}>{sel.company}</span> based on industry and tech signals. Use these in your pitch.
+                      </div>
+                    </div>
+                    {selMatchedStories.length === 0 ? (
+                      <div style={{ padding: "32px 0", textAlign: "center", color: C.textDim, fontFamily: MONO, fontSize: 12 }}>
+                        No closely matched stories. Run the agent first or use general Condense proof points.
+                      </div>
+                    ) : (
+                      selMatchedStories.map((story, i) => (
+                        <div key={story.id} style={{ background: "#FFFFFF", border: `1px solid ${i === 0 ? "#B8CCFF" : "#E4ECF4"}`, borderRadius: 10, padding: 18, marginBottom: 10, boxShadow: i === 0 ? "0 2px 12px rgba(27,110,243,0.10)" : "0 1px 4px rgba(10,37,64,0.05)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                            <div>
+                              <div style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, color: C.text }}>{story.company}</div>
+                              <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>{story.industry}</div>
+                            </div>
+                            {i === 0 && <span style={{ fontSize: 9, fontFamily: MONO, color: C.gold, background: C.goldDim, padding: "3px 10px", borderRadius: 3, border: `1px solid ${C.gold}44` }}>BEST MATCH</span>}
+                          </div>
+                          <div style={{ fontSize: 13, color: C.textMid, lineHeight: 1.7, marginBottom: 10 }}>{story.summary}</div>
+                          <div style={{ padding: "8px 12px", background: C.greenDim, borderRadius: 3, fontSize: 12, color: C.green, fontFamily: FONT }}>
+                            📈 {story.outcome}
+                          </div>
+                          <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            {story.tags.slice(0, 5).map(tag => (
+                              <span key={tag} style={{ fontSize: 9, fontFamily: MONO, color: C.textDim, background: "rgba(255,255,255,0.04)", padding: "2px 8px", borderRadius: 3, border: `1px solid ${C.borderDim}` }}>{tag}</span>
+                            ))}
+                          </div>
+                          <GlowButton small color={C.textMid} onClick={() => { const copyText = `${story.company} (${story.industry}) — ${story.summary} Result: ${story.outcome}`; navigator.clipboard.writeText(copyText); }} style={{ marginTop: 8 }}>Copy for pitch</GlowButton>
+                        </div>
+                      ))
+                    )}
+
+                    {/* All stories */}
+                    <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.borderDim}` }}>
+                      <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, letterSpacing: "0.1em", marginBottom: 12 }}>ALL SUCCESS STORIES</div>
+                      {SUCCESS_STORIES.filter(s => !selMatchedStories.find(m => m.id === s.id)).map(story => (
+                        <div key={story.id} style={{ padding: "10px 14px", border: "1px solid #E4ECF4", borderRadius: 8, marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#FFFFFF" }}>
+                          <div>
+                            <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, fontWeight: 500 }}>{story.company}</div>
+                            <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{story.industry}</div>
+                          </div>
+                          <GlowButton small color={C.textDim} onClick={() => navigator.clipboard.writeText(`${story.company} — ${story.summary} Result: ${story.outcome}`)}>Copy</GlowButton>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* KEY POINTS TAB */}
+{activeTab === "keypoints" && selMessages?.key_points && (
+  <div className="card-enter">
+    <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 16 }}>💡 Why This Message Was Written This Way</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {selMessages.key_points.map((point, i) => (
+          <div key={i} style={{ display: "flex", gap: 12, padding: "12px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", borderLeft: "3px solid #1B6EF3" }}>
+            <span style={{ color: C.gold, fontFamily: MONO, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>→</span>
+            <span style={{ fontSize: 13, color: C.textMid, fontFamily: FONT, lineHeight: 1.6 }}>{point}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+
+{/* OBJECTIONS TAB */}
+{activeTab === "objections" && selMessages?.objections && (
+  <div className="card-enter">
+    <div style={{ fontSize: 12, color: C.textMid, fontFamily: MONO, marginBottom: 16, lineHeight: 1.7 }}>
+      Ready-made responses to common objections. Copy and use when prospects push back.
+    </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {selMessages.objections.map((obj, i) => (
+        <div key={i} style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 18, boxShadow: "0 1px 4px rgba(10,37,64,0.05)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ color: C.amber, fontSize: 14 }}>？</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.amber, fontFamily: FONT }}>{obj.title}</span>
+            </div>
+            <GlowButton small color={C.textMid} onClick={() => navigator.clipboard.writeText(obj.response)}>Copy</GlowButton>
+          </div>
+          <div style={{ fontSize: 13, color: C.textMid, fontFamily: FONT, lineHeight: 1.7, padding: "10px 14px", background: "#F8FAFC", borderRadius: 6 }}>{obj.response}</div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+                {/* LOG REPLY TAB */}
+                {activeTab === "reply" && (
+                  <div className="card-enter">
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 500, color: C.text, marginBottom: 6 }}>Log a Reply</div>
+                      <div style={{ fontSize: 12, color: C.textMid, fontFamily: MONO, lineHeight: 1.7 }}>
+                        When a prospect replies, log what worked here. Future pitches to similar companies will be trained on successful patterns.
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                      <div>
+                        <label style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: C.textDim, fontFamily: MONO, display: "block", marginBottom: 6 }}>What did they reply? (summarize or paste)</label>
+                        <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="e.g. 'Replied positively, asked for a demo. They mentioned they're already using Kafka but struggling with schema evolution.' OR paste the actual reply." style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 8, padding: "12px 14px", fontSize: 13, fontFamily: FONT, lineHeight: 1.7, outline: "none", resize: "vertical", minHeight: 120 }} />
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                        <div>
+                          <label style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: C.textDim, fontFamily: MONO, display: "block", marginBottom: 6 }}>Industry Context</label>
+                          <input value={replyIndustry} onChange={e => setReplyIndustry(e.target.value)} placeholder="e.g. EV / Automotive / SaaS" style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 8, padding: "9px 12px", fontSize: 12, fontFamily: FONT, outline: "none" }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase", color: C.textDim, fontFamily: MONO, display: "block", marginBottom: 6 }}>Tone That Worked</label>
+                          <select value={replyTone} onChange={e => setReplyTone(e.target.value)} style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 8, padding: "9px 12px", fontSize: 12, fontFamily: FONT, outline: "none" }}>
+                            <option value="">Select tone</option>
+                            <option value="technical-peer">Technical peer exchange</option>
+                            <option value="business-impact">Business impact focused</option>
+                            <option value="casual-warm">Casual and warm</option>
+                            <option value="formal-strategic">Formal strategic</option>
+                            <option value="event-reference">Event/conference reference</option>
+                          </select>
+                        </div>
+                      </div>
+                      <GlowButton onClick={saveReply} disabled={!replyText.trim()} primary>💾 Save Reply Pattern</GlowButton>
+                    </div>
+
+                    {/* Saved replies */}
+                    {replies.length > 0 && (
+                      <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.borderDim}` }}>
+                        <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, letterSpacing: "0.1em", marginBottom: 12 }}>SAVED REPLY PATTERNS ({replies.length})</div>
+                        {replies.slice(-5).reverse().map(r => (
+                          <div key={r.id} style={{ padding: "12px 14px", border: "1px solid #F0E8D8", borderRadius: 8, marginBottom: 6, background: "#FFFDF7" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                              <span style={{ fontSize: 12, color: C.text, fontFamily: FONT, fontWeight: 500 }}>{r.prospect_name} · {r.company}</span>
+                              <span style={{ fontSize: 10, fontFamily: MONO, color: C.textDim }}>{new Date(r.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            <div style={{ fontSize: 11, color: C.textMid, fontFamily: MONO }}>{r.industry} · {r.tone}</div>
+                            <div style={{ fontSize: 12, color: C.textMid, marginTop: 4, fontFamily: FONT, lineHeight: 1.6 }}>{r.reply_summary.slice(0, 200)}{r.reply_summary.length > 200 ? "..." : ""}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Follow-up Timeline */}
+                {sel.status === "following" && sel.sentAt && (
+                  <div style={{ marginTop: 20 }} className="card-enter">
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, letterSpacing: "-0.01em" }}>Follow-Up Timeline</span>
+                      <div style={{ flex: 1, height: 1, background: C.borderDim }} />
+                    </div>
+                    <div style={{ display: "flex", gap: 0, position: "relative" }}>
+                      <div style={{ position: "absolute", top: 14, left: "12.5%", right: "12.5%", height: 2, background: "#E4ECF4", zIndex: 0 }} />
+                      {[{ label: "Sent", day: 0, key: "day0_message" }, { label: "Day 3", day: 3, key: "day3_followup" }, { label: "Day 7", day: 7, key: "day7_followup" }, { label: "Day 14", day: 14, key: "day14_followup" }].map((step) => {
+                        const d = getDaysUntilFollowup(sel, step.day);
+                        const isDue = d <= 0;
+                        return (
+                          <div key={step.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 10, position: "relative", zIndex: 1 }}>
+                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: isDue ? "rgba(93,232,160,0.15)" : "rgba(0,0,0,0.6)", border: `1px solid ${isDue ? C.green : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: isDue ? C.green : C.textDim, boxShadow: isDue ? `0 0 14px rgba(93,232,160,0.3)` : "none" }}>
+                              {isDue ? "✓" : "·"}
+                            </div>
+                            <div style={{ fontSize: 10, fontWeight: 500, color: isDue ? C.green : C.textDim, fontFamily: MONO }}>{step.label}</div>
+                            {step.day > 0 && <div style={{ fontSize: 9, fontFamily: MONO, color: isDue ? C.green : C.amber, opacity: 0.8 }}>{isDue ? "send now" : `in ${d}d`}</div>}
+                            {isDue && step.day > 0 && <GlowButton small color={C.green} onClick={() => { setActiveTab("messages"); setActiveMsg(step.key); }}>View →</GlowButton>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
       {/* TOAST */}
