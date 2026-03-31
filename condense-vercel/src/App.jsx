@@ -958,6 +958,8 @@ const gtmFileRef = useRef();
 const gtmCancelRef = useRef(false);
 const [gtmToast, setGtmToast] = useState(null);
 const [showGtmForm, setShowGtmForm] = useState(false);
+const [gtmSearchQuery, setGtmSearchQuery] = useState("");
+const [gtmSidebarFilter, setGtmSidebarFilter] = useState("all");
 const [gtmBatchEnriching, setGtmBatchEnriching] = useState(false);
 const [gtmEnrichProgress, setGtmEnrichProgress] = useState(0);
 const gtmEnrichCancelRef = useRef(false);
@@ -1260,27 +1262,60 @@ const extraCtx = extraContext[id] || "";
   }
   setEnriching(null);
 }
-  const handleGtmUpload = (e) => {
+ const handleGtmUpload = (e) => {
   const file = e.target.files[0]; if (!file) return;
+  const ext = file.name.split(".").pop().toLowerCase();
   const reader = new FileReader();
-  reader.onload = (ev) => {
-    const XLSX = window.XLSX;
-    if (!XLSX) { alert("SheetJS not loaded"); return; }
-    const wb = XLSX.read(ev.target.result, { type: "array" });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
-const withIds = data.map((row, i) => {
-  // Normalize column names (trim whitespace)
-  const cleaned = {};
-  Object.entries(row).forEach(([k, v]) => { cleaned[k.trim()] = v; });
-  return { ...cleaned, _id: i, _status: "idle" };
-});
-    setGtmRows(withIds);
-    setGtmSelected(0);
-    // Save to Supabase
+
+  const processRows = (rawRows) => {
+    // Normalize column names (trim whitespace)
+    const withIds = rawRows.map((row, i) => {
+      const cleaned = {};
+      Object.entries(row).forEach(([k, v]) => { cleaned[k.trim()] = v; });
+      return { ...cleaned, _id: Date.now() + i, _status: "idle" };
+    });
+    setGtmRows(prev => [...withIds, ...prev]);
+    if (withIds.length > 0) setGtmSelected(withIds[0]._id);
     withIds.forEach(row => dbSave('v3_gtm_rows', String(row._id), row));
+    showGtmToast(`✅ ${withIds.length} companies imported!`, "success");
   };
-  reader.readAsArrayBuffer(file);
+
+  if (ext === "csv") {
+    reader.onload = (ev) => {
+      const lines = ev.target.result.split(/\r?\n/).filter(l => l.trim());
+      const parseCSVLine = (line) => {
+        const result = []; let cur = "", inQ = false;
+        for (const ch of line) {
+          if (ch === '"') inQ = !inQ;
+          else if (ch === "," && !inQ) { result.push(cur.trim()); cur = ""; }
+          else cur += ch;
+        }
+        result.push(cur.trim());
+        return result;
+      };
+      const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, "").trim());
+      const rows = lines.slice(1).map(line => {
+        const vals = parseCSVLine(line).map(v => v.replace(/^"|"$/g, "").trim());
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = vals[i] || ""; });
+        return obj;
+      }).filter(r => Object.values(r).some(v => v));
+      processRows(rows);
+    };
+    reader.readAsText(file);
+  } else if (ext === "xlsx" || ext === "xls") {
+    reader.onload = (ev) => {
+      const XLSX = window.XLSX;
+      if (!XLSX) { showGtmToast("❌ Excel support not loaded", "error"); return; }
+      const wb = XLSX.read(ev.target.result, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      processRows(data);
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    showGtmToast("❌ Please upload .csv, .xlsx or .xls", "error");
+  }
   e.target.value = "";
 };
 
@@ -2090,7 +2125,7 @@ if (!dbLoaded) return (
             <button onClick={() => { gtmCancelRef.current = true; setGtmBatchRunning(false); }} style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
           </div>
         )}
-        <input ref={gtmFileRef} type="file" accept=".xlsx,.xls" onChange={handleGtmUpload} style={{ display: "none" }} />
+        <input ref={gtmFileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleGtmUpload} style={{ display: "none" }} />
         <button onClick={() => setShowGtmForm(true)} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
   + Add Single
 </button>
@@ -2120,31 +2155,99 @@ if (!dbLoaded) return (
           Required columns: Company · HQ · Employees · Data Stack Signal<br/>
           Tool Used · Use Case · Cloud Provider · Data Warehouse · Buying Persona · Integration Opportunity
         </div>
-        <button onClick={() => gtmFileRef.current.click()} style={{ padding: "12px 28px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 14, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
-          📊 Upload Excel to Begin
-        </button>
+      <button onClick={() => gtmFileRef.current.click()} style={{ padding: "12px 28px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 14, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
+  📊 Upload Excel or CSV to Begin
+</button> 
       </div>
     ) : (
       <div style={{ display: "flex", gap: 16, height: "calc(100vh - 220px)" }}>
 
-        {/* LEFT — company list */}
-        <div style={{ width: 280, background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, overflow: "hidden", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-          <div style={{ padding: "10px 14px", borderBottom: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>{gtmRows.length} companies</span>
-            <span style={{ fontSize: 11, color: C.green, fontFamily: MONO, fontWeight: 600 }}>{gtmRows.filter(r => r._status === "ready").length} ready</span>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto" }}>
-            {gtmRows.map(row => {
+       {/* LEFT — company list */}
+<div style={{ width: 280, background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, overflow: "hidden", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+  <div style={{ padding: "10px 14px", borderBottom: "1px solid #EEF2F7" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+      <span style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>{gtmRows.length} companies</span>
+      <span style={{ fontSize: 11, color: C.green, fontFamily: MONO, fontWeight: 600 }}>{gtmRows.filter(r => r._status === "ready").length} ready</span>
+    </div>
+    {/* Filter tabs */}
+    <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+      {[
+        { label: "All", value: "all" },
+        { label: "📧 E+3 Due", value: "followup1" },
+        { label: "📧 E+7 Due", value: "followup2" },
+        { label: "✅ Ready", value: "ready" },
+        { label: "⏳ Idle", value: "idle" },
+      ].map(f => {
+        const count = f.value === "all" ? gtmRows.length
+          : f.value === "ready" ? gtmRows.filter(r => r._status === "ready").length
+          : f.value === "idle" ? gtmRows.filter(r => r._status === "idle").length
+          : gtmRows.filter(r => {
+              if (!r._sentAt) return false;
+              const day = f.value === "followup1" ? 3 : 7;
+              const target = new Date(new Date(r._sentAt).getTime() + day * 24 * 60 * 60 * 1000);
+              return Math.ceil((target - new Date()) / (1000 * 60 * 60 * 24)) <= 0;
+            }).length;
+        const isActive = (gtmSidebarFilter || "all") === f.value;
+        return (
+          <button key={f.value} onClick={() => setGtmSidebarFilter(f.value)}
+            style={{ padding: "3px 8px", borderRadius: 20, border: `1px solid ${isActive ? C.gold : "#E4ECF4"}`, background: isActive ? C.goldDim : "#F8FAFC", color: isActive ? C.gold : C.textDim, fontSize: 9, fontFamily: MONO, cursor: "pointer", fontWeight: isActive ? 700 : 400 }}>
+            {f.label}{count > 0 ? ` (${count})` : ""}
+          </button>
+        );
+      })}
+    </div>
+    {/* Search */}
+    <div style={{ position: "relative" }}>
+      <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: C.textDim, pointerEvents: "none" }}>🔍</span>
+      <input value={gtmSearchQuery} onChange={e => setGtmSearchQuery(e.target.value)}
+        placeholder="Search company..."
+        style={{ width: "100%", background: "#F8FAFC", border: "1px solid #E4ECF4", color: C.text, borderRadius: 6, padding: "6px 10px 6px 26px", fontSize: 11, fontFamily: FONT, outline: "none", boxSizing: "border-box" }} />
+      {gtmSearchQuery && <button onClick={() => setGtmSearchQuery("")} style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.textDim, fontSize: 12, padding: 0 }}>✕</button>}
+    </div>
+  </div>
+  <div style={{ flex: 1, overflowY: "auto" }}>
+    {gtmRows.filter(row => {
+      if (gtmSearchQuery.trim()) {
+        const q = gtmSearchQuery.toLowerCase();
+        if (!((row.Company || "").toLowerCase().includes(q) || (row["Buying Persona"] || "").toLowerCase().includes(q) || (row._discoveredName || "").toLowerCase().includes(q))) return false;
+      }
+      if (gtmSidebarFilter === "ready") return row._status === "ready";
+      if (gtmSidebarFilter === "idle") return row._status === "idle";
+      if (gtmSidebarFilter === "followup1" || gtmSidebarFilter === "followup2") {
+        if (!row._sentAt) return false;
+        const day = gtmSidebarFilter === "followup1" ? 3 : 7;
+        const target = new Date(new Date(row._sentAt).getTime() + day * 24 * 60 * 60 * 1000);
+        return Math.ceil((target - new Date()) / (1000 * 60 * 60 * 24)) <= 0;
+      }
+      return true;
+    }).map(row => {
               const isSelected = row._id === gtmSelected;
               return (
                 <div key={row._id} onClick={() => setGtmSelected(row._id)}
                   style={{ padding: "10px 14px", borderBottom: "1px solid #F0F4F8", cursor: "pointer", background: isSelected ? "#EEF5FF" : "#fff", borderLeft: isSelected ? "3px solid #1B6EF3" : "3px solid transparent", transition: "all 0.1s" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div style={{ fontWeight: 600, fontSize: 12, color: isSelected ? C.navy : C.text }}>{row.Company}</div>
-                    {row._status === "ready" && <span style={{ fontSize: 8, color: C.green, fontFamily: MONO, background: C.greenDim, padding: "2px 6px", borderRadius: 10, flexShrink: 0 }}>READY</span>}
-                    {row._status === "generating" && <Spinner />}
-                    {row._status === "error" && <span style={{ fontSize: 8, color: C.red, fontFamily: MONO }}>ERR</span>}
-                  </div>
+  <div style={{ fontWeight: 600, fontSize: 12, color: isSelected ? C.navy : C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 4 }}>{row.Company}</div>
+  <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+    {row._status === "ready" && <span style={{ fontSize: 8, color: C.green, fontFamily: MONO, background: C.greenDim, padding: "2px 6px", borderRadius: 10 }}>READY</span>}
+    {row._status === "generating" && <Spinner />}
+    {row._status === "error" && <span style={{ fontSize: 8, color: C.red, fontFamily: MONO }}>ERR</span>}
+    <button
+      onClick={e => {
+        e.stopPropagation();
+        if (gtmSelected === row._id) {
+          const remaining = gtmRows.filter(r => r._id !== row._id);
+          setGtmSelected(remaining.length > 0 ? remaining[0]._id : null);
+        }
+        setGtmRows(prev => prev.filter(r => r._id !== row._id));
+        if (supabase) supabase.from('v3_gtm_rows').delete().eq('id', String(row._id));
+      }}
+      title="Remove"
+      style={{ background: "none", border: "none", cursor: "pointer", color: C.textFaint, fontSize: 13, lineHeight: 1, padding: "0 1px", borderRadius: 3 }}
+      onMouseEnter={e => e.currentTarget.style.color = C.red}
+      onMouseLeave={e => e.currentTarget.style.color = C.textFaint}
+    >✕</button>
+  </div>
+</div>
                  <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>{row.HQ} · {row.Employees}</div>
 {row._discoveredName && <div style={{ fontSize: 10, color: C.navy, fontFamily: FONT, fontWeight: 600, marginTop: 2 }}>👤 {row._discoveredName}</div>}
 {row.email && <div style={{ fontSize: 9, color: C.green, fontFamily: MONO, marginTop: 1 }}>✉️ {row.email}</div>}
