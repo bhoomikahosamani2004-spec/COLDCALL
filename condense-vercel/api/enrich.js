@@ -1,6 +1,10 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-  const { name, company, jobTitle, linkedinUrl } = req.body;
+ if (req.method !== "POST") return res.status(405).end();
+  
+  try {
+    if (!req.body) return res.status(400).json({ found: false, error: "Empty request body" });
+    const { name, company, jobTitle, linkedinUrl } = req.body;
+    if (!company) return res.status(400).json({ found: false, error: "Company is required" });
 const cleanName = (name || "").trim();
 const firstName = cleanName.split(" ")[0];
 const lastName = cleanName.split(" ").slice(1).join(" ");
@@ -174,14 +178,18 @@ return res.json({
       console.error("Lusha error:", err.message);
     }
   }
+return res.status(404).json({
+      found: false,
+      error: "No data found",
+      debug: {
+        apollo_key_set: !!process.env.APOLLO_API_KEY,
+        lusha_key_set: !!process.env.LUSHA_API_KEY,
+        mode: looksLikeTitle ? "search-by-title" : "match-by-name",
+      },
+    });
 
-  return res.status(404).json({
-    found: false,
-    error: "No data found",
-    debug: {
-      apollo_key_set: !!process.env.APOLLO_API_KEY,
-      lusha_key_set: !!process.env.LUSHA_API_KEY,
-      mode: looksLikeTitle ? "search-by-title" : "match-by-name",
-    },
-  });
+  } catch (err) {
+    console.error("ENRICH HANDLER CRASH:", err.message);
+    return res.status(500).json({ found: false, error: err.message });
+  }
 }
