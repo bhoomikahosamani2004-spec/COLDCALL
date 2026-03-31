@@ -2219,7 +2219,7 @@ if (!dbLoaded) return (
                   </div>
                 </div>
 
-                {gen ? (() => {
+                {(() => {
                 {/* RIGHT PANEL TABS */}
 <div style={{ display: "flex", borderBottom: "1px solid #EEF2F7", background: "#fff", borderRadius: "8px 8px 0 0", padding: "0 4px", flexShrink: 0 }}>
   {[
@@ -2446,62 +2446,7 @@ if (!dbLoaded) return (
     </div>
   );
 })()}
-           
-                 
-                  const editKey = `gtm_${row._id}_${activeGtmTab}`;
-                  const text = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
-
-                  return (
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10 }}>
-                      {/* Tab bar */}
-                      <div style={{ display: "flex", borderBottom: "1px solid #EEF2F7", padding: "0 4px", flexShrink: 0, overflowX: "auto" }}>
-                        {GTM_TABS.map(tab => (
-                          <button key={tab.key} onClick={() => setActiveGtmTab(tab.key)}
-                            style={{ padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", borderBottom: activeGtmTab === tab.key ? "2px solid #1B6EF3" : "2px solid transparent", color: activeGtmTab === tab.key ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 11, fontWeight: activeGtmTab === tab.key ? 600 : 400, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-                            {tab.icon} {tab.label}
-                          </button>
-                        ))}
-                        <div style={{ flex: 1 }} />
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "0 12px" }}>
-                          {activeGtmTab === "email_body" && gen.email_subject && (
-                            <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Subj: {gen.email_subject}</span>
-                          )}
-                          {gtmEdited[editKey] !== undefined && (
-                            <button onClick={() => setGtmEdited(prev => { const n = {...prev}; delete n[editKey]; return n; })} style={{ fontSize: 10, color: C.textDim, background: "none", border: "none", cursor: "pointer" }}>↺</button>
-                          )}
-                          <button onClick={() => navigator.clipboard.writeText(text)} style={{ fontSize: 11, color: C.gold, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: FONT }}>📋 Copy</button>
-                          {(activeGtmTab === "email_body" || activeGtmTab === "email_followup1" || activeGtmTab === "email_followup2") && (
-  <button onClick={() => {
-    const subj = activeGtmTab === "email_body" 
-      ? (gen.email_subject || "") 
-      : activeGtmTab === "email_followup1" 
-        ? `Re: ${gen.email_subject || ""}` 
-        : `Following up: ${gen.email_subject || ""}`;
-    window.open(`mailto:${row.email || ""}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`, "_blank");
-  }} style={{ fontSize: 11, color: C.amber, background: C.amberDim, border: `1px solid ${C.amber}33`, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✉️ Mail</button>
-)}
-                        </div>
-                      </div>
-                      {/* Text area */}
-                      <textarea
-                        value={text}
-                        onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
-                        style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }}
-                      />
-                      {/* Footer nav */}
-                      <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-                        <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
-                        <button onClick={() => { const next = gtmRows.find(r => r._id > row._id); if (next) setGtmSelected(next._id); }} style={{ fontSize: 11, color: C.textMid, background: "none", border: "1px solid #E4ECF4", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT }}>Next →</button>
-                      </div>
-                    </div>
-                  );
-                })() : (
-                  <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
-                    <div style={{ fontSize: 40, opacity: 0.2 }}>✉️</div>
-                    <div style={{ fontSize: 14, color: C.textMid, fontFamily: FONT }}>Click Generate Email to create a Dream11-style outreach for {row.Company}</div>
-                    <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>Uses Gemini AI · tailored to {row["Data Stack Signal"]} + {row["Integration Opportunity"]}</div>
-                  </div>
-                )}
+        
               </>
             );
           })()}
