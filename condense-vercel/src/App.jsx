@@ -952,13 +952,13 @@ const [gtmSelected, setGtmSelected] = useState(null);
 const [gtmEdited, setGtmEdited] = useState({});
 const [activeGtmTab, setActiveGtmTab] = useState("email_body");
 const [gtmRunning, setGtmRunning] = useState(null);
-const [gtmEnriching, setGtmEnriching] = useState(null); // _id of row being enriched
-const [gtmEnrichAll, setGtmEnrichAll] = useState(false); // bulk enriching
-const gtmEnrichCancelRef = useRef(false);
 const [gtmBatchRunning, setGtmBatchRunning] = useState(false);
 const [gtmBatchProgress, setGtmBatchProgress] = useState(0);
 const gtmFileRef = useRef();
 const gtmCancelRef = useRef(false);
+const [gtmToast, setGtmToast] = useState(null);
+const [showGtmForm, setShowGtmForm] = useState(false);
+const [gtmForm, setGtmForm] = useState({ Company: "", HQ: "", Employees: "", "Data Stack Signal": "", "Tool Used": "", "Use Case": "", "Cloud Provider": "", "Data Warehouse": "", "Buying Persona": "", "Integration Opportunity": "", email: "", phone: "" });
   
 
   // Persist state changes
@@ -1233,74 +1233,25 @@ const extraCtx = extraContext[id] || "";
   async function enrichProspect(prospect) {
   setEnriching(prospect.id);
   try {
-    // Step 1 — Try Apollo
-    let data = null;
-    let source = null;
-
-    try {
-      const apolloRes = await fetch("/api/enrich", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: prospect.name,
-          company: prospect.company,
-          jobTitle: prospect.jobTitle,
-          linkedinUrl: prospect.linkedinUrl,
-          source: "apollo",
-        }),
-      });
-      const apolloData = await apolloRes.json();
-      if (!apolloData.error && (apolloData.email || apolloData.name)) {
-        data = apolloData;
-        source = "apollo";
-      }
-    } catch (apolloErr) {
-      console.log("Apollo failed, trying Lusha...", apolloErr.message);
-    }
-
-    // Step 2 — Try Lusha if Apollo failed
-    if (!data) {
-      try {
-        const lushaRes = await fetch("/api/enrich", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: prospect.name,
-            company: prospect.company,
-            jobTitle: prospect.jobTitle,
-            linkedinUrl: prospect.linkedinUrl,
-            source: "lusha",
-          }),
-        });
-        const lushaData = await lushaRes.json();
-        if (!lushaData.error && (lushaData.email || lushaData.name)) {
-          data = lushaData;
-          source = "lusha";
-        }
-      } catch (lushaErr) {
-        console.log("Lusha also failed:", lushaErr.message);
-      }
-    }
-
-    // Step 3 — Both failed
-    if (!data) {
-      throw new Error("No contact found via Apollo or Lusha");
-    }
-
+    const res = await fetch("/api/enrich", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: prospect.name,
+        company: prospect.company,
+        jobTitle: prospect.jobTitle,
+        linkedinUrl: prospect.linkedinUrl,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
     setProspects(prev => prev.map(p =>
       p.id === prospect.id
-        ? {
-            ...p,
-            email:      data.email      || p.email,
-            phone:      data.phone      || p.phone,
-            linkedinUrl: data.linkedinUrl || p.linkedinUrl,
-            jobTitle:   data.title      || p.jobTitle,
-          }
+        ? { ...p, email: data.email || p.email, phone: data.phone || p.phone, linkedinUrl: data.linkedinUrl || p.linkedinUrl, jobTitle: data.title || p.jobTitle }
         : p
     ));
-    setEnrichedData(prev => ({ ...prev, [prospect.id]: { ...data, source } }));
-    addLog(prospect.id, `✅ Enriched via ${source} — ${data.email || "no email found"}`);
-
+    setEnrichedData(prev => ({ ...prev, [prospect.id]: data }));
+    addLog(prospect.id, `✅ Enriched via ${data.source} — ${data.email || "no email found"}`);
   } catch (err) {
     addLog(prospect.id, `❌ Enrichment failed: ${err.message}`);
   }
@@ -1330,24 +1281,16 @@ const generateGtmEmail = async (row) => {
   setGtmRunning(id);
   setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _status: "generating" } : r));
 
-  // Convert GTM row into a prospect object — same shape as single prospect
-  const prospect = {
-    id: `gtm_${id}`,
-    name: row._enrichedName || row["Buying Persona"] || "Decision Maker",
-    jobTitle: row["Buying Persona"] || "",
-    company: row.Company || "",
-    email: row._enrichedEmail || "",
-    phone: row._enrichedPhone || "",
-    linkedinUrl: row._enrichedLI || "",
-    industry: row["Data Stack Signal"] || "",
-    seniority: "",
-    region: row.HQ || "India",
-    // Pass tech context as JD so the agent uses it for personalization
-    jdText: `Data Stack: ${row["Data Stack Signal"] || ""}. Tool Used: ${row["Tool Used"] || ""}. Use Case: ${row["Use Case"] || ""}. Cloud Provider: ${row["Cloud Provider"] || ""}. Data Warehouse: ${row["Data Warehouse"] || ""}. Integration Opportunity: ${row["Integration Opportunity"] || ""}.`,
-    status: "idle",
-    createdAt: new Date().toISOString(),
-    sentAt: null,
-  };
+  const company = row["Company"] || "";
+  const stack = row["Data Stack Signal"] || "";
+  const tool = row["Tool Used"] || "";
+  const useCase = row["Use Case"] || "";
+  const cloud = row["Cloud Provider"] || "";
+  const warehouse = row["Data Warehouse"] || "";
+  const persona = row["Buying Persona"] || "";
+  const integration = row["Integration Opportunity"] || "";
+  const hq = row["HQ"] || "";
+  const employees = row["Employees"] || "";
 
   const prompt = `You are Veera Raghavan, Head of Enterprise Sales at Zeliot (Bosch-backed). Generate a personalized outreach email and LinkedIn messages for this prospect.
 
@@ -1367,9 +1310,9 @@ STYLE — follow this EXACT Dream11 email format:
 
 Subject: Condense — Complementing ${company}'s ${stack.includes("Kafka") ? "Kafka" : "event streaming"} data platform for scale and cost efficiency
 
-Greetings! ${personName}, 
+Greetings! ${persona},
 
-I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch. Condense is built for modern data engineering and analytics teams that need to operationalize real-time data across products, analytics platforms, and AI systems without the heavy operational complexity of managing distributed streaming infrastructure.
+Greetings! I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch. Condense is built for modern data engineering and analytics teams that need to operationalize real-time data across products, analytics platforms, and AI systems without the heavy operational complexity of managing distributed streaming infrastructure.
 
 Platforms like ${company} typically operate a modern data architecture built around [describe their stack: ${stack}], with [${tool}] complementing the pipeline. Teams running on ${cloud} leverage ${warehouse} as the analytical layer, with microservices generating large volumes of ${useCase.toLowerCase()} events across the platform.
 
@@ -1422,51 +1365,39 @@ Return ONLY valid JSON:
   "day14_followup": "..."
 }`;
 
-try {
-    // Step 1 — Full research agent (same as single prospect)
-    const researchData = await runResearchAgent(
-      prospect.company,
-      prospect.linkedinUrl,
-      prospect.name,
-      prospect.jobTitle,
-      prospect.jdText,
-      (msg) => console.log(`[GTM ${row.Company}]`, msg)
-    );
-
-    // Step 2 — Rate limit pause
-    await new Promise(r => setTimeout(r, 30000));
-
-    // Step 3 — Industry use cases + success stories (same as single prospect)
-    const industryUC = findIndustryUseCases(prospect.company, prospect.industry || "", researchData);
-    const useCasesStr = industryUC.use_cases.map(uc => `• ${uc.title} – ${uc.desc}`).join("\n");
-    const industryIntro = industryUC.intro.replace(/\[COMPANY\]/g, prospect.company);
-    const industrySocialProof = industryUC.social_proof.replace(/\[COMPANY\]/g, prospect.company);
-    const industryClosing = industryUC.closing.replace(/\[COMPANY\]/g, prospect.company);
-    const matchedStories = findMatchingStories(prospect.company, prospect.industry || "", researchData);
-
-    // Step 4 — Full message generation (same Dream11-style prompt as single prospect)
-    const msgs = await generateMessages(
-      prospect,
-      researchData,
-      matchedStories,
-      prospect.jdText,
-      replies,
-      { industryUC, useCasesStr, industryIntro, industrySocialProof, industryClosing },
-      "", // extra context
-      (msg) => console.log(`[GTM ${row.Company}]`, msg)
-    );
-
-    // Step 5 — Save results
-    setGtmGenerated(prev => ({ ...prev, [id]: msgs }));
+  try {
+    const data = await callClaude({
+      system: "You are Veera Raghavan. Return ONLY valid JSON. Start with { and end with }. No markdown.",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 2000,
+    });
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+    const result = extractJSON(text);
+    setGtmGenerated(prev => ({ ...prev, [id]: result }));
     setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _status: "ready" } : r));
-    dbSave('v2_gtm_messages', String(id), msgs);
-
+    // Save to Supabase
+    dbSave('v3_gtm_messages', String(id), result);
   } catch (err) {
-    console.error("GTM generate error:", err);
-    setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _status: "error", _error: err.message } : r));
+    setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _status: "error" } : r));
   }
   setGtmRunning(null);
 };
+const showGtmToast = (msg, type = "info", duration = 4000) => {
+  setGtmToast({ msg, type });
+  setTimeout(() => setGtmToast(null), duration);
+};
+
+const addGtmRow = () => {
+  if (!gtmForm.Company) return;
+  const newRow = { ...gtmForm, _id: Date.now(), _status: "idle" };
+  setGtmRows(prev => [newRow, ...prev]);
+  setGtmSelected(newRow._id);
+  dbSave('v3_gtm_rows', String(newRow._id), newRow);
+  setShowGtmForm(false);
+  setGtmForm({ Company: "", HQ: "", Employees: "", "Data Stack Signal": "", "Tool Used": "", "Use Case": "", "Cloud Provider": "", "Data Warehouse": "", "Buying Persona": "", "Integration Opportunity": "", email: "", phone: "" });
+  showGtmToast(`✅ ${gtmForm.Company} added to GTM list`, "success");
+};
+
 const runGtmBatch = async () => {
   const queue = gtmRows.filter(r => r._status === "idle");
   if (queue.length === 0) return;
@@ -1477,121 +1408,11 @@ const runGtmBatch = async () => {
     if (gtmCancelRef.current) break;
     setGtmBatchProgress(i + 1);
     await generateGtmEmail(queue[i]);
-    if (i < queue.length - 1) await new Promise(r => setTimeout(r, 5000));
+    if (i < queue.length - 1) await new Promise(r => setTimeout(r, 32000));
   }
   setGtmBatchRunning(false);
 };
-const enrichGtmRow = async (row) => {
-  setGtmEnriching(row._id);
-  setGtmRows(prev => prev.map(r => r._id === row._id
-    ? { ...r, _enriching: true, _enrichError: null } : r));
-  try {
-    // Step 1 — Try Apollo first
-    let data = null;
-    let source = null;
 
-    try {
-      const apolloRes = await fetch("/api/enrich", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company: row.Company,
-          jobTitle: row["Buying Persona"],
-          name: "",
-          source: "apollo", // tell your API to use Apollo
-        }),
-      });
-      const apolloData = await apolloRes.json();
-      if (!apolloData.error && (apolloData.email || apolloData.name)) {
-        data = apolloData;
-        source = "apollo";
-      }
-    } catch (apolloErr) {
-      console.log("Apollo failed, trying Lusha...", apolloErr.message);
-    }
-
-    // Step 2 — Apollo failed or returned nothing, try Lusha
-    if (!data) {
-      try {
-        const lushaRes = await fetch("/api/enrich", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            company: row.Company,
-            jobTitle: row["Buying Persona"],
-            name: "",
-            source: "lusha", // tell your API to use Lusha
-          }),
-        });
-        const lushaData = await lushaRes.json();
-        if (!lushaData.error && (lushaData.email || lushaData.name)) {
-          data = lushaData;
-          source = "lusha";
-        }
-      } catch (lushaErr) {
-        console.log("Lusha also failed:", lushaErr.message);
-      }
-    }
-
-    // Step 3 — Both failed
-    if (!data) {
-      throw new Error("No contact found via Apollo or Lusha");
-    }
-
-    const updatedRow = {
-      ...row,
-      _enrichedName:  data.name  || "",
-      _enrichedEmail: data.email || "",
-      _enrichedPhone: data.phone || "",
-      _enrichedLI:    data.linkedinUrl || "",
-      _enriched:      source,
-      _enriching:     false,
-      _enrichError:   null,
-    };
-    setGtmRows(prev => prev.map(r => r._id === row._id ? updatedRow : r));
-    dbSave('v2_gtm_rows', String(row._id), updatedRow);
-
-    // Auto-patch greeting in already-generated emails if name found
-    if (data.name && gtmGenerated[row._id]) {
-      const firstName = data.name.split(" ")[0];
-      const patch = (body) => body
-        ? body
-            .replace(/^Greetings[^,\n]*,/m, `Greetings ${firstName},`)
-            .replace(/^Dear [^,\n]+,/m,     `Greetings ${firstName},`)
-        : body;
-      const gen = gtmGenerated[row._id];
-      const patched = {
-        ...gen,
-        email_body:      patch(gen.email_body),
-        email_followup1: patch(gen.email_followup1),
-        email_followup2: patch(gen.email_followup2),
-        day0_message:    patch(gen.day0_message),
-      };
-      setGtmGenerated(prev => ({ ...prev, [row._id]: patched }));
-      dbSave('v2_gtm_messages', String(row._id), patched);
-    }
-
-  } catch (err) {
-    setGtmRows(prev => prev.map(r =>
-      r._id === row._id
-        ? { ...r, _enriching: false, _enrichError: err.message }
-        : r
-    ));
-  }
-  setGtmEnriching(null);
-};
-
-const enrichAllGtmRows = async () => {
-  setGtmEnrichAll(true);
-  gtmEnrichCancelRef.current = false;
-  const queue = gtmRows.filter(r => !r._enriched && !r._enriching);
-  for (let i = 0; i < queue.length; i++) {
-    if (gtmEnrichCancelRef.current) break;
-    await enrichGtmRow(queue[i]);
-    if (i < queue.length - 1) await new Promise(r => setTimeout(r, 1200));
-  }
-  setGtmEnrichAll(false);
-};
 
   const saveReply = () => {
     if (!replyText.trim()) return;
@@ -2198,26 +2019,18 @@ if (!dbLoaded) return (
            
               {/* MAIN CONTENT */}
 <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
-{activeView === "gtm" && (
+
+{/* DASHBOARD VIEW */}
+  {activeView === "gtm" && (
   <div style={{ maxWidth: 1100, margin: "0 auto" }} className="card-enter">
+
+    {/* GTM Header */}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
       <div>
         <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}>GTM Excel Engine</div>
-        <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Upload GTM Excel → AI generates personalized emails per data stack signal</div>
+        <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Upload India GTM Excel → Gemini generates Dream11-style emails per data stack signal</div>
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        {gtmRows.length > 0 && !gtmEnrichAll && !gtmBatchRunning && (
-          <button onClick={enrichAllGtmRows} style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            🔍 Enrich All ({gtmRows.filter(r => !r._enriched).length} pending)
-          </button>
-        )}
-        {gtmEnrichAll && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44" }}>
-            <Spinner />
-            <span style={{ fontSize: 11, fontFamily: MONO, color: "#7C3AED" }}>Enriching... {gtmRows.filter(r => r._enriched).length}/{gtmRows.length}</span>
-            <button onClick={() => { gtmEnrichCancelRef.current = true; setGtmEnrichAll(false); }} style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
-          </div>
-        )}
         {gtmRows.length > 0 && gtmRows.filter(r => r._status === "idle").length > 0 && !gtmBatchRunning && (
           <button onClick={runGtmBatch} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
             ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
@@ -2231,212 +2044,12 @@ if (!dbLoaded) return (
           </div>
         )}
         <input ref={gtmFileRef} type="file" accept=".xlsx,.xls" onChange={handleGtmUpload} style={{ display: "none" }} />
-        <button onClick={() => gtmFileRef.current.click()} style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 12, fontFamily: FONT, fontWeight: 500, cursor: "pointer" }}>
-          📊 Upload Excel
-        </button>
-      </div>
-    </div>
-
-    {gtmRows.length === 0 ? (
-      <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 12, padding: "60px 32px", textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>📊</div>
-        <div style={{ fontSize: 15, color: C.textMid, marginBottom: 8 }}>Upload your GTM Excel file</div>
-        <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, marginBottom: 24, lineHeight: 1.9 }}>
-          Required columns: Company · HQ · Employees · Data Stack Signal<br/>
-          Tool Used · Use Case · Cloud Provider · Data Warehouse · Buying Persona · Integration Opportunity
-        </div>
-        <button onClick={() => gtmFileRef.current.click()} style={{ padding: "12px 28px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 14, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
-          📊 Upload Excel to Begin
-        </button>
-      </div>
-    ) : (
-      <div style={{ display: "flex", gap: 16, height: "calc(100vh - 220px)" }}>
-        <div style={{ width: 280, background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, overflow: "hidden", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-          <div style={{ padding: "10px 14px", borderBottom: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>{gtmRows.length} companies</span>
-            <span style={{ fontSize: 11, color: C.green, fontFamily: MONO, fontWeight: 600 }}>{gtmRows.filter(r => r._status === "ready").length} ready</span>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto" }}>
-            {gtmRows.map(row => {
-              const isSelected = row._id === gtmSelected;
-              return (
-                <div key={row._id} onClick={() => setGtmSelected(row._id)}
-                  style={{ padding: "10px 14px", borderBottom: "1px solid #F0F4F8", cursor: "pointer", background: isSelected ? "#EEF5FF" : "#fff", borderLeft: isSelected ? "3px solid #1B6EF3" : "3px solid transparent", transition: "all 0.1s" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div style={{ fontWeight: 600, fontSize: 12, color: isSelected ? C.navy : C.text }}>{row.Company}</div>
-                    {row._status === "ready" && <span style={{ fontSize: 8, color: C.green, fontFamily: MONO, background: C.greenDim, padding: "2px 6px", borderRadius: 10 }}>READY</span>}
-                    {row._status === "generating" && <Spinner />}
-                    {row._status === "error" && <span style={{ fontSize: 8, color: C.red, fontFamily: MONO }}>ERR</span>}
-                  </div>
-                  <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>{row.HQ} · {row.Employees}</div>
-                  <div style={{ fontSize: 9, color: C.gold, fontFamily: MONO, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row["Data Stack Signal"]}</div>
-                  {row._enrichedName && <div style={{ fontSize: 9, color: C.green, fontFamily: MONO, marginTop: 2 }}>👤 {row._enrichedName}</div>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, overflow: "hidden" }}>
-          {(() => {
-            const row = gtmRows.find(r => r._id === gtmSelected);
-            if (!row) return <div style={{ padding: 40, textAlign: "center", color: C.textDim, fontFamily: MONO }}>Select a company</div>;
-            const gen = gtmGenerated[row._id];
-            return (
-              <>
-                <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, padding: "14px 18px", flexShrink: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: C.navy }}>{row.Company}</div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      {row._status === "generating" && <><Spinner /><span style={{ fontSize: 11, color: C.gold, fontFamily: MONO }}>Generating...</span></>}
-                      <button onClick={() => enrichGtmRow(row)} disabled={gtmEnriching === row._id || gtmEnrichAll}
-                        style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: (gtmEnriching === row._id || gtmEnrichAll) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-                        {gtmEnriching === row._id ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enrichedName || row._enriched}` : "🔍 Enrich"}
-                      </button>
-                      {gen && (
-                        <button onClick={async () => {
-                          setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: true } : r));
-                          try {
-                            await pushToZoho({ name: row._enrichedName || row["Buying Persona"], company: row.Company, jobTitle: row["Buying Persona"], email: row._enrichedEmail || "", phone: row._enrichedPhone || "" }, gen, `Data Stack: ${row["Data Stack Signal"]} | Tool: ${row["Tool Used"]} | Integration: ${row["Integration Opportunity"]}`);
-                            setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: false, _zohoStatus: "success" } : r));
-                            setTimeout(() => setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoStatus: null } : r)), 4000);
-                          } catch {
-                            setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: false, _zohoStatus: "error" } : r));
-                            setTimeout(() => setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoStatus: null } : r)), 4000);
-                          }
-                        }} disabled={row._zohoPushing}
-                          style={{ padding: "6px 12px", borderRadius: 6, fontSize: 11, fontFamily: FONT, fontWeight: 500, border: `1px solid ${row._zohoStatus === "success" ? "#B8EDD3" : "#E4629444"}`, background: row._zohoStatus === "success" ? "#F0FBF5" : "#FFF0F5", color: row._zohoStatus === "success" ? C.green : "#E46294", cursor: row._zohoPushing ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-                          {row._zohoPushing ? <><Spinner /> Pushing...</> : row._zohoStatus === "success" ? "✅ Pushed!" : "☁️ Zoho"}
-                        </button>
-                      )}
-                      {(row._status === "idle" || row._status === "error") && (
-                        <button onClick={() => generateGtmEmail(row)} disabled={gtmRunning !== null} style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
-                          ⚡ Generate
-                        </button>
-                      )}
-                      {row._status === "ready" && (
-                        <button onClick={() => generateGtmEmail(row)} disabled={gtmRunning !== null} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 11, fontFamily: FONT, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
-                          ↺ Regenerate
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {[{ v: row["Data Stack Signal"], c: "#1B6EF3" }, { v: row["Tool Used"], c: "#7C3AED" }, { v: row["Use Case"], c: "#D97706" }, { v: row["Cloud Provider"], c: "#0D9E6E" }, { v: row["Data Warehouse"], c: "#0A2540" }, { v: row["Buying Persona"], c: "#E53E3E" }, { v: row["Integration Opportunity"], c: "#1B6EF3" }].filter(c => c.v).map(chip => (
-                      <span key={chip.v} style={{ fontSize: 10, fontFamily: MONO, color: chip.c, background: `${chip.c}11`, padding: "3px 10px", borderRadius: 20, border: `1px solid ${chip.c}22` }}>{chip.v}</span>
-                    ))}
-                  </div>
-                  {(row._enrichedName || row._enrichedEmail) && (
-                    <div style={{ marginTop: 10, padding: "10px 14px", background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 8, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-                      <span style={{ fontSize: 10, fontFamily: MONO, color: C.green, fontWeight: 600 }}>✅ CONTACT via {row._enriched}</span>
-                      {row._enrichedName && <span style={{ fontSize: 12, color: C.navy, fontWeight: 600 }}>{row._enrichedName}</span>}
-                      {row._enrichedEmail && <span style={{ fontSize: 11, color: C.textMid, fontFamily: MONO }}>✉️ {row._enrichedEmail}</span>}
-                      {row._enrichedPhone && <span style={{ fontSize: 11, color: C.textMid, fontFamily: MONO }}>📱 {row._enrichedPhone}</span>}
-                    </div>
-                  )}
-                </div>
-
-                {gen ? (() => {
-                  const GTM_TABS = [
-                    { key: "email_body", label: "Email", icon: "✉️" },
-                    { key: "email_followup1", label: "Email F/U 1", icon: "📧" },
-                    { key: "email_followup2", label: "Email F/U 2", icon: "📧" },
-                    { key: "connection_note", label: "Connection", icon: "🔗" },
-                    { key: "day0_message", label: "Day 0", icon: "💬" },
-                    { key: "day3_followup", label: "Day 3", icon: "📨" },
-                    { key: "day7_followup", label: "Day 7", icon: "📨" },
-                    { key: "day14_followup", label: "Day 14", icon: "📨" },
-                  ];
-                  const editKey = `gtm_${row._id}_${activeGtmTab}`;
-                  const text = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
-                  return (
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10 }}>
-                      <div style={{ display: "flex", borderBottom: "1px solid #EEF2F7", padding: "0 4px", flexShrink: 0, overflowX: "auto" }}>
-                        {GTM_TABS.map(tab => (
-                          <button key={tab.key} onClick={() => setActiveGtmTab(tab.key)}
-                            style={{ padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", borderBottom: activeGtmTab === tab.key ? "2px solid #1B6EF3" : "2px solid transparent", color: activeGtmTab === tab.key ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 11, fontWeight: activeGtmTab === tab.key ? 600 : 400, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-                            {tab.icon} {tab.label}
-                          </button>
-                        ))}
-                        <div style={{ flex: 1 }} />
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "0 12px" }}>
-                          {gtmEdited[editKey] !== undefined && (
-                            <button onClick={() => setGtmEdited(prev => { const n = {...prev}; delete n[editKey]; return n; })} style={{ fontSize: 10, color: C.textDim, background: "none", border: "none", cursor: "pointer" }}>↺</button>
-                          )}
-                          <button onClick={() => navigator.clipboard.writeText(text)} style={{ fontSize: 11, color: C.gold, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: FONT }}>📋 Copy</button>
-                          {(activeGtmTab === "email_body" || activeGtmTab === "email_followup1" || activeGtmTab === "email_followup2") && (
-                            <button onClick={() => { const subj = activeGtmTab === "email_body" ? (gen.email_subject || "") : activeGtmTab === "email_followup1" ? `Re: ${gen.email_subject || ""}` : `Following up: ${gen.email_subject || ""}`; window.open(`mailto:${row._enrichedEmail || ""}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`, "_blank"); }}
-                              style={{ fontSize: 11, color: C.amber, background: C.amberDim, border: `1px solid ${C.amber}33`, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✉️ Mail</button>
-                          )}
-                        </div>
-                      </div>
-                      <textarea value={text} onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
-                        style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }} />
-                      <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-                        <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
-                        <button onClick={() => { const next = gtmRows.find(r => r._id > row._id); if (next) setGtmSelected(next._id); }} style={{ fontSize: 11, color: C.textMid, background: "none", border: "1px solid #E4ECF4", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT }}>Next →</button>
-                      </div>
-                    </div>
-                  );
-                })() : (
-                  <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
-                    <div style={{ fontSize: 40, opacity: 0.2 }}>✉️</div>
-                    <div style={{ fontSize: 14, color: C.textMid, fontFamily: FONT }}>Click Generate to create outreach for {row.Company}</div>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-        </div>
-      </div>
-    )}
-  </div>
-)}
-  /* DASHBOARD VIEW */}
-  {activeView === "gtm" && (
-  <div style={{ maxWidth: 1100, margin: "0 auto" }} className="card-enter">
-
-    {/* GTM Header */}
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-      <div>
-        <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}>GTM Excel Engine</div>
-        <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Upload India GTM Excel → Gemini generates Dream11-style emails per data stack signal</div>
-      </div>
-     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        {gtmRows.length > 0 && !gtmEnrichAll && !gtmBatchRunning && (
-          <button onClick={enrichAllGtmRows}
-            style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            🔍 Enrich All ({gtmRows.filter(r => !r._enriched).length} pending)
-          </button>
-        )}
-        {gtmEnrichAll && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44" }}>
-            <Spinner />
-            <span style={{ fontSize: 11, fontFamily: MONO, color: "#7C3AED" }}>
-              Enriching... {gtmRows.filter(r => r._enriched).length}/{gtmRows.length}
-            </span>
-            <button onClick={() => { gtmEnrichCancelRef.current = true; setGtmEnrichAll(false); }}
-              style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
-          </div>
-        )}
-        {gtmRows.length > 0 && gtmRows.filter(r => r._status === "idle").length > 0 && !gtmBatchRunning && (
-          <button onClick={runGtmBatch}
-            style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
-          </button>
-        )}
-        {gtmBatchRunning && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "rgba(27,110,243,0.1)", border: "1px solid #B8D4FF" }}>
-            <Spinner />
-            <span style={{ fontSize: 11, fontFamily: MONO, color: C.gold }}>{gtmBatchProgress}/{gtmRows.filter(r => r._status !== "ready").length} generating</span>
-            <button onClick={() => { gtmCancelRef.current = true; setGtmBatchRunning(false); }} style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
-          </div>
-        )}
-        <input ref={gtmFileRef} type="file" accept=".xlsx,.xls" onChange={handleGtmUpload} style={{ display: "none" }} />
-        <button onClick={() => gtmFileRef.current.click()}
-          style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 12, fontFamily: FONT, fontWeight: 500, cursor: "pointer" }}>
-          📊 Upload Excel
-        </button>
+        <button onClick={() => setShowGtmForm(true)} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
+  + Add Single
+</button>
+<button onClick={() => gtmFileRef.current.click()} style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 12, fontFamily: FONT, fontWeight: 500, cursor: "pointer" }}>
+  📊 Upload Excel
+</button>
       </div>
     </div>
 
@@ -2476,11 +2089,6 @@ if (!dbLoaded) return (
                   <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>{row.HQ} · {row.Employees}</div>
                   <div style={{ fontSize: 9, color: C.gold, fontFamily: MONO, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row["Data Stack Signal"]}</div>
                   <div style={{ fontSize: 9, color: C.purple, fontFamily: MONO, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row["Integration Opportunity"]}</div>
-                  {row._enrichedName && (
-                    <div style={{ fontSize: 9, color: C.green, fontFamily: MONO, marginTop: 2 }}>
-                      👤 {row._enrichedName}
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -2505,23 +2113,45 @@ if (!dbLoaded) return (
   </div>
   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
     {row._status === "generating" && <><Spinner /><span style={{ fontSize: 11, color: C.gold, fontFamily: MONO }}>Generating...</span></>}
- {/* ENRICH BUTTON */}
+
+    {/* ENRICH BUTTON */}
     <button
-      onClick={() => enrichGtmRow(row)}
-      disabled={gtmEnriching === row._id || gtmEnrichAll}
-      style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44",
-        background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED",
-        fontSize: 11, fontFamily: FONT, fontWeight: 500,
-        cursor: (gtmEnriching === row._id || gtmEnrichAll) ? "not-allowed" : "pointer",
-        display: "flex", alignItems: "center", gap: 5 }}
+     onClick={async () => {
+  setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: true } : r));
+  showGtmToast("🔍 Looking up via Apollo / Lusha...", "info", 8000);
+  try {
+    const res = await fetch("/api/enrich", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: row["Buying Persona"] || "",
+        company: row.Company,
+        jobTitle: row["Buying Persona"] || "",
+      }),
+    });
+    const data = await res.json();
+    if (data.email || data.phone) {
+      setGtmRows(prev => prev.map(r =>
+        r._id === row._id
+          ? { ...r, email: data.email || r.email, phone: data.phone || r.phone, _enriching: false, _enriched: data.source }
+          : r
+      ));
+      dbSave('v3_gtm_rows', String(row._id), { ...row, email: data.email, phone: data.phone, _enriched: data.source });
+      showGtmToast(`✅ ${data.source}: ${data.email || "no email"} ${data.phone ? "· " + data.phone : ""}`, "success");
+    } else {
+      setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
+      showGtmToast(`❌ Nothing found for "${row["Buying Persona"] || row.Company}" — check your API keys`, "error");
+    }
+  } catch (err) {
+    setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
+    showGtmToast(`❌ Enrichment error: ${err.message}`, "error");
+  }
+}}
+      disabled={row._enriching}
+      style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: row._enriching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}
     >
-      {gtmEnriching === row._id
-        ? <><Spinner /> Enriching...</>
-        : row._enriched
-          ? `✅ ${row._enrichedName || row._enriched}`
-          : "🔍 Enrich"}
+      {row._enriching ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enriched}` : "🔍 Enrich"}
     </button>
-   
 
     {/* ZOHO PUSH BUTTON */}
     {gen && (
@@ -2530,7 +2160,7 @@ if (!dbLoaded) return (
           setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: true, _zohoStatus: null } : r));
           try {
             await pushToZoho(
-             { name: row._personName || row["Buying Persona"], company: row.Company, jobTitle: row["Buying Persona"],email: row.email || "", phone: row.phone || "" },
+              { name: row["Buying Persona"], company: row.Company, jobTitle: row["Buying Persona"], email: row.email || "", phone: row.phone || "" },
               gen,
               `Data Stack: ${row["Data Stack Signal"]} | Tool: ${row["Tool Used"]} | Integration: ${row["Integration Opportunity"]}`
             );
@@ -2581,19 +2211,6 @@ if (!dbLoaded) return (
                     ))}
                   </div>
                 </div>
-                {(row._enrichedName || row._enrichedEmail) && (
-  <div style={{ marginTop: 10, padding: "10px 14px", background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 8, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-    <span style={{ fontSize: 10, fontFamily: MONO, color: C.green, fontWeight: 600 }}>✅ CONTACT via {row._enriched}</span>
-    {row._enrichedName  && <span style={{ fontSize: 12, color: C.navy, fontWeight: 600 }}>{row._enrichedName}</span>}
-    {row._enrichedEmail && <span style={{ fontSize: 11, color: C.textMid, fontFamily: MONO }}>✉️ {row._enrichedEmail}</span>}
-    {row._enrichedPhone && <span style={{ fontSize: 11, color: C.textMid, fontFamily: MONO }}>📱 {row._enrichedPhone}</span>}
-    {row._enrichedLI    && (
-      <a href={row._enrichedLI.startsWith("http") ? row._enrichedLI : "https://" + row._enrichedLI}
-        target="_blank" rel="noreferrer"
-        style={{ fontSize: 11, color: "#0077B5", fontFamily: MONO, textDecoration: "none" }}>💼 LinkedIn ↗</a>
-    )}
-  </div>
-)}
 
                 {gen ? (() => {
                   // Message tabs for GTM
@@ -3469,6 +3086,53 @@ if (!dbLoaded) return (
           </div>
         </div>
       </div>
+      {/* TOAST */}
+      {gtmToast && (
+        <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", zIndex: 999, padding: "12px 24px", borderRadius: 10, background: gtmToast.type === "success" ? "#0D9E6E" : gtmToast.type === "error" ? "#E53E3E" : "#1B6EF3", color: "#FFFFFF", fontSize: 13, fontFamily: FONT, fontWeight: 500, boxShadow: "0 4px 24px rgba(0,0,0,0.18)", maxWidth: 500, textAlign: "center", animation: "fadeUp 0.2s ease", whiteSpace: "pre-wrap" }}>
+          {gtmToast.msg}
+        </div>
+      )}
+
+      {/* SINGLE GTM PROSPECT MODAL */}
+      {showGtmForm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowGtmForm(false)}>
+          <div style={{ background: "#FFFFFF", borderRadius: 12, width: "min(620px, 96vw)", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(10,37,64,0.18)", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: "#0A2540", padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+              <div>
+                <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>Add Single Prospect to GTM</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 2, fontFamily: MONO }}>No Excel needed — add one row manually</div>
+              </div>
+              <button onClick={() => setShowGtmForm(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "#FFFFFF", fontSize: 16, cursor: "pointer", padding: "4px 10px", borderRadius: 6 }}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                {[
+                  { key: "Company", label: "Company *", placeholder: "Dream11", full: false },
+                  { key: "HQ", label: "HQ / Location", placeholder: "Mumbai, India", full: false },
+                  { key: "Employees", label: "Employee Count", placeholder: "1000–5000", full: false },
+                  { key: "Buying Persona", label: "Buying Persona / Name", placeholder: "VP Data Engineering", full: false },
+                  { key: "Data Stack Signal", label: "Data Stack Signal", placeholder: "Kafka, Flink, Spark", full: false },
+                  { key: "Tool Used", label: "Tool Used", placeholder: "Kafka Connect, Debezium", full: false },
+                  { key: "Cloud Provider", label: "Cloud Provider", placeholder: "AWS", full: false },
+                  { key: "Data Warehouse", label: "Data Warehouse", placeholder: "Snowflake, BigQuery", full: false },
+                  { key: "Use Case", label: "Use Case", placeholder: "Real-Time Analytics", full: false },
+                  { key: "email", label: "Email (optional)", placeholder: "person@company.com", full: false },
+                  { key: "Integration Opportunity", label: "Integration Opportunity", placeholder: "Kafka → Snowflake CDC pipeline", full: true },
+                ].map(field => (
+                  <div key={field.key} style={{ gridColumn: field.full ? "span 2" : "span 1" }}>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "#4A6080", display: "block", marginBottom: 4, fontFamily: FONT, textTransform: "uppercase", letterSpacing: "0.08em" }}>{field.label}</label>
+                    <input value={gtmForm[field.key] || ""} onChange={e => setGtmForm(prev => ({ ...prev, [field.key]: e.target.value }))} placeholder={field.placeholder} style={{ width: "100%", background: "#F8FAFC", border: "1px solid #D8E2EE", color: "#0A2540", borderRadius: 6, padding: "9px 12px", fontSize: 13, fontFamily: FONT, outline: "none", boxSizing: "border-box" }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ padding: "16px 24px", borderTop: "1px solid #E4ECF4", flexShrink: 0, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowGtmForm(false)} style={{ padding: "10px 20px", borderRadius: 6, border: "1px solid #E4ECF4", background: "#FFFFFF", color: "#4A6080", fontFamily: FONT, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+              <button onClick={addGtmRow} disabled={!gtmForm.Company} style={{ padding: "10px 24px", borderRadius: 6, border: "none", background: gtmForm.Company ? "linear-gradient(135deg, #1B6EF3, #3D8BFF)" : "#E4ECF4", color: gtmForm.Company ? "#FFFFFF" : "#8A9BB0", fontFamily: FONT, fontWeight: 600, fontSize: 13, cursor: gtmForm.Company ? "pointer" : "not-allowed" }}>+ Add to GTM List</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
