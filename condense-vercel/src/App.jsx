@@ -1420,11 +1420,12 @@ const runGtmBulkEnrich = async () => {
       const res = await fetch("/api/enrich", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: (row["Full Name"] || row["Prospect Name"] || "").trim(),
-          company: row.Company || "",
-          jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(),
-        }),
+      body: JSON.stringify({
+  name: (row["Full Name"] || row["Prospect Name"] || "").trim(),
+  company: row.Company || "",
+  jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(),
+  linkedinUrl: row.linkedinUrl || "",
+}),
       });
       const data = await res.json();
       if (data.found && (data.email || data.phone || data.name)) {
@@ -2144,7 +2145,10 @@ if (!dbLoaded) return (
                     {row._status === "generating" && <Spinner />}
                     {row._status === "error" && <span style={{ fontSize: 8, color: C.red, fontFamily: MONO }}>ERR</span>}
                   </div>
-                  <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>{row.HQ} · {row.Employees}</div>
+                 <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>{row.HQ} · {row.Employees}</div>
+{row._discoveredName && <div style={{ fontSize: 10, color: C.navy, fontFamily: FONT, fontWeight: 600, marginTop: 2 }}>👤 {row._discoveredName}</div>}
+{row.email && <div style={{ fontSize: 9, color: C.green, fontFamily: MONO, marginTop: 1 }}>✉️ {row.email}</div>}
+{row.phone && <div style={{ fontSize: 9, color: C.textDim, fontFamily: MONO, marginTop: 1 }}>📱 {row.phone}</div>}
                   <div style={{ fontSize: 9, color: C.gold, fontFamily: MONO, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row["Data Stack Signal"]}</div>
                   <div style={{ fontSize: 9, color: C.purple, fontFamily: MONO, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row["Integration Opportunity"]}</div>
                 </div>
