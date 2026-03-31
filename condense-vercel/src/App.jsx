@@ -2553,7 +2553,7 @@ if (!dbLoaded) return (
               {fu.prospects.map(p => (
                 <div
                   key={p.id}
-                  onClick={() => { setActiveView("prospects"); setSelected(p.id); setActiveTab("messages"); setActiveMsg(fu.key); }}
+                  onClick={() => { setSelected(p.id); setActiveTab("messages"); setActiveMsg(fu.key); }}
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#F8FAFC", borderRadius: 6, border: "1px solid #E4ECF4", cursor: "pointer", transition: "all 0.15s" }}
                   onMouseEnter={e => { e.currentTarget.style.background = "#EEF5FF"; e.currentTarget.style.borderColor = "#B8CCFF"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.borderColor = "#E4ECF4"; }}
@@ -2596,7 +2596,7 @@ if (!dbLoaded) return (
         <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>📋 Recent Prospects</div>
         {prospects.length === 0 ? <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, textAlign: "center", padding: "20px 0" }}>No prospects yet</div> :
           prospects.slice(-5).reverse().map(p => (
-            <div key={p.id} onClick={() => { setActiveView("prospects"); setSelected(p.id); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #F0F4F8", cursor: "pointer" }}>
+            <div key={p.id} onClick={() => { setSelected(p.id); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #F0F4F8", cursor: "pointer" }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 500, color: C.text, fontFamily: FONT }}>{p.name}</div>
                 <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{p.company}</div>
@@ -2672,7 +2672,7 @@ if (!dbLoaded) return (
     </div>
   </div>
 )}
-          </div>
+ </div>
         </div>
       </div>
       {/* TOAST */}
