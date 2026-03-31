@@ -6,9 +6,11 @@ export default async function handler(req, res) {
   const lastName = (name || "").split(" ").slice(1).join(" ");
 
   // Detect if "name" is actually a job title (e.g. "VP Data Engineering")
-  const titleWords = ["VP", "Head", "Director", "Manager", "Lead", "Chief", "CTO", "CEO", "CIO", "President", "Engineer", "Analyst", "Architect"];
-  const looksLikeTitle = !name || titleWords.some(t => (name || "").includes(t)) || (name || "").split(" ").length > 3;
-
+ const titleWords = ["VP", "Head", "Director", "Manager", "Lead", "Chief", "CTO", "CEO", "CIO", "President", "Engineer", "Analyst", "Architect", "Officer", "Founder", "Partner", "Consultant"];
+// Only treat as title if: no name provided, OR name contains a title word AND has no typical name structure
+const wordCount = (name || "").split(" ").filter(Boolean).length;
+const containsTitleWord = titleWords.some(t => (name || "").includes(t));
+const looksLikeTitle = !name || (containsTitleWord && wordCount <= 4) || wordCount > 5;
   console.log("ENRICH REQUEST:", { name, company, jobTitle, looksLikeTitle });
 
   // ── APOLLO ──────────────────────────────────────────────────────────────────
@@ -56,16 +58,36 @@ export default async function handler(req, res) {
         const person = apolloData?.people?.[0];
         if (person) {
           // Return whatever we have — even name-only if email is gated on paid plan
-          return res.json({
-            source: person.email ? "Apollo" : "Apollo (name only)",
-            found: true,
-            name: `${person.first_name || ""} ${person.last_name || ""}`.trim(),
-            email: person.email || "",
-            phone: person.phone_numbers?.[0]?.sanitized_number || "",
-            linkedinUrl: person.linkedin_url || linkedinUrl || "",
-            title: person.title || name || jobTitle || "",
-            company: person.organization?.name || company,
-          });
+          // For gated emails on free Apollo plan, try to reveal via match endpoint
+let revealedEmail = person.email || "";
+let revealedPhone = person.phone_numbers?.[0]?.sanitized_number || "";
+if (!revealedEmail && person.id) {
+  try {
+    const revealRes = await fetch("https://api.apollo.io/v1/people/match", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: process.env.APOLLO_API_KEY,
+        id: person.id,
+        reveal_personal_emails: true,
+        reveal_phone_number: true,
+      }),
+    });
+    const revealData = await revealRes.json();
+    revealedEmail = revealData?.person?.email || "";
+    revealedPhone = revealData?.person?.phone_numbers?.[0]?.sanitized_number || revealedPhone;
+  } catch(e) { /* silent */ }
+}
+return res.json({
+  source: revealedEmail ? "Apollo" : "Apollo (name only)",
+  found: true,
+  name: `${person.first_name || ""} ${person.last_name || ""}`.trim(),
+  email: revealedEmail,
+  phone: revealedPhone,
+  linkedinUrl: person.linkedin_url || linkedinUrl || "",
+  title: person.title || jobTitle || "",
+  company: person.organization?.name || company,
+});
         }
         console.log("APOLLO: No people found for this title/company — trying Lusha");
       } else {
