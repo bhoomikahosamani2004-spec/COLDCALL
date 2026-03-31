@@ -1458,7 +1458,7 @@ const runGtmBulkEnrich = async () => {
       body: JSON.stringify({
       name: (row["Full Name"] || row["Prospect Name"] || "").trim(),
       company: (row.Company || "").trim(),
-      jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(),
+      jobTitle: (row["Job Title"] || "").trim(),
       linkedinUrl: row.linkedinUrl || row.linkedinURL || "",
 }),
       });
@@ -2305,7 +2305,7 @@ if (!dbLoaded) return (
       body: JSON.stringify({
      name: (row["Full Name"] || row["Prospect Name"] || "").trim(),
      company: (row.Company || "").trim(),
-     jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(),
+     jobTitle: (row["Job Title"] || "").trim(),
      linkedinUrl: row.linkedinUrl || row.linkedinURL || "",
 }),
     });
