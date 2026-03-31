@@ -2093,18 +2093,7 @@ if (!dbLoaded) return (
         {/* ENRICH ALL */}
         {gtmRows.length > 0 && !gtmEnrichAll && !gtmBatchRunning && (
           <button onClick={enrichAllGtmRows}
- )}
-      
-{gtmEnrichAll && (
-  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44" }}>
-    <Spinner />
-    <span style={{ fontSize: 11, fontFamily: MONO, color: "#7C3AED" }}>
-      Enriching... {gtmRows.filter(r => r._enriched).length}/{gtmRows.length}
-    </span>
-    <button onClick={() => { gtmEnrichCancelRef.current = true; setGtmEnrichAll(false); }}
-      style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
-  </div>
-)}
+
       {/* FULL AGENT BUTTON */}
 {(row._status === "idle" || row._status === "error") && (
   <button
