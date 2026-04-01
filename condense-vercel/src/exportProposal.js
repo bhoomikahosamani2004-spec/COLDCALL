@@ -36,23 +36,30 @@ function drawWrapped(page, text, { x, y, font, size, color, maxWidth, leading })
 //                       findIndustryUseCases, onStart, onDone, onError })
 // ---------------------------------------------------------------------------
 
-export async function exportProposalPDF({
-  sel,
-  selResearch,
-  selMessages,
-  selMatchedStories = [],
-  findIndustryUseCases,
-  onStart,
-  onDone,
-  onError,
-}) {
+export async function exportProposalPDF({ sel, selResearch, selMessages, selMatchedStories, findIndustryUseCases, onStart, onDone, onError }) {
   try {
-    onStart?.();
+   onStart?.();
 
-    const company      = sel?.company || "Prospect";
-    const industry     = sel?.industry || "";
-    const researchData = selResearch || {};
+try {
 
+  const company = sel.company;
+
+  const industry = sel.industry || "";
+
+  const researchData = selResearch || {};
+
+  const data = findIndustryUseCases(company, industry, researchData);
+
+  // ... rest of function stays the same ...
+
+  onDone?.();
+
+} catch(err) {
+
+  onError?.(err);
+
+}
+ 
     // Get industry use-case content
     const data = findIndustryUseCases(company, industry, researchData);
 
