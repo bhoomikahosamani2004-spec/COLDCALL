@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
+import { exportProposalPDF } from "./exportProposal";
 import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_SUPABASE_URL 
   || process.env.REACT_APP_SUPABASE_URL 
@@ -441,8 +442,8 @@ Some relevant use cases where Condense can add value include:
 Unlike traditional streaming stacks that require heavy infrastructure management, Condense abstracts scaling, operations, and monitoring, allowing engineering teams to focus on building mobility applications rather than managing data infrastructure.
 As a pre-read, sharing the below information on Condense.
 - Condense Overview: https://docs.zeliot.in/condense
-- Case Studies: https://www.zeliot.in/case-studies
-- About Zeliot: https://bento.me/zeliotofficial
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot:  www.zeliot.in/quick-links
 - Get Started with Condense: https://bit.ly/3NmxJpe
 Zeliot supports leading mobility and automotive companies such as TVS Motor, Volvo, Montra Electric, Bosch, Eicher, CEAT, Royal Enfield, Tata Motors, Adani Ports & Logistics, SML ISUZU, and Ashok Leyland helping them build large-scale connected vehicle platforms, process high-frequency telematics data, and enable real-time mobility intelligence services.
 I would be happy to walk you through how leading mobility platforms are using Condense. Please let me know a convenient time for a short discussion next week.
@@ -469,8 +470,8 @@ Operational intelligence for logistics and fulfillment – Enabling real-time mo
 Many teams we work with have been able to reduce their streaming infrastructure and data pipeline costs by 40–50%, while significantly simplifying the engineering effort required to maintain these pipelines.
 As a pre-read, sharing the below information on Condense.
 - Condense Overview: https://docs.zeliot.in/condense
-- Case Studies: https://www.zeliot.in/case-studies
-- About Zeliot: https://bento.me/zeliotofficial
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot:  www.zeliot.in/quick-links
 - Get Started with Condense: https://bit.ly/3NmxJpe
 I would love to explore whether there might be an opportunity to support [Company]'s analytics platform with real-time data capabilities or help optimize parts of the current streaming architecture.
 Would you be open to a 30 minute conversation sometime next week?
@@ -497,8 +498,8 @@ Below are a few relevant use cases where Condense can add value:
 By reducing operational complexity and centralizing real-time ingestion and transformation, Condense helps data engineering teams focus on building reliable, scalable data products rather than maintaining streaming infrastructure.
 As a pre-read, sharing the below information on Condense.
 - Condense Overview: https://docs.zeliot.in/condense
-- Case Studies: https://www.zeliot.in/case-studies
-- About Zeliot: https://bento.me/zeliotofficial
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot:  www.zeliot.in/quick-links
 - Get Started with Condense: https://bit.ly/3NmxJpe
 Proven Adoption: Condense is already trusted in production by leading organizations, including TVS, Volvo Eicher, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield — supporting real-time vehicle data, manufacturing visibility, and digital platform initiatives at scale.
 I would welcome 30 minutes at your convenience to understand your current GCP streaming architecture and explore whether Condense could optimize performance, cost, or operational efficiency in your setup.
@@ -539,8 +540,8 @@ Accelerate AI, analytics, and intelligent automation – Provide AI/ML models, d
 Reduce integration sprawl – Replace fragmented, point-to-point integrations with a scalable streaming layer that simplifies operations and supports long-term platform and product evolution.
 As a pre-read, sharing the below information on Condense.
 - Condense Overview: https://docs.zeliot.in/condense
-- Case Studies: https://www.zeliot.in/case-studies
-- About Zeliot: https://bento.me/zeliotofficial
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot:  www.zeliot.in/quick-links
 - Get Started with Condense: https://bit.ly/3NmxJpe
 Proven Adoption: Condense is already trusted in production by leading automotive and mobility organizations, including TVS Motor, Eicher Motors, SML Isuzu, Tata Motors, Ashok Leyland, Instavans, Switch Mobility, Montra Electric, and Royal Enfield.
 If helpful, I'd be glad to share a brief overview focused on how Condense supports internal product platforms, AI readiness, and continuous process excellence.
@@ -561,10 +562,9 @@ Zeliot
 
 As a pre-read, sharing the below information on Condense.
 - Condense Overview: https://docs.zeliot.in/condense
-- Case Studies: https://www.zeliot.in/case-studies
-- About Zeliot: https://bento.me/zeliotofficial
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot:  www.zeliot.in/quick-links
 - Get Started with Condense: https://bit.ly/3NmxJpe
-
 Omitting this block is a HARD ERROR. It must appear in every email_body without exception.
 - Total length: 350-500 words
 - No asterisks, no markdown, no bold in email body
@@ -769,7 +769,7 @@ function Input({ label, value, onChange, placeholder, type = "text" }) {
 function SendButtons({ prospect, messageText, messageType, emailSubject, senderProfile = {} }) {
   const phone = senderProfile.phone || prospect.phone || "";
   const email = prospect.email || "";
-  const name = prospect.name || "";
+  const _name = prospect.name || "";
 
   const sendWhatsApp = () => {
     const encoded = encodeURIComponent(messageText);
@@ -869,14 +869,14 @@ const [edits, setEdits] = useState({});
 const [replies, setReplies] = useState([]);
 const [notifications, setNotifications] = useState([]);
 const [dbLoaded, setDbLoaded] = useState(false);
-
+const [exportingPDF, setExportingPDF] = useState(false);
 useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
   const [p, r, m, e, rep, n, rat, tr] = await Promise.all([
-  dbLoad('prospects'), dbLoad('research'), dbLoad('messages'),
-  dbLoad('edits'), dbLoad('replies'), dbLoad('notifications'),
-  dbLoad('ratings'), dbLoad('training'),
+  dbLoad('v2_prospects'), dbLoad('v2_research'), dbLoad('v2_messages'),
+  dbLoad('v2_edits'), dbLoad('v2_replies'), dbLoad('v2_notifications'),
+  dbLoad('v2_ratings'), dbLoad('v2_training'),
 ]);
     setProspects(Object.values(p).sort((a, b) => {
   // Ready/Following first, then by newest created
@@ -933,50 +933,53 @@ const [activeView, setActiveView] = useState("prospects"); // prospects | dashbo
 const [zohoPushing, setZohoPushing] = useState(false);      
 const [zohoPushStatus, setZohoPushStatus] = useState({});
 const [searchQuery, setSearchQuery] = useState("");
+const [sidebarFilter, setSidebarFilter] = useState("all");
 const [ratings, setRatings] = useState({});
 const [ratingFeedback, setRatingFeedback] = useState({});
 const [trainingExamples, setTrainingExamples] = useState([]);
+const [enriching, setEnriching] = useState(null);
+const [enrichedData, setEnrichedData] = useState({});
   
 
   // Persist state changes
   useEffect(() => {
   if (!dbLoaded) return;
-  prospects.forEach(p => dbSave('prospects', p.id, p));
+  prospects.forEach(p => dbSave('v2_prospects', p.id, p));
 }, [prospects, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(research).forEach(([id, val]) => dbSave('research', id, val));
+  Object.entries(research).forEach(([id, val]) => dbSave('v2_research', id, val));
 }, [research, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(messages).forEach(([id, val]) => dbSave('messages', id, val));
+  Object.entries(messages).forEach(([id, val]) => dbSave('v2_messages', id, val));
 }, [messages, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(edits).forEach(([id, val]) => dbSave('edits', id, val));
+  Object.entries(edits).forEach(([id, val]) => dbSave('v2_edits', id, val));
 }, [edits, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  replies.forEach(r => dbSave('replies', r.id, r));
+  replies.forEach(r => dbSave('v2_replies', r.id, r));
 }, [replies, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  notifications.forEach(n => dbSave('notifications', n.id || `n_${Date.now()}`, n));
+  notifications.forEach(n => dbSave('v2_notifications', n.id || `n_${Date.now()}`, n));
 }, [notifications, dbLoaded]);
   
   useEffect(() => {
   if (!dbLoaded) return;
-  Object.entries(ratings).forEach(([id, val]) => dbSave('ratings', id, val));
+  Object.entries(ratings).forEach(([id, val]) => dbSave('v2_ratings', id, val));
 }, [ratings, dbLoaded]);
 
 useEffect(() => {
   if (!dbLoaded) return;
-  trainingExamples.forEach(t => dbSave('training', t.id, t));
+  trainingExamples.forEach(t => dbSave('v2_training', t.id, t));
 }, [trainingExamples, dbLoaded]);
   
   useEffect(() => {
@@ -1019,6 +1022,7 @@ useEffect(() => {
     checkNotifs();
     const interval = setInterval(checkNotifs, 5 * 60 * 1000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prospects]);
 
   const addLog = (id, msg) => setLogs(prev => ({ ...prev, [id]: [...(prev[id] || []), msg] }));
@@ -1197,6 +1201,33 @@ const extraCtx = extraContext[id] || "";
   const data = await res.json();
   if (data.data?.[0]?.status === "success") return true;
   throw new Error(data.message || "Push failed");
+}
+  async function enrichProspect(prospect) {
+  setEnriching(prospect.id);
+  try {
+    const res = await fetch("/api/enrich", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: prospect.name,
+        company: prospect.company,
+        jobTitle: prospect.jobTitle,
+        linkedinUrl: prospect.linkedinUrl,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    setProspects(prev => prev.map(p =>
+      p.id === prospect.id
+        ? { ...p, email: data.email || p.email, phone: data.phone || p.phone, linkedinUrl: data.linkedinUrl || p.linkedinUrl, jobTitle: data.title || p.jobTitle }
+        : p
+    ));
+    setEnrichedData(prev => ({ ...prev, [prospect.id]: data }));
+    addLog(prospect.id, `✅ Enriched via ${data.source} — ${data.email || "no email found"}`);
+  } catch (err) {
+    addLog(prospect.id, `❌ Enrichment failed: ${err.message}`);
+  }
+  setEnriching(null);
 }
 
   const saveReply = () => {
@@ -1544,7 +1575,7 @@ if (!dbLoaded) return (
                         ⚡ Generate {selectedCount} Scripts
                       </button>
                       <button onClick={() => setBatchOpen(false)}
-                        style={{ width: "100%", padding: "10px", borderRadius: 5, border: "1px solid #E4ECF4", background: "#FFFFFF", color: C.textMid, fontFamily: FONT, fontSize: 12, cursor: "pointer", borderRadius: 6 }}>
+                        style={{ width: "100%", padding: "10px", borderRadius: 6, border: "1px solid #E4ECF4", background: "#FFFFFF", color: C.textMid, fontFamily: FONT, fontSize: 12, cursor: "pointer" }}>
                         Cancel
                       </button>
                     </div>
@@ -1680,6 +1711,43 @@ if (!dbLoaded) return (
     <span style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: DISPLAY }}>Prospects ({prospects.length})</span>
     {prospects.length > 0 && <span style={{ fontSize: 10, color: C.textDim }}>{prospects.filter(p=>p.status==="ready"||p.status==="following").length} active</span>}
   </div>
+                {/* FOLLOW-UP FILTER BUTTONS */}
+<div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+  {[
+    { label: "All", value: "all" },
+    { label: "📧 E+3 Due", value: "followup1" },
+    { label: "📧 E+7 Due", value: "followup2" },
+  ].map(f => {
+    const count = f.value === "all" ? prospects.length
+      : prospects.filter(p => {
+          if (!p.sentAt || p.status === "done") return false;
+          const day = f.value === "followup1" ? 3 : 7;
+          const d = getDaysUntilFollowup(p, day);
+          return d !== null && d <= 0;
+        }).length;
+    const isActive = (sidebarFilter || "all") === f.value;
+    return (
+      <button
+        key={f.value}
+        onClick={() => setSidebarFilter(f.value)}
+        style={{
+          padding: "4px 10px", borderRadius: 20, border: `1px solid ${isActive ? C.gold : "#E4ECF4"}`,
+          background: isActive ? C.goldDim : "#F8FAFC",
+          color: isActive ? C.gold : C.textDim,
+          fontSize: 10, fontFamily: MONO, cursor: "pointer", fontWeight: isActive ? 700 : 400,
+          display: "flex", alignItems: "center", gap: 4
+        }}
+      >
+        {f.label}
+        {count > 0 && (
+          <span style={{ background: isActive ? C.gold : "#E4ECF4", color: isActive ? "#fff" : C.textMid, borderRadius: 8, padding: "0px 5px", fontSize: 9, fontWeight: 700 }}>
+            {count}
+          </span>
+        )}
+      </button>
+    );
+  })}
+</div>
   <div style={{ position: "relative" }}>
     <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.textDim, pointerEvents: "none" }}>🔍</span>
     <input
@@ -1699,12 +1767,28 @@ if (!dbLoaded) return (
                   <div style={{ fontSize: 12, color: C.textDim, lineHeight: 1.7, fontFamily: FONT }}>Add your first prospect above<br/>or upload a CSV file</div>
                 </div>
              ) : prospects.filter(p => {
-                  if (!searchQuery.trim()) return true;
-                  const q = searchQuery.toLowerCase();
-                  return (p.name || "").toLowerCase().includes(q) ||
-                         (p.company || "").toLowerCase().includes(q) ||
-                         (p.jobTitle || "").toLowerCase().includes(q);
-                }).map(p => (
+  // Search filter
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    if (!(
+      (p.name || "").toLowerCase().includes(q) ||
+      (p.company || "").toLowerCase().includes(q) ||
+      (p.jobTitle || "").toLowerCase().includes(q)
+    )) return false;
+  }
+  // Follow-up filter
+  if (sidebarFilter === "followup1") {
+    if (!p.sentAt || p.status === "done") return false;
+    const d = getDaysUntilFollowup(p, 3);
+    return d !== null && d <= 0;
+  }
+  if (sidebarFilter === "followup2") {
+    if (!p.sentAt || p.status === "done") return false;
+    const d = getDaysUntilFollowup(p, 7);
+    return d !== null && d <= 0;
+  }
+  return true;
+}).map(p => (
                 <div key={p.id} className="card-enter prospect-card" onClick={() => setSelected(p.id)} style={{ padding: "11px 14px", marginBottom: 0, background: selected === p.id ? "#EEF5FF" : "#FFFFFF", borderBottom: "1px solid #F0F4F8", borderLeft: selected === p.id ? "3px solid #1B6EF3" : "3px solid transparent" }}>
                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
   <div style={{ fontWeight: 600, fontSize: 13, color: selected === p.id ? C.navy : C.text, lineHeight: 1.3, fontFamily: FONT }}>{p.name}</div>
@@ -1716,10 +1800,10 @@ if (!dbLoaded) return (
         if (selected === p.id) setSelected(null);
         setProspects(prev => prev.filter(pr => pr.id !== p.id));
         if (supabase) {
-          supabase.from('prospects').delete().eq('id', p.id);
-          supabase.from('research').delete().eq('id', p.id);
-          supabase.from('messages').delete().eq('id', p.id);
-          supabase.from('edits').delete().eq('id', p.id);
+          supabase.from('v2_prospects').delete().eq('id', p.id);
+          supabase.from('v2_research').delete().eq('id', p.id);
+          supabase.from('v2_messages').delete().eq('id', p.id);
+          supabase.from('v2_edits').delete().eq('id', p.id);
         }
         setResearch(prev => { const n = {...prev}; delete n[p.id]; return n; });
         setMessages(prev => { const n = {...prev}; delete n[p.id]; return n; });
@@ -1758,6 +1842,65 @@ if (!dbLoaded) return (
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}>Dashboard</div>
       <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Engagement tracking & batch analytics</div>
     </div>
+    {/* FOLLOW-UP DUE TODAY */}
+{(() => {
+  const followUps = [
+  { day: 3, label: "Email Follow-Up 1 Due", color: C.amber, key: "email_followup1" },
+  { day: 7, label: "Email Follow-Up 2 Due", color: C.red, key: "email_followup2" },
+].map(fu => ({
+  ...fu,
+  prospects: prospects.filter(p => {
+    if (!p.sentAt || p.status === "done") return false;
+    const d = getDaysUntilFollowup(p, fu.day);
+    return d !== null && d <= 0;
+  })
+})).filter(fu => fu.prospects.length > 0);
+
+  if (followUps.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 12 }}>
+        🔔 Follow-Ups Due Now
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {followUps.map(fu => (
+          <div key={fu.day} style={{ background: "#FFFFFF", border: `1px solid ${fu.color}33`, borderRadius: 10, padding: "14px 18px", boxShadow: "0 1px 4px rgba(10,37,64,0.06)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 16 }}>📨</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: fu.color, fontFamily: FONT }}>{fu.label}</span>
+                <span style={{ fontSize: 11, fontFamily: MONO, color: fu.color, background: `${fu.color}15`, padding: "2px 8px", borderRadius: 10, border: `1px solid ${fu.color}33` }}>
+                  {fu.prospects.length} prospect{fu.prospects.length > 1 ? "s" : ""}
+                </span>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {fu.prospects.map(p => (
+                <div
+                  key={p.id}
+                  onClick={() => { setActiveView("prospects"); setSelected(p.id); setActiveTab("messages"); setActiveMsg(fu.key); }}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#F8FAFC", borderRadius: 6, border: "1px solid #E4ECF4", cursor: "pointer", transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "#EEF5FF"; e.currentTarget.style.borderColor = "#B8CCFF"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#F8FAFC"; e.currentTarget.style.borderColor = "#E4ECF4"; }}
+                >
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT }}>{p.name}</div>
+                    <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{p.company} · {p.jobTitle || "—"}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 10, fontFamily: MONO, color: fu.color, fontWeight: 600 }}>OVERDUE</span>
+                    <span style={{ fontSize: 11, color: C.gold, fontFamily: FONT }}>View →</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+})()}
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
       {[
         { label: "Messages Generated", value: prospects.filter(p => p.status !== "idle").length, icon: "✉️", color: C.blue },
@@ -1905,7 +2048,39 @@ if (!dbLoaded) return (
                           {running === sel.id ? <><Spinner /> Running...</> : "⚡  Run Agent"}
                         </GlowButton>
                       )}
+                      {(!sel.email || !sel.linkedinUrl) && (
+  <button
+    onClick={() => enrichProspect(sel)}
+    disabled={enriching === sel.id}
+    style={{
+      padding: "8px 14px", borderRadius: 6,
+      border: `1px solid #7C3AED44`,
+      background: enrichedData[sel.id] ? "#F5F0FF" : "#FAF5FF",
+      color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500,
+      cursor: enriching === sel.id ? "not-allowed" : "pointer",
+      display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s"
+    }}
+  >
+    {enriching === sel.id ? <><Spinner /> Enriching...</> 
+     : enrichedData[sel.id] ? `✅ via ${enrichedData[sel.id].source}` 
+     : "🔍 Enrich"}
+  </button>
+)}
 {sel.status === "ready" && <GlowButton onClick={() => markSent(sel.id)} color={C.green} primary>✓ Mark Sent</GlowButton>}
+                      {selMessages && (
+  <GlowButton
+    onClick={() => exportProposalPDF({
+      sel, selResearch, selMessages, selMatchedStories, findIndustryUseCases,
+      onStart: () => setExportingPDF(true),
+      onDone: () => setExportingPDF(false),
+      onError: () => setExportingPDF(false),
+    })}
+    disabled={exportingPDF}
+    color="#7C3AED"
+  >
+    {exportingPDF ? <><Spinner /> Generating PDF...</> : "📄 Export Proposal"}
+  </GlowButton>
+)}
 {selMessages && (
   <button
     onClick={async () => {
