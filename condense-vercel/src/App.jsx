@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { exportProposalPDF } from "./exportProposal";
-import { exportGtmProposalPDF } from './exportGtmProposal';
+
 import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_SUPABASE_URL 
   || process.env.REACT_APP_SUPABASE_URL 
@@ -871,7 +871,7 @@ const [replies, setReplies] = useState([]);
 const [notifications, setNotifications] = useState([]);
 const [dbLoaded, setDbLoaded] = useState(false);
 const [exportingPDF, setExportingPDF] = useState(false);
-const [exportingGtmPDF, setExportingGtmPDF] = useState(false);
+
 useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
@@ -2382,31 +2382,7 @@ if (!dbLoaded) return (
         {row._zohoPushing ? <><Spinner /> Pushing...</> : row._zohoStatus === "success" ? "✅ Pushed!" : row._zohoStatus === "error" ? "❌ Failed" : "☁️ Zoho"}
       </button>
     )}
-{/* EXPORT PDF BUTTON — add after the Zoho push button */}
-{gen && (
-  <button
-    onClick={() => exportGtmProposalPDF({
-      row,
-      gen,
-      onStart: () => setExportingGtmPDF(true),
-      onDone:  () => setExportingGtmPDF(false),
-      onError: () => setExportingGtmPDF(false),
-    })}
-    disabled={exportingGtmPDF}
-    style={{
-      padding: "6px 12px", borderRadius: 6,
-      border: "1px solid #7C3AED44",
-      background: "#FAF5FF",
-      color: "#7C3AED",
-      fontSize: 11, fontFamily: FONT, fontWeight: 500,
-      cursor: exportingGtmPDF ? "not-allowed" : "pointer",
-      display: "flex", alignItems: "center", gap: 5,
-      opacity: exportingGtmPDF ? 0.6 : 1,
-    }}
-  >
-    {exportingGtmPDF ? <><Spinner /> Generating...</> : "📄 Export PDF"}
-  </button>
-)}
+
     {/* GENERATE BUTTON */}
     {(row._status === "idle" || row._status === "error") && (
       <button onClick={() => generateGtmEmail(row)} disabled={gtmRunning !== null} style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
