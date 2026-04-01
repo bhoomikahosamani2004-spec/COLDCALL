@@ -61,8 +61,8 @@ export default async function handler(req, res) {
   if (process.env.LUSHA_API_KEY) {
     try {
       console.log("Trying Lusha for:", firstName, lastName, company);
-      const lushaRes = await fetch(
-        `https://api.lusha.com/v2/person?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&company=${encodeURIComponent(company)}`,
+    const lushaRes = await fetch(
+  `https://api.lusha.com/v2/person?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&companyName=${encodeURIComponent(company)}`,
         {
           method: "GET",
           headers: {
