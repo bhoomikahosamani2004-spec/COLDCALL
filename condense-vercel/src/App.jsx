@@ -1591,7 +1591,7 @@ if (!dbLoaded) return (
             </div>
             {[
             { key: "prospects", label: "🎯 Prospects" },
-            { key: "gtm", label: "📊 GTM Excel" },
+            { key: "gtm", label: "📊 Tech GTM" },
             { key: "dashboard", label: "📊 Dashboard" },
             { key: "training", label: "🧠 Training" },
 ].map(v => (
@@ -2120,8 +2120,8 @@ if (!dbLoaded) return (
     {/* GTM Header */}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
       <div>
-        <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}>GTM Excel Engine</div>
-        <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Upload India GTM Excel → Gemini generates Dream11-style emails per data stack signal</div>
+        <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}> Tech GTM</div>
+        <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Upload India Tech GTM → Gemini generates Dream11-style emails per data stack signal</div>
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {gtmRows.length > 0 && gtmRows.filter(r => r._status === "idle").length > 0 && !gtmBatchRunning && (
@@ -2161,7 +2161,7 @@ if (!dbLoaded) return (
     {gtmRows.length === 0 ? (
       <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 12, padding: "60px 32px", textAlign: "center" }}>
         <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>📊</div>
-        <div style={{ fontSize: 15, color: C.textMid, marginBottom: 8 }}>Upload your India GTM Excel file</div>
+        <div style={{ fontSize: 15, color: C.textMid, marginBottom: 8 }}>Upload your India Tech GTM file</div>
         <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, marginBottom: 24, lineHeight: 1.9 }}>
           Required columns: Company · HQ · Employees · Data Stack Signal<br/>
           Tool Used · Use Case · Cloud Provider · Data Warehouse · Buying Persona · Integration Opportunity
