@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
   const { name, company, jobTitle, linkedinUrl } = req.body;
   if (!company) return res.status(400).json({ found: false, error: "Company is required" });
@@ -76,10 +76,10 @@ export default async function handler(req, res) {
       console.log("Lusha response:", JSON.stringify(lushaData).slice(0, 300));
 
       // ✅ FIX 2: Check array length properly
-      const email = lushaData?.emailAddresses?.[0]?.emailAddress || "";
-      const phone = lushaData?.phoneNumbers?.[0]?.localNumber || "";
-      const lushaName = lushaData?.fullName
-        || `${lushaData?.firstName || ""} ${lushaData?.lastName || ""}`.trim();
+     const d = lushaData?.contact?.data || lushaData;
+const email = d?.emailAddresses?.[0]?.email || d?.emailAddresses?.[0]?.emailAddress || "";
+const phone = d?.phoneNumbers?.[0]?.number || d?.phoneNumbers?.[0]?.localNumber || "";
+const lushaName = d?.fullName || `${d?.firstName || ""} ${d?.lastName || ""}`.trim();
 
       if (email || phone || lushaName) {
         return res.json({
@@ -89,8 +89,9 @@ export default async function handler(req, res) {
           email,
           linkedinUrl: linkedinUrl || "",
           phone,
-          title: lushaData?.title || jobTitle || "",
-          company: lushaData?.company || company,
+          title: d?.jobTitle?.title || d?.title || jobTitle || "",
+          company: d?.company?.name || d?.company || company,
+          linkedinUrl: d?.socialLinks?.linkedIn || linkedinUrl || "",
         });
       } else {
         console.warn("Lusha returned no usable data:", lushaData);
