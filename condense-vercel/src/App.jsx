@@ -2153,25 +2153,21 @@ if (!dbLoaded) return (
   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
     {running === p.id && <Spinner />}
     <button
-      onClick={e => {
+     onClick={async e => {
         e.stopPropagation();
         if (selected === p.id) setSelected(null);
         setProspects(prev => prev.filter(pr => pr.id !== p.id));
         if (supabase) {
-          supabase.from('v3_prospects').delete().eq('id', p.id);
-          supabase.from('v3_research').delete().eq('id', p.id);
-          supabase.from('v3_messages').delete().eq('id', p.id);
-          supabase.from('v3_edits').delete().eq('id', p.id);
+          await Promise.all([
+            supabase.from('v3_prospects').delete().eq('id', p.id),
+            supabase.from('v3_research').delete().eq('id', p.id),
+            supabase.from('v3_messages').delete().eq('id', p.id),
+            supabase.from('v3_edits').delete().eq('id', p.id),
+          ]);
         }
        setResearch(prev => { const n = {...prev}; delete n[p.id]; return n; });
         setMessages(prev => { const n = {...prev}; delete n[p.id]; return n; });
         setEdits(prev => { const n = {...prev}; Object.keys(n).filter(k => k.startsWith(p.id)).forEach(k => delete n[k]); return n; });
-        if (supabase) {
-          supabase.from('v3_prospects').delete().eq('id', p.id);
-          supabase.from('v3_research').delete().eq('id', p.id);
-          supabase.from('v3_messages').delete().eq('id', p.id);
-          supabase.from('v3_edits').delete().eq('id', p.id);
-        }
       }}
       title="Remove prospect"
       style={{ background: "none", border: "none", cursor: "pointer", color: C.textFaint, fontSize: 14, lineHeight: 1, padding: "0 2px", borderRadius: 3 }}
@@ -2334,7 +2330,7 @@ if (!dbLoaded) return (
     {row._status === "generating" && <Spinner />}
     {row._status === "error" && <span style={{ fontSize: 8, color: C.red, fontFamily: MONO }}>ERR</span>}
     <button
-      onClick={e => {
+      onClick={async e => {
         e.stopPropagation();
         if (gtmSelected === row._id) {
           const remaining = gtmRows.filter(r => r._id !== row._id);
@@ -2344,9 +2340,11 @@ if (!dbLoaded) return (
         setGtmGenerated(prev => { const n = {...prev}; delete n[row._id]; return n; });
         setGtmResearch(prev => { const n = {...prev}; delete n[String(row._id)]; return n; });
         if (supabase) {
-          supabase.from('v3_gtm_rows').delete().eq('id', String(row._id));
-          supabase.from('v3_gtm_messages').delete().eq('id', String(row._id));
-          supabase.from('v3_gtm_research').delete().eq('id', String(row._id));
+          await Promise.all([
+            supabase.from('v3_gtm_rows').delete().eq('id', String(row._id)),
+            supabase.from('v3_gtm_messages').delete().eq('id', String(row._id)),
+            supabase.from('v3_gtm_research').delete().eq('id', String(row._id)),
+          ]);
         }
       }}
       title="Remove"
