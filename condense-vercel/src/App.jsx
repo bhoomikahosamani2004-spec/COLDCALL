@@ -975,6 +975,9 @@ const [gtmSearchQuery, setGtmSearchQuery] = useState("");
 const [gtmSidebarFilter, setGtmSidebarFilter] = useState("all");
 const [gtmBatchEnriching, setGtmBatchEnriching] = useState(false);
 const [gtmEnrichProgress, setGtmEnrichProgress] = useState(0);
+const [gtmBatchOpen, setGtmBatchOpen] = useState(false);
+const [gtmBatchFrom, setGtmBatchFrom] = useState(1);
+const [gtmBatchTo, setGtmBatchTo] = useState(30);
 const gtmEnrichCancelRef = useRef(false);
 const [gtmResearch, setGtmResearch] = useState({});
 const [gtmResearchRunning, setGtmResearchRunning] = useState(null);
@@ -1611,17 +1614,20 @@ const runGtmBulkEnrich = async () => {
   }
   setBatchEnrichRunning(false);
 };
-const runGtmBatch = async () => {
-  const queue = gtmRows.filter(r => r._status === "idle");
-  if (queue.length === 0) return;
+const runGtmBatch = async (queue) => {
+  if (!queue || queue.length === 0) return;
   setGtmBatchRunning(true);
+  setGtmBatchOpen(false);
   gtmCancelRef.current = false;
   setGtmBatchProgress(0);
   for (let i = 0; i < queue.length; i++) {
     if (gtmCancelRef.current) break;
     setGtmBatchProgress(i + 1);
+    // Research first, then generate
+    await runGtmResearch(queue[i]);
+    if (gtmCancelRef.current) break;
     await generateGtmEmail(queue[i]);
-    if (i < queue.length - 1) await new Promise(r => setTimeout(r, 32000));
+    if (i < queue.length - 1 && !gtmCancelRef.current) await new Promise(r => setTimeout(r, 32000));
   }
   setGtmBatchRunning(false);
 };
@@ -2258,10 +2264,10 @@ if (!dbLoaded) return (
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         {gtmRows.length > 0 && gtmRows.filter(r => r._status === "idle").length > 0 && !gtmBatchRunning && (
-          <button onClick={runGtmBatch} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-            ⚡ Generate All ({gtmRows.filter(r => r._status === "idle").length})
-          </button>
-        )}
+  <button onClick={() => { setGtmBatchFrom(1); setGtmBatchTo(Math.min(30, gtmRows.filter(r => r._status === "idle").length)); setGtmBatchOpen(true); }} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+    ⚡ Batch Run ({gtmRows.filter(r => r._status === "idle").length})
+  </button>
+)}
         {gtmBatchRunning && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "rgba(27,110,243,0.1)", border: "1px solid #B8D4FF" }}>
             <Spinner />
@@ -2494,22 +2500,24 @@ if (!dbLoaded) return (
               )}
 
               {/* RESEARCH + GENERATE — single combined button */}
-              <button
-                onClick={async () => {
-                  // Run research first, then generate email using research context
-                  await runGtmResearch(row);
-                  setActiveGtmPanel("research");
-                }}
-                disabled={gtmResearchRunning === row._id}
-                style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: research ? "linear-gradient(135deg, #0D9E6E, #16B87E)" : "linear-gradient(135deg, #7C3AED, #9F67FF)", color: "#fff", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: gtmResearchRunning === row._id ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6, opacity: gtmResearchRunning === row._id ? 0.7 : 1 }}>
-                {gtmResearchRunning === row._id ? <><Spinner /> Researching...</> : research ? "↺ Re-research" : "🔬 Research"}
-              </button>
 
-              {/* GENERATE EMAIL */}
-              <button onClick={() => { generateGtmEmail(row); setActiveGtmPanel("email"); }} disabled={gtmRunning !== null}
-                style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: gen ? "#fff" : "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: gen ? C.textMid : "#fff", border: gen ? "1px solid #D8E2EE" : "none", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
-                {gtmRunning === row._id ? <><Spinner /> Generating...</> : gen ? "↺ Regenerate" : "⚡ Generate Email"}
-              </button>
+            <button
+  onClick={async () => {
+    const isRunning = gtmResearchRunning === row._id || gtmRunning === row._id;
+    if (isRunning) return;
+    setActiveGtmPanel("research");
+    await runGtmResearch(row);
+    await generateGtmEmail(row);
+    setActiveGtmPanel("email");
+  }}
+  disabled={gtmResearchRunning === row._id || gtmRunning === row._id}
+  style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: (gtmResearchRunning === row._id || gtmRunning === row._id) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6, opacity: (gtmResearchRunning === row._id || gtmRunning === row._id) ? 0.6 : 1 }}>
+  {(gtmResearchRunning === row._id || gtmRunning === row._id)
+    ? <><Spinner /> {gtmResearchRunning === row._id ? "Researching..." : "Generating..."}</>
+    : gen ? "↺ Re-run Agent" : "⚡ Run Agent"}
+</button>
+              
+             
             </div>
           </div>
 
@@ -2589,7 +2597,7 @@ if (!dbLoaded) return (
                       <GlowButton
                         small
                         onClick={() => exportProposalPDF({
-                          sel: { name: row._discoveredName || row["Buying Persona"] || row.Company, jobTitle: row["Buying Persona"] || "", company: row.Company, email: row.email || "", phone: row.phone || "" },
+                          sel: { name: row._discoveredName || row["Full Name"] || row["Prospect Name"] || row.Company, jobTitle: row["Job Title"] || "", company: row.Company, email: row.email || "", phone: row.phone || "" },
                           selResearch: gtmResearch[String(row._id)] || {},
                           selMessages: gen,
                           selMatchedStories: findMatchingStories(row.Company, row["Data Stack Signal"] || "", gtmResearch[String(row._id)] || {}),
@@ -3896,7 +3904,133 @@ if (!dbLoaded) return (
           {gtmToast.msg}
         </div>
       )}
+{/* GTM BATCH RUN MODAL */}
+{gtmBatchOpen && (() => {
+  const idleList = gtmRows.filter(r => r._status === "idle");
+  const total = idleList.length;
+  const selectedQueue = idleList.slice(Math.max(0, gtmBatchFrom - 1), gtmBatchTo);
+  const selectedCount = selectedQueue.length;
+  const estMins = Math.round(selectedCount * 1.2);
+  const PRESETS = [
+    { label: "First 5", from: 1, to: 5 },
+    { label: "First 10", from: 1, to: 10 },
+    { label: "First 25", from: 1, to: 25 },
+    { label: "All", from: 1, to: total },
+  ];
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setGtmBatchOpen(false)}>
+      <div style={{ background: "#FFFFFF", border: "1px solid #D0DCF0", borderRadius: 12, width: "min(860px, 96vw)", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 0 60px rgba(14,165,233,0.18)", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
 
+        {/* Header */}
+        <div style={{ padding: "22px 28px 18px", borderBottom: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexShrink: 0 }}>
+          <div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.navy, marginBottom: 4 }}>GTM Batch Run</div>
+            <div style={{ fontSize: 11, color: C.textMid, fontFamily: MONO }}>
+              <span style={{ color: C.gold }}>{total}</span> idle ·{" "}
+              <span style={{ color: C.green }}>{gtmRows.filter(r => r._status === "ready").length}</span> already done ·{" "}
+              <span style={{ color: C.textDim }}>Runs research + generates email per company</span>
+            </div>
+          </div>
+          <button onClick={() => setGtmBatchOpen(false)} style={{ background: "#F5F7FA", border: "1px solid #E4ECF4", color: C.textMid, fontSize: 16, cursor: "pointer", padding: "4px 10px", borderRadius: 6 }}>✕</button>
+        </div>
+
+        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          {/* LEFT — Controls */}
+          <div style={{ width: 280, borderRight: "1px solid #EEF2F7", padding: "20px 22px", display: "flex", flexDirection: "column", gap: 20, overflowY: "auto", flexShrink: 0, background: "#F8FAFC" }}>
+            {/* Presets */}
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: C.textDim, fontFamily: MONO, marginBottom: 10 }}>Quick Select</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {PRESETS.filter(p => p.to <= total || p.label === "All").map(preset => {
+                  const isActive = gtmBatchFrom === preset.from && gtmBatchTo === Math.min(preset.to, total);
+                  return (
+                    <button key={preset.label} onClick={() => { setGtmBatchFrom(preset.from); setGtmBatchTo(Math.min(preset.to, total)); }}
+                      style={{ padding: "6px 14px", borderRadius: 20, border: `1px solid ${isActive ? "#1B6EF3" : "#D8E2EE"}`, background: isActive ? "#1B6EF3" : "#FFFFFF", color: isActive ? "#FFFFFF" : C.textMid, fontSize: 11, fontFamily: FONT, cursor: "pointer", fontWeight: isActive ? 600 : 400 }}>
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Custom Range */}
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: C.textDim, fontFamily: MONO, marginBottom: 10 }}>Custom Range</div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 9, color: C.textDim, fontFamily: MONO, display: "block", marginBottom: 4 }}>FROM #</label>
+                  <input type="number" min={1} max={total} value={gtmBatchFrom} onChange={e => setGtmBatchFrom(Math.max(1, Math.min(total, Number(e.target.value))))} style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 6, padding: "8px 10px", fontSize: 13, fontFamily: MONO, outline: "none" }} />
+                </div>
+                <div style={{ color: C.textDim, fontFamily: MONO, fontSize: 14, marginTop: 14 }}>—</div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 9, color: C.textDim, fontFamily: MONO, display: "block", marginBottom: 4 }}>TO #</label>
+                  <input type="number" min={1} max={total} value={gtmBatchTo} onChange={e => setGtmBatchTo(Math.max(gtmBatchFrom, Math.min(total, Number(e.target.value))))} style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 6, padding: "8px 10px", fontSize: 13, fontFamily: MONO, outline: "none" }} />
+                </div>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: "#E4ECF4", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: 0, bottom: 0, left: `${((gtmBatchFrom - 1) / Math.max(total, 1)) * 100}%`, width: `${((gtmBatchTo - gtmBatchFrom + 1) / Math.max(total, 1)) * 100}%`, background: "linear-gradient(90deg, #1B6EF3, #3D8BFF)", borderRadius: 3 }} />
+              </div>
+            </div>
+            {/* Summary */}
+            <div style={{ background: "linear-gradient(135deg, #EEF5FF, #F0F8FF)", border: "1px solid #B8D4FF", borderRadius: 10, padding: "16px 18px" }}>
+              <div style={{ fontSize: 30, fontFamily: DISPLAY, fontWeight: 800, color: "#1B6EF3", lineHeight: 1, marginBottom: 4 }}>{selectedCount}</div>
+              <div style={{ fontSize: 11, color: C.textMid, fontFamily: MONO, marginBottom: 12 }}>companies selected</div>
+              <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO, lineHeight: 1.9 }}>
+                ⏱ Est. time: <span style={{ color: C.gold }}>{estMins < 60 ? `~${estMins} min` : `~${(estMins/60).toFixed(1)} hr`}</span><br/>
+                🔄 Research + Email per company<br/>
+                📍 Range: #{gtmBatchFrom} – #{Math.min(gtmBatchTo, total)}
+              </div>
+            </div>
+            {/* Actions */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: "auto" }}>
+              <button onClick={() => runGtmBatch(selectedQueue)} disabled={selectedCount === 0}
+                style={{ width: "100%", padding: "13px", borderRadius: 5, border: "none", background: selectedCount > 0 ? "linear-gradient(135deg, #1B6EF3, #3D8BFF)" : "#E4ECF4", color: selectedCount > 0 ? "#FFFFFF" : C.textDim, fontFamily: FONT, fontWeight: 600, fontSize: 13, cursor: selectedCount > 0 ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                ⚡ Run Agent on {selectedCount} Companies
+              </button>
+              <button onClick={() => setGtmBatchOpen(false)} style={{ width: "100%", padding: "10px", borderRadius: 5, border: "1px solid #E4ECF4", background: "#FFFFFF", color: C.textMid, fontFamily: FONT, fontSize: 12, cursor: "pointer" }}>Cancel</button>
+            </div>
+          </div>
+
+          {/* RIGHT — Company Table Preview */}
+          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "14px 20px 10px", borderBottom: "1px solid #EEF2F7", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 9, fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: C.textDim, fontFamily: MONO }}>Company Preview</span>
+              <span style={{ fontSize: 10, fontFamily: MONO, color: C.textDim }}>Rows in <span style={{ color: C.gold }}>blue</span> = selected</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "36px 28px 1fr 1fr 1fr 80px", gap: 0, padding: "8px 20px", borderBottom: "1px solid #EEF2F7", flexShrink: 0, background: "#F8FAFC" }}>
+              {["#", "", "Company", "Stack", "Persona", "Status"].map((h, i) => (
+                <div key={i} style={{ fontSize: 10, fontFamily: MONO, color: "#8A9BB0", letterSpacing: "0.08em", textTransform: "uppercase", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h}</div>
+              ))}
+            </div>
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {idleList.map((row, idx) => {
+                const rowNum = idx + 1;
+                const inRange = rowNum >= gtmBatchFrom && rowNum <= gtmBatchTo;
+                const statusCfg = row._status === "ready" ? STATUS_CONFIG.ready : STATUS_CONFIG.idle;
+                return (
+                  <div key={row._id}
+                    onClick={() => {
+                      if (inRange) { if (rowNum === gtmBatchFrom) setGtmBatchFrom(gtmBatchFrom + 1); else if (rowNum === gtmBatchTo) setGtmBatchTo(gtmBatchTo - 1); }
+                      else { if (rowNum < gtmBatchFrom) setGtmBatchFrom(rowNum); if (rowNum > gtmBatchTo) setGtmBatchTo(rowNum); }
+                    }}
+                    style={{ display: "grid", gridTemplateColumns: "36px 28px 1fr 1fr 1fr 80px", gap: 0, padding: "9px 20px", borderBottom: "1px solid #F0F4F8", background: inRange ? "#EEF5FF" : "#FFFFFF", borderLeft: inRange ? "3px solid #1B6EF3" : "2px solid transparent", cursor: "pointer" }}>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: inRange ? "#1B6EF3" : C.textDim, fontWeight: inRange ? 700 : 400 }}>{rowNum}</div>
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <div style={{ width: 12, height: 12, borderRadius: 3, border: `1px solid ${inRange ? "#1B6EF3" : "#D8E2EE"}`, background: inRange ? "#1B6EF3" : "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#FFFFFF" }}>{inRange ? "✓" : ""}</div>
+                    </div>
+                    <div style={{ fontSize: 12, color: C.text, fontFamily: FONT, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>{row.Company}</div>
+                    <div style={{ fontSize: 10, color: C.gold, fontFamily: MONO, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>{row["Data Stack Signal"] || "—"}</div>
+                    <div style={{ fontSize: 11, color: C.textDim, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>{row["Buying Persona"] || "—"}</div>
+                    <div><span style={{ fontSize: 9, fontFamily: MONO, color: statusCfg.color, background: statusCfg.bg, padding: "2px 7px", borderRadius: 3 }}>{statusCfg.label}</span></div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+})()}
       {/* SINGLE GTM PROSPECT MODAL */}
       {showGtmForm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setShowGtmForm(false)}>
