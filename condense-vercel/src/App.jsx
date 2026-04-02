@@ -2522,7 +2522,24 @@ if (!dbLoaded) return (
                     style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }} />
                   <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <GlowButton
+                        small
+                        onClick={() => exportProposalPDF({
+                          sel: { name: row._discoveredName || row["Buying Persona"] || row.Company, jobTitle: row["Buying Persona"] || "", company: row.Company, email: row.email || "", phone: row.phone || "" },
+                          selResearch: gtmResearch[String(row._id)] || {},
+                          selMessages: gen,
+                          selMatchedStories: findMatchingStories(row.Company, row["Data Stack Signal"] || "", gtmResearch[String(row._id)] || {}),
+                          findIndustryUseCases,
+                          onStart: () => setExportingPDF(true),
+                          onDone: () => setExportingPDF(false),
+                          onError: () => setExportingPDF(false),
+                        })}
+                        disabled={exportingPDF}
+                        color="#7C3AED"
+                      >
+                        {exportingPDF ? <><Spinner /> PDF...</> : "📄 Export PDF"}
+                      </GlowButton>
                       {!row._sentAt ? (
                         <button onClick={() => {
                           const updated = { ...row, _sentAt: new Date().toISOString() };
