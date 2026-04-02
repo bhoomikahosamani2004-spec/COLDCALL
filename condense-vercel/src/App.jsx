@@ -2382,7 +2382,34 @@ if (!dbLoaded) return (
         {row._zohoPushing ? <><Spinner /> Pushing...</> : row._zohoStatus === "success" ? "✅ Pushed!" : row._zohoStatus === "error" ? "❌ Failed" : "☁️ Zoho"}
       </button>
     )}
-
+   {/* FULL RESEARCH BUTTON */}
+<button
+  onClick={() => {
+    const newProspect = {
+      id: `p_gtm_${row._id}_${Date.now()}`,
+      name: row._discoveredName || row["Prospect Name"] || row["Full Name"] || row["Buying Persona"],
+      jobTitle: row["Buying Persona"] || row["Job Title"] || "",
+      company: row.Company,
+      email: row.email || "",
+      phone: row.phone || "",
+      linkedinUrl: row.linkedinUrl || "",
+      industry: row["Data Stack Signal"] || "",
+      region: row.HQ || "India",
+      jdText: `Data Stack: ${row["Data Stack Signal"]}. Tool: ${row["Tool Used"]}. Use Case: ${row["Use Case"]}. Cloud: ${row["Cloud Provider"]}. Warehouse: ${row["Data Warehouse"]}. Integration: ${row["Integration Opportunity"]}.`,
+      status: "idle",
+      createdAt: new Date().toISOString(),
+      sentAt: null,
+    };
+    setProspects(prev => [newProspect, ...prev]);
+    setActiveView("prospects");
+    setSelected(newProspect.id);
+    setTimeout(() => runAgent(newProspect), 400);
+    showGtmToast(`🔍 Running full research for ${row.Company}...`, "info", 6000);
+  }}
+  style={{ padding: "7px 14px", borderRadius: 6, border: "1px solid #0D9E6E44", background: "#F0FBF5", color: C.green, fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
+>
+  🔍 Full Research
+</button>
     {/* GENERATE BUTTON */}
     {(row._status === "idle" || row._status === "error") && (
       <button onClick={() => generateGtmEmail(row)} disabled={gtmRunning !== null} style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
@@ -2464,11 +2491,73 @@ if (!dbLoaded) return (
                         onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
                         style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }}
                       />
+                      {/* STAR RATING */}
+<div style={{ padding: "12px 16px", borderTop: "1px solid #EEF2F7", background: "#FAFCFF" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+    <span style={{ fontSize: 13 }}>⭐</span>
+    <span style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: FONT }}>Rate this message</span>
+    <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>— 4+ stars adds to training</span>
+  </div>
+  <div style={{ display: "flex", gap: 4 }}>
+    {[1,2,3,4,5].map(star => {
+      const ratingKey = `gtm_${row._id}_${activeGtmTab}_rating`;
+      const current = ratings[ratingKey]?.stars || 0;
+      return (
+        <button key={star} onClick={() => {
+          const newRating = { stars: star, message: text, messageType: `gtm_${activeGtmTab}`, prospect: row._discoveredName || row["Buying Persona"], company: row.Company, createdAt: new Date().toISOString() };
+          setRatings(prev => ({ ...prev, [ratingKey]: newRating }));
+          if (star >= 4) {
+            const ex = { id: `t_gtm_${Date.now()}`, ...newRating, feedback: "" };
+            setTrainingExamples(prev => [...prev, ex]);
+          }
+        }} style={{ fontSize: 20, background: "none", border: "none", cursor: "pointer", color: star <= current ? "#F5A623" : "#D8E2EE" }}>★</button>
+      );
+    })}
+  </div>
+</div>
                       {/* Footer nav */}
-                      <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-                        <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
-                        <button onClick={() => { const next = gtmRows.find(r => r._id > row._id); if (next) setGtmSelected(next._id); }} style={{ fontSize: 11, color: C.textMid, background: "none", border: "1px solid #E4ECF4", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT }}>Next →</button>
-                      </div>
+                    <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, flexWrap: "wrap", gap: 8 }}>
+  <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
+  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    {/* MARK SENT */}
+    {!row._sentAt ? (
+      <button onClick={() => {
+        const updated = { ...row, _sentAt: new Date().toISOString() };
+        setGtmRows(prev => prev.map(r => r._id === row._id ? updated : r));
+        dbSave('v3_gtm_rows', String(row._id), updated);
+        showGtmToast("✅ Marked as sent — follow-up reminders activated", "success");
+      }} style={{ fontSize: 11, color: C.green, background: C.greenDim, border: `1px solid ${C.green}44`, padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✓ Mark Sent</button>
+    ) : (
+      <span style={{ fontSize: 10, color: C.green, fontFamily: MONO }}>✅ Sent {new Date(row._sentAt).toLocaleDateString()}</span>
+    )}
+    <button onClick={() => { const next = gtmRows.find(r => r._id > row._id); if (next) setGtmSelected(next._id); }} style={{ fontSize: 11, color: C.textMid, background: "none", border: "1px solid #E4ECF4", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT }}>Next →</button>
+  </div>
+</div>
+
+{/* FOLLOW-UP TIMELINE */}
+{row._sentAt && (
+  <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, padding: "14px 18px", flexShrink: 0 }}>
+    <div style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: FONT, marginBottom: 12 }}>Follow-Up Timeline</div>
+    <div style={{ display: "flex", gap: 0, position: "relative" }}>
+      <div style={{ position: "absolute", top: 14, left: "12.5%", right: "12.5%", height: 2, background: "#E4ECF4", zIndex: 0 }} />
+      {[{ label: "Sent", day: 0 }, { label: "Day 3", day: 3, key: "day3_followup" }, { label: "Day 7", day: 7, key: "day7_followup" }, { label: "Day 14", day: 14, key: "day14_followup" }].map(step => {
+        const target = new Date(new Date(row._sentAt).getTime() + step.day * 24 * 60 * 60 * 1000);
+        const d = Math.ceil((target - new Date()) / (1000 * 60 * 60 * 24));
+        const isDue = d <= 0;
+        return (
+          <div key={step.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, position: "relative", zIndex: 1 }}>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", background: isDue ? C.greenDim : "#F0F4F8", border: `1px solid ${isDue ? C.green : "#D8E2EE"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: isDue ? C.green : C.textDim }}>
+              {isDue ? "✓" : "·"}
+            </div>
+            <div style={{ fontSize: 9, color: isDue ? C.green : C.textDim, fontFamily: MONO, fontWeight: isDue ? 700 : 400 }}>{step.label}</div>
+            {step.day > 0 && <div style={{ fontSize: 9, fontFamily: MONO, color: isDue ? C.red : C.amber }}>{isDue ? "OVERDUE" : `in ${d}d`}</div>}
+            {isDue && step.key && <button onClick={() => setActiveGtmTab(step.key)} style={{ fontSize: 9, color: C.green, background: C.greenDim, border: `1px solid ${C.green}44`, padding: "2px 8px", borderRadius: 4, cursor: "pointer", fontFamily: MONO }}>View →</button>}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
                     </div>
                   );
                 })() : (
@@ -2492,6 +2581,245 @@ if (!dbLoaded) return (
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.navy, letterSpacing: "-0.02em" }}>Dashboard</div>
       <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Engagement tracking & batch analytics</div>
     </div>
+
+    {/* ── GTM DASHBOARD ── */}
+    {gtmRows.length > 0 && (
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <span style={{ fontSize: 16 }}>📊</span>
+          <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: C.navy }}>Tech GTM Engine</div>
+          <span style={{ fontSize: 10, fontFamily: MONO, color: C.gold, background: C.goldDim, padding: "2px 8px", borderRadius: 10 }}>{gtmRows.length} companies</span>
+        </div>
+
+        {/* GTM STAT CARDS */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+          {[
+            { label: "Total Companies", value: gtmRows.length, icon: "🏢", color: C.blue },
+            { label: "Emails Generated", value: gtmRows.filter(r => r._status === "ready").length, icon: "✉️", color: C.green },
+            { label: "Enriched Contacts", value: gtmRows.filter(r => r._enriched).length, icon: "👤", color: C.purple },
+            { label: "Sent & Active", value: gtmRows.filter(r => r._sentAt).length, icon: "📤", color: C.amber },
+          ].map(stat => (
+            <div key={stat.label} style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: "16px 18px", boxShadow: "0 1px 4px rgba(10,37,64,0.06)" }}>
+              <div style={{ fontSize: 20, marginBottom: 6 }}>{stat.icon}</div>
+              <div style={{ fontSize: 26, fontFamily: DISPLAY, fontWeight: 800, color: stat.color, lineHeight: 1 }}>{stat.value}</div>
+              <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 4 }}>{stat.label}</div>
+              <div style={{ marginTop: 8, height: 3, borderRadius: 2, background: "#EEF2F7", overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${Math.round((stat.value / Math.max(gtmRows.length, 1)) * 100)}%`, background: stat.color, borderRadius: 2 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* GENERATION + ENRICHMENT PROGRESS */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: "16px 20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT }}>⚡ Email Generation</span>
+              <span style={{ fontSize: 11, fontFamily: MONO, color: C.textDim }}>{gtmRows.filter(r => r._status === "ready").length}/{gtmRows.length}</span>
+            </div>
+            <div style={{ height: 8, borderRadius: 4, background: "#EEF2F7", overflow: "hidden", marginBottom: 10 }}>
+              <div style={{ height: "100%", width: `${Math.round((gtmRows.filter(r => r._status === "ready").length / Math.max(gtmRows.length, 1)) * 100)}%`, background: "linear-gradient(90deg, #1B6EF3, #3D8BFF)", borderRadius: 4 }} />
+            </div>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {[
+                { label: "Ready", count: gtmRows.filter(r => r._status === "ready").length, color: C.green },
+                { label: "Generating", count: gtmRows.filter(r => r._status === "generating").length, color: C.blue },
+                { label: "Error", count: gtmRows.filter(r => r._status === "error").length, color: C.red },
+                { label: "Idle", count: gtmRows.filter(r => r._status === "idle").length, color: C.textDim },
+              ].map(s => (
+                <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />
+                  <span style={{ fontSize: 10, fontFamily: MONO, color: C.textMid }}>{s.label}: <strong>{s.count}</strong></span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: "16px 20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT }}>👤 Contact Enrichment</span>
+              <span style={{ fontSize: 11, fontFamily: MONO, color: C.textDim }}>{gtmRows.filter(r => r._enriched).length}/{gtmRows.length}</span>
+            </div>
+            <div style={{ height: 8, borderRadius: 4, background: "#EEF2F7", overflow: "hidden", marginBottom: 10 }}>
+              <div style={{ height: "100%", width: `${Math.round((gtmRows.filter(r => r._enriched).length / Math.max(gtmRows.length, 1)) * 100)}%`, background: "linear-gradient(90deg, #7C3AED, #9F67FF)", borderRadius: 4 }} />
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.purple }} />
+                <span style={{ fontSize: 10, fontFamily: MONO, color: C.textMid }}>Enriched: <strong>{gtmRows.filter(r => r._enriched).length}</strong></span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.textDim }} />
+                <span style={{ fontSize: 10, fontFamily: MONO, color: C.textMid }}>Pending: <strong>{gtmRows.filter(r => !r._enriched).length}</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* GTM FOLLOW-UPS DUE */}
+        {(() => {
+          const gtmDue = gtmRows.filter(r => {
+            if (!r._sentAt) return false;
+            const d3 = Math.ceil((new Date(new Date(r._sentAt).getTime() + 3*24*60*60*1000) - new Date()) / (1000*60*60*24));
+            const d7 = Math.ceil((new Date(new Date(r._sentAt).getTime() + 7*24*60*60*1000) - new Date()) / (1000*60*60*24));
+            return d3 <= 0 || d7 <= 0;
+          });
+          if (gtmDue.length === 0) return null;
+          return (
+            <div style={{ background: "#FFFFFF", border: `1px solid ${C.amber}33`, borderRadius: 10, padding: "14px 18px", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.amber, fontFamily: FONT, marginBottom: 10 }}>🔔 GTM Follow-Ups Due ({gtmDue.length})</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {gtmDue.slice(0, 5).map(row => {
+                  const d3 = Math.ceil((new Date(new Date(row._sentAt).getTime() + 3*24*60*60*1000) - new Date()) / (1000*60*60*24));
+                  const d7 = Math.ceil((new Date(new Date(row._sentAt).getTime() + 7*24*60*60*1000) - new Date()) / (1000*60*60*24));
+                  return (
+                    <div key={row._id} onClick={() => { setActiveView("gtm"); setGtmSelected(row._id); }}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#FFF8F0", borderRadius: 6, border: "1px solid #F0C070", cursor: "pointer" }}>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT }}>{row.Company}</div>
+                        <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{row._discoveredName || row["Buying Persona"]}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {d3 <= 0 && <span style={{ fontSize: 9, color: C.red, background: C.redDim, padding: "2px 8px", borderRadius: 10, fontFamily: MONO }}>Day 3 OVERDUE</span>}
+                        {d7 <= 0 && <span style={{ fontSize: 9, color: C.red, background: C.redDim, padding: "2px 8px", borderRadius: 10, fontFamily: MONO }}>Day 7 OVERDUE</span>}
+                        <span style={{ fontSize: 11, color: C.gold, fontFamily: FONT }}>View →</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+          {/* DATA STACK BREAKDOWN */}
+          <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: "16px 20px" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>⚡ Data Stack Signals</div>
+            {(() => {
+              const counts = {};
+              gtmRows.forEach(r => { const s = (r["Data Stack Signal"] || "Unknown").trim(); counts[s] = (counts[s] || 0) + 1; });
+              return Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,6).map(([k,v]) => (
+                <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid #F0F4F8" }}>
+                  <div style={{ flex: 1, fontSize: 11, color: C.textMid, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{k}</div>
+                  <div style={{ width: 80, height: 4, borderRadius: 2, background: "#EEF2F7", flexShrink: 0 }}>
+                    <div style={{ height: "100%", width: `${Math.round((v/gtmRows.length)*100)}%`, background: C.gold, borderRadius: 2 }} />
+                  </div>
+                  <div style={{ fontSize: 11, fontFamily: MONO, color: C.gold, fontWeight: 600, width: 20, textAlign: "right", flexShrink: 0 }}>{v}</div>
+                </div>
+              ));
+            })()}
+          </div>
+
+          {/* CLOUD PROVIDER BREAKDOWN */}
+          <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: "16px 20px" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>☁️ Cloud Providers</div>
+            {(() => {
+              const counts = {};
+              const colors = ["#1B6EF3","#0D9E6E","#D97706","#7C3AED","#E53E3E"];
+              gtmRows.forEach(r => { const s = (r["Cloud Provider"] || "Unknown").trim(); counts[s] = (counts[s] || 0) + 1; });
+              return Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,5).map(([k,v],i) => (
+                <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid #F0F4F8" }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: colors[i%colors.length], flexShrink: 0 }} />
+                  <div style={{ flex: 1, fontSize: 11, color: C.textMid, fontFamily: FONT }}>{k}</div>
+                  <div style={{ width: 60, height: 4, borderRadius: 2, background: "#EEF2F7", flexShrink: 0 }}>
+                    <div style={{ height: "100%", width: `${Math.round((v/gtmRows.length)*100)}%`, background: colors[i%colors.length], borderRadius: 2 }} />
+                  </div>
+                  <div style={{ fontSize: 11, fontFamily: MONO, color: colors[i%colors.length], fontWeight: 600, width: 20, textAlign: "right", flexShrink: 0 }}>{v}</div>
+                </div>
+              ));
+            })()}
+          </div>
+
+          {/* ENRICHED CONTACTS */}
+          <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: "16px 20px" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>
+              👤 Enriched Contacts <span style={{ fontSize: 10, fontFamily: MONO, color: C.green, background: C.greenDim, padding: "2px 8px", borderRadius: 10, marginLeft: 6 }}>{gtmRows.filter(r => r._enriched).length}</span>
+            </div>
+            <div style={{ maxHeight: 180, overflowY: "auto" }}>
+              {gtmRows.filter(r => r._enriched).length === 0
+                ? <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO, padding: "12px 0", textAlign: "center" }}>No contacts enriched yet</div>
+                : gtmRows.filter(r => r._enriched).map(row => (
+                  <div key={row._id} onClick={() => { setActiveView("gtm"); setGtmSelected(row._id); }}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid #F0F4F8", cursor: "pointer" }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT }}>{row._discoveredName || row["Buying Persona"]}</div>
+                      <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{row.Company}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      {row.email && <div style={{ fontSize: 10, color: C.textMid, fontFamily: MONO }}>✉️ {row.email.split("@")[0]}@...</div>}
+                      <span style={{ fontSize: 9, fontFamily: MONO, color: C.green, background: C.greenDim, padding: "1px 6px", borderRadius: 8 }}>via {row._enriched}</span>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+
+          {/* INTEGRATION OPPORTUNITIES */}
+          <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: "16px 20px" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>🔗 Integration Opportunities</div>
+            {(() => {
+              const counts = {};
+              gtmRows.forEach(r => { const s = (r["Integration Opportunity"] || "Unknown").trim(); counts[s] = (counts[s] || 0) + 1; });
+              return Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,5).map(([k,v]) => (
+                <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderBottom: "1px solid #F0F4F8" }}>
+                  <div style={{ flex: 1, fontSize: 11, color: C.textMid, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{k}</div>
+                  <span style={{ fontSize: 10, fontFamily: MONO, color: C.purple, background: C.purpleDim, padding: "2px 7px", borderRadius: 10, flexShrink: 0 }}>{v}</span>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+
+        {/* ALL GTM COMPANIES TABLE */}
+        <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, overflow: "hidden", marginBottom: 16 }}>
+          <div style={{ padding: "14px 20px", borderBottom: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.navy, fontFamily: DISPLAY }}>All GTM Companies</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <span style={{ fontSize: 10, fontFamily: MONO, color: C.green }}>{gtmRows.filter(r => r._status === "ready").length} ready</span>
+              <span style={{ fontSize: 10, fontFamily: MONO, color: C.purple }}>{gtmRows.filter(r => r._enriched).length} enriched</span>
+              <span style={{ fontSize: 10, fontFamily: MONO, color: C.amber }}>{gtmRows.filter(r => r._sentAt).length} sent</span>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1.5fr 1fr 1fr 70px 70px", gap: 0, padding: "8px 20px", background: "#F8FAFC", borderBottom: "1px solid #EEF2F7" }}>
+            {["Company", "Data Stack", "Persona", "Cloud", "Warehouse", "Enriched", "Status"].map(h => (
+              <div key={h} style={{ fontSize: 9, fontFamily: MONO, color: C.textDim, letterSpacing: "0.08em", textTransform: "uppercase" }}>{h}</div>
+            ))}
+          </div>
+          <div style={{ maxHeight: 320, overflowY: "auto" }}>
+            {gtmRows.map(row => (
+              <div key={row._id} onClick={() => { setActiveView("gtm"); setGtmSelected(row._id); }}
+                style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1.5fr 1fr 1fr 70px 70px", gap: 0, padding: "10px 20px", borderBottom: "1px solid #F0F4F8", cursor: "pointer", transition: "background 0.1s" }}
+                onMouseEnter={e => e.currentTarget.style.background = "#F8FAFC"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT }}>{row.Company}</div>
+                  {row._discoveredName && <div style={{ fontSize: 9, color: C.green, fontFamily: MONO, marginTop: 1 }}>👤 {row._discoveredName}</div>}
+                  {row._sentAt && <div style={{ fontSize: 9, color: C.blue, fontFamily: MONO, marginTop: 1 }}>📤 sent</div>}
+                </div>
+                <div style={{ fontSize: 10, color: C.gold, fontFamily: MONO, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8, alignSelf: "center" }}>{row["Data Stack Signal"] || "—"}</div>
+                <div style={{ fontSize: 10, color: C.textMid, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8, alignSelf: "center" }}>{row["Buying Persona"] || "—"}</div>
+                <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, alignSelf: "center" }}>{row["Cloud Provider"] || "—"}</div>
+                <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, alignSelf: "center" }}>{row["Data Warehouse"] || "—"}</div>
+                <div style={{ alignSelf: "center" }}>
+                  {row._enriched ? <span style={{ fontSize: 9, color: C.green, background: C.greenDim, padding: "2px 6px", borderRadius: 10, fontFamily: MONO }}>✓</span>
+                    : <span style={{ fontSize: 9, color: C.textDim, background: "#EEF2F7", padding: "2px 6px", borderRadius: 10, fontFamily: MONO }}>—</span>}
+                </div>
+                <div style={{ alignSelf: "center" }}>
+                  {row._status === "ready" && <span style={{ fontSize: 9, color: C.green, background: C.greenDim, padding: "2px 6px", borderRadius: 10, fontFamily: MONO }}>Ready</span>}
+                  {row._status === "idle" && <span style={{ fontSize: 9, color: C.textDim, background: "#EEF2F7", padding: "2px 6px", borderRadius: 10, fontFamily: MONO }}>Idle</span>}
+                  {row._status === "generating" && <span style={{ fontSize: 9, color: C.blue, background: C.blueDim, padding: "2px 6px", borderRadius: 10, fontFamily: MONO }}>Gen...</span>}
+                  {row._status === "error" && <span style={{ fontSize: 9, color: C.red, background: C.redDim, padding: "2px 6px", borderRadius: 10, fontFamily: MONO }}>Err</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ height: 1, background: "#E4ECF4", margin: "8px 0 32px" }} />
+      </div>
+    )}
+
     {/* FOLLOW-UP DUE TODAY */}
 {(() => {
   const followUps = [
