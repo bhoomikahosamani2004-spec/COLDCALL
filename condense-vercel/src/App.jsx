@@ -2115,8 +2115,8 @@ if (!dbLoaded) return (
             </div>
 
        {/* Prospect List */}
-<div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-              <div style={{ padding: "10px 12px 4px", borderBottom: "1px solid #EEF2F7" }}>
+<div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
+  <div style={{ padding: "10px 12px 4px", borderBottom: "1px solid #EEF2F7", flexShrink: 0 }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
     <span style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: DISPLAY }}>Prospects ({prospects.length})</span>
     {prospects.length > 0 && <span style={{ fontSize: 10, color: C.textDim }}>{prospects.filter(p=>p.status==="ready"||p.status==="following").length} active</span>}
@@ -2169,6 +2169,14 @@ if (!dbLoaded) return (
     {searchQuery && (
       <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: C.textDim, fontSize: 13, lineHeight: 1, padding: 0 }}>✕</button>
     )}
+  </div>
+</div>
+   <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+    {prospects.length === 0 ? (
+      ...
+    ) : prospects.filter(...).map(p => (
+      ...
+    ))}
   </div>
 </div>
               {prospects.length === 0 ? (
