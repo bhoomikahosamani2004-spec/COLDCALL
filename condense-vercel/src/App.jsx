@@ -2651,11 +2651,14 @@ if (!dbLoaded) return (
                   </div>
                 </div>
 
-               {/* WHY CONDENSE HELPS — styled bullets */}
+ {/* WHY CONDENSE HELPS — styled bullets */}
 <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 10, padding: 20 }}>
   <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>⚡ Why Condense Helps {row.Company}</div>
+  <div style={{ fontSize: 10, color: "red", wordBreak: "break-all", marginBottom: 8 }}>
+    DEBUG: "{research.why_condense_fits}"
+  </div>
   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-    {(research.why_condense_fits || "").split(". ").filter(s => s.trim()).map((point, i) => (
+    {(research.why_condense_fits || "No data — re-run research").split(/\.\s+/).filter(s => s.trim().length > 5).map((point, i) => (
       <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #B8EDD3" }}>
         <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, fontFamily: MONO }}>→</span>
         <span style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.6 }}>{point.trim()}{point.trim().endsWith(".") ? "" : "."}</span>
