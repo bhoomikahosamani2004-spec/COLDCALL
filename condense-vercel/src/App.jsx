@@ -871,6 +871,9 @@ const [replies, setReplies] = useState([]);
 const [notifications, setNotifications] = useState([]);
 const [dbLoaded, setDbLoaded] = useState(false);
 const [exportingPDF, setExportingPDF] = useState(false);
+const [batchEnrichRunning, setBatchEnrichRunning] = useState(false);
+const [prospectEnrichProgress, setProspectEnrichProgress] = useState(0);
+const prospectEnrichCancelRef = useRef(false);
 
 useEffect(() => {
   async function loadAll() {
@@ -1571,6 +1574,43 @@ const runGtmBulkEnrich = async () => {
   setGtmBatchEnriching(false);
   showGtmToast(`✅ Enrichment complete — ${gtmRows.filter(r => r._enriched).length} contacts found`, "success");
 };
+  const runProspectBulkEnrich = async () => {
+  const queue = prospects.filter(p => !p._enriched);
+  if (queue.length === 0) return;
+  setBatchEnrichRunning(true);
+  prospectEnrichCancelRef.current = false;
+  setProspectEnrichProgress(0);
+
+  for (let i = 0; i < queue.length; i++) {
+    if (prospectEnrichCancelRef.current) break;
+    setProspectEnrichProgress(i + 1);
+    const p = queue[i];
+    try {
+      const res = await fetch("/api/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: p.name,
+          company: p.company,
+          jobTitle: p.jobTitle,
+          linkedinUrl: p.linkedinUrl || "",
+        }),
+      });
+      const data = await res.json();
+      if (data.found && (data.email || data.phone)) {
+        setProspects(prev => prev.map(pr =>
+          pr.id === p.id
+            ? { ...pr, email: data.email || pr.email, phone: data.phone || pr.phone, linkedinUrl: data.linkedinUrl || pr.linkedinUrl, _enriched: data.source }
+            : pr
+        ));
+      }
+    } catch (err) {
+      console.error("Enrich error for", p.company, err.message);
+    }
+    if (i < queue.length - 1) await new Promise(r => setTimeout(r, 1200));
+  }
+  setBatchEnrichRunning(false);
+};
 const runGtmBatch = async () => {
   const queue = gtmRows.filter(r => r._status === "idle");
   if (queue.length === 0) return;
@@ -2004,7 +2044,7 @@ if (!dbLoaded) return (
          {/* LEFT SIDEBAR */}
 {activeView === "prospects" && <div style={{ width: 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "2px 0 8px rgba(10,37,64,0.04)" }}>
             {/* Add Prospect Form */}
-            <div style={{ padding: "18px 16px", borderBottom: "1px solid #EEF2F7", overflowY: "auto", maxHeight: "55vh" }}>
+            <div style={{ padding: "18px 16px", borderBottom: "1px solid #EEF2F7", overflowY: "auto", maxHeight: "45vh", flexShrink: 0  }}>
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, letterSpacing: "-0.01em" }}>Add Prospect</div>
                 <div style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Fill manually or paste a LinkedIn URL</div>
@@ -2053,17 +2093,29 @@ if (!dbLoaded) return (
                     Supports .csv · .xlsx · .xls · Columns: Name, Company, Title, Email, Phone, LinkedIn
                   </div>
                   {uploadStatus && <div style={{ fontSize: 10, fontFamily: MONO, marginTop: 5, padding: "5px 8px", borderRadius: 3, background: uploadStatus.startsWith("✅") ? C.greenDim : uploadStatus.startsWith("❌") ? C.redDim : C.goldDimmer, color: uploadStatus.startsWith("✅") ? C.green : uploadStatus.startsWith("❌") ? C.red : C.gold }}>{uploadStatus}</div>}
-                  {prospects.filter(p => p.status === "idle").length > 0 && (
-                    <button onClick={() => setBatchOpen(true)} style={{ width: "100%", marginTop: 6, padding: "9px", borderRadius: 4, border: `1px solid ${C.green}44`, background: C.greenDim, color: C.green, fontSize: 11, fontFamily: MONO, letterSpacing: "0.06em", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                      ⚡ Select &amp; Generate Scripts ({prospects.filter(p => p.status === "idle").length} ready)
-                    </button>
-                  )}
+                 {prospects.filter(p => p.status === "idle").length > 0 && (
+  <button onClick={() => setBatchOpen(true)} style={{ width: "100%", marginTop: 6, padding: "9px", borderRadius: 4, border: `1px solid ${C.green}44`, background: C.greenDim, color: C.green, fontSize: 11, fontFamily: MONO, letterSpacing: "0.06em", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+    ⚡ Select &amp; Generate Scripts ({prospects.filter(p => p.status === "idle").length} ready)
+  </button>
+)}
+{prospects.length > 0 && !batchEnrichRunning && (
+  <button onClick={runProspectBulkEnrich} style={{ width: "100%", marginTop: 6, padding: "9px", borderRadius: 4, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: MONO, letterSpacing: "0.06em", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+    🔍 Enrich All ({prospects.filter(p => !p._enriched).length} pending)
+  </button>
+)}
+{batchEnrichRunning && (
+  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "#FAF5FF", border: "1px solid #7C3AED44", marginTop: 6 }}>
+    <Spinner />
+    <span style={{ fontSize: 11, fontFamily: MONO, color: "#7C3AED" }}>{prospectEnrichProgress}/{prospects.length} enriched</span>
+    <button onClick={() => { prospectEnrichCancelRef.current = true; setBatchEnrichRunning(false); }} style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
+  </div>
+)}
                 </div>
               </div>
             </div>
 
-            {/* Prospect List */}
-            <div style={{ flex: 1, overflowY: "auto" }}>
+       {/* Prospect List */}
+<div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
               <div style={{ padding: "10px 12px 4px", borderBottom: "1px solid #EEF2F7" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
     <span style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: DISPLAY }}>Prospects ({prospects.length})</span>
@@ -2178,7 +2230,16 @@ if (!dbLoaded) return (
 </div>
                   <div style={{ fontSize: 11, color: C.textMid, marginTop: 2, fontFamily: FONT }}>{p.company}</div>
                   {p.email && <div style={{ fontSize: 10, color: C.textDim, marginTop: 1 }}>✉️ {p.email}</div>}
-                  <div style={{ marginTop: 6 }}><Badge status={p.status} /></div>
+                  <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+  <Badge status={p.status} />
+  {(p.status === "ready" || p.status === "following" || p.status === "error") && (
+    <button
+      onClick={e => { e.stopPropagation(); runAgent(p); }}
+      disabled={running !== null}
+      style={{ fontSize: 9, fontFamily: MONO, color: C.gold, background: C.goldDim, border: `1px solid ${C.gold}44`, padding: "2px 8px", borderRadius: 10, cursor: running !== null ? "not-allowed" : "pointer", opacity: running !== null ? 0.5 : 1 }}
+    >↺ Regen</button>
+  )}
+</div>
                   {p.status === "following" && (
                     <div style={{ marginTop: 5, display: "flex", flexWrap: "wrap", gap: 3 }}>
                       {[3, 7, 14].map(day => {
