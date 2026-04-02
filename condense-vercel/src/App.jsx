@@ -2739,10 +2739,8 @@ if (!dbLoaded) return (
       </>
     );
   })()}
-</div>
-        
-    </div>
-      </div>
+</div>       
+   </div>
     )}
   </div>
 )}
@@ -3831,8 +3829,7 @@ if (!dbLoaded) return (
             </div>
           </div>
         </div>
-        )}
-    </div>   {/* closes minHeight 100vh div */}
-  </>        {/* closes the fragment */}
+        )}  
+     </>        
   );
 }
