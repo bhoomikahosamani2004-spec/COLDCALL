@@ -2171,13 +2171,14 @@ if (!dbLoaded) return (
     )}
   </div>
 </div>
-              {prospects.length === 0 ? (
+            {prospects.length === 0 ? (
                 <div style={{ padding: "40px 20px", textAlign: "center" }}>
                   <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.25 }}>👤</div>
                   <div style={{ fontSize: 12, color: C.textDim, lineHeight: 1.7, fontFamily: FONT }}>Add your first prospect above<br/>or upload a CSV file</div>
-                  <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
                 </div>
-             ) : prospects.filter(p => {
+             ) : (
+              <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+             {prospects.filter(p => { 
   // Search filter
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
