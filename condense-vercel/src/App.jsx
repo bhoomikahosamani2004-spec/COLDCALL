@@ -2042,10 +2042,9 @@ if (!dbLoaded) return (
         <div style={{ display: "flex", flex: 1, overflow: "hidden", height: "calc(100vh - 64px)" }}>
 
          {/* LEFT SIDEBAR */}
-{activeView === "prospects" && <div style={{ width: 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "2px 0 8px rgba(10,37,64,0.04)", minHeight: 0, height: "100%" }}>
-            {activeView === "prospects" && <div style={{ width: 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "2px 0 8px rgba(10,37,64,0.04)", height: "100%", maxHeight: "100%" }}>
-    {/* Add Prospect Form */}
-    <div style={{ padding: "18px 16px", borderBottom: "1px solid #EEF2F7", overflowY: "auto", maxHeight: "42vh", flexShrink: 0 }}>
+{activeView === "prospects" && <div style={{ width: 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "2px 0 8px rgba(10,37,64,0.04)" }}>
+            {/* Add Prospect Form */}
+            <div style={{ padding: "18px 16px", borderBottom: "1px solid #EEF2F7", overflowY: "auto", maxHeight: "45vh", flexShrink: 0  }}>
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, letterSpacing: "-0.01em" }}>Add Prospect</div>
                 <div style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Fill manually or paste a LinkedIn URL</div>
@@ -3890,7 +3889,8 @@ if (!dbLoaded) return (
             ) : null}
           </div>
         </div>
-      /* TOAST */
+      </div>
+      {/* TOAST */}
       {gtmToast && (
         <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", zIndex: 999, padding: "12px 24px", borderRadius: 10, background: gtmToast.type === "success" ? "#0D9E6E" : gtmToast.type === "error" ? "#E53E3E" : "#1B6EF3", color: "#FFFFFF", fontSize: 13, fontFamily: FONT, fontWeight: 500, boxShadow: "0 4px 24px rgba(0,0,0,0.18)", maxWidth: 500, textAlign: "center", animation: "fadeUp 0.2s ease", whiteSpace: "pre-wrap" }}>
           {gtmToast.msg}
