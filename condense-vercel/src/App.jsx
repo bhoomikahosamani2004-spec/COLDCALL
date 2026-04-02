@@ -2253,9 +2253,7 @@ if (!dbLoaded) return (
                   )}
                 </div>
               ))}
-    </div>
-        </div>
-      </div>}
+          </div>
            
               {/* MAIN CONTENT */}
 <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
