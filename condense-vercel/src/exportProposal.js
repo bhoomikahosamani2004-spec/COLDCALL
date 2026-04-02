@@ -80,8 +80,7 @@ function resolveIndustry(sel, research) {
 }
  
 // ---------------------------------------------------------------------------
-// buildWhyText() — complete sentences from why_condense_fits (up to 4 lines)
-// Ensures sentences are never cut off mid-way.
+// buildWhyText()
 // ---------------------------------------------------------------------------
 function buildWhyText(research) {
   const raw = safe(
@@ -92,16 +91,12 @@ function buildWhyText(research) {
   );
   if (!raw) return "";
  
-  // Ensure the text ends with proper punctuation so last sentence is complete
   const trimmed = raw.trim();
- 
-  // Split on sentence boundaries — keep complete sentences only
   const sentences = trimmed
     .split(/(?<=[.!?])\s+/)
     .map(s => s.trim())
     .filter(Boolean);
  
-  // Return only the second complete sentence
   return sentences.slice(1, 2).join(" ");
 }
  
@@ -121,11 +116,8 @@ export async function exportProposalPDF({
     const research = selResearch || {};
  
     const industry = resolveIndustry(sel, research);
+    const whyText  = buildWhyText(research);
  
-    // ── Why Condense: complete sentences from research.why_condense_fits ──
-    const whyText = buildWhyText(research);
- 
-    // ── Use case titles: pulled directly from INDUSTRY_USE_CASES via App.js ─
     const industryUC = findIndustryUseCases
       ? findIndustryUseCases(sel.company, sel.industry || "", research)
       : null;
@@ -149,6 +141,7 @@ export async function exportProposalPDF({
     const GREY_TEXT = rgb(0.30,  0.38,  0.47);
     const DARK      = rgb(0.04,  0.09,  0.16);
  
+    // pdf-lib: origin bottom-left, y increases upward. Page = 1080 × 1440 pt.
     const H     = 1440;
     const L     = 80;
     const MAX_W = 920;
@@ -172,9 +165,6 @@ export async function exportProposalPDF({
     page1.drawText(company,  { x: L + forW, y: H - 220, size: FOR_SIZE, font: bold,    color: BLUE });
  
     // ── Contact name + Job title
-    // Confirmed coords (pdfplumber): name top=168/bottom=184, role top=204/bottom=220
-    // pdf-lib y-from-bottom: name at y=1256-1272, role at y=1220-1236
-    // Erase a wide tall band covering BOTH rows + any template leftover text (x goes to ~975)
     page1.drawRectangle({ x: 758, y: H - 250, width: 325, height: 100, color: WHITE });
     if (contact) {
       page1.drawText(contact, { x: 765, y: H - 184, size: 16, font: regular, color: DARK });
@@ -182,21 +172,17 @@ export async function exportProposalPDF({
     if (role) {
       const ROLE_SIZE  = 16;
       const ROLE_MAX_W = 270;
-      const roleLines = fitLines(role, { font: regular, size: ROLE_SIZE, maxWidth: ROLE_MAX_W, maxLines: 3 });
-      // Line 1 at y=H-220, line 2 at y=H-238, line 3 at y=H-256 (18pt leading)
-      const ROLE_Y = [H - 220, H - 238, H - 256];
+      const roleLines  = fitLines(role, { font: regular, size: ROLE_SIZE, maxWidth: ROLE_MAX_W, maxLines: 3 });
+      const ROLE_Y     = [H - 220, H - 238, H - 256];
       roleLines.forEach((line, i) => {
         if (line) page1.drawText(line, { x: 765, y: ROLE_Y[i], size: ROLE_SIZE, font: regular, color: GREY_TEXT });
       });
     }
  
-    // ── "Why is Condense the Best Fit" — 2nd sentence from research
-    // The original placeholder was at y=62, height=126 (3 lines).
-    // Erase that exact zone. Do NOT erase above it — heading is above.
+    // ── "Why is Condense the Best Fit" body text
     page1.drawRectangle({ x: L - 4, y: 50, width: MAX_W + 30, height: 140, color: WHITE });
     const WHY_SIZE = 18;
-    // 4 lines at 28pt leading: y=174, 146, 118, 90 — all inside the erase zone (y=50 to y=190)
-    const WHY_Y    = [160, 132, 104, 76]; // 40pt gap below heading
+    const WHY_Y    = [160, 132, 104, 76];
     const whyLines = fitLines(whyText, { font: regular, size: WHY_SIZE, maxWidth: MAX_W, maxLines: 4 });
     whyLines.forEach((line, i) => {
       if (line) page1.drawText(line, { x: L, y: WHY_Y[i], size: WHY_SIZE, font: regular, color: GREY_TEXT });
@@ -207,55 +193,77 @@ export async function exportProposalPDF({
     // ══════════════════════════════════════════════════════════════════════════
     const page2 = pdfDoc.getPages()[1];
  
+    // ── Industry name: replace "(Industry Name)" only — do NOT touch the rest.
+    //
+    // Exact positions measured from Template.pdf with pdfplumber (y = top-from-top):
+    //   "Help"      x0=371.29  x1=456.75  top=140  bottom=180
+    //   "(Industry" x0=464.75  x1=638.03  top=140  bottom=180
+    //   "Name)"     x0=646.03  x1=770.19  top=140  bottom=180
+    //
+    // pdf-lib y-from-bottom conversions (page height = 1440):
+    //   baseline  = 1440 - 180 = 1260
+    //   glyph top = 1440 - 140 = 1300
+    //
+    // Strategy: white-rectangle over x=464 to x=800, y=1256 to y=1304 (48pt tall),
+    // then draw industry name in bold blue starting at x=464.
  
-    // ── Industry name in heading (40pt bold)
-    // CRITICAL: "How Condense Help" is baked into the template at x=80.
-    // Only erase the "(Industry Name)" placeholder that follows it — starting at x=455.
-    // Also erase the artifact dot that appears just below the heading.
-    const industryW = bold.widthOfTextAtSize(industry, 40);
+    const INDUSTRY_X    = 464;    // x0 of "(Industry" — pdfplumber exact
+    const INDUSTRY_Y    = 1260;   // baseline in pdf-lib coords (H - 180)
+    const INDUSTRY_SIZE = 40;     // same as template heading
+ 
+    // Erase the placeholder — 4px padding above/below glyph bounds
     page2.drawRectangle({
-      x: 455, y: H - 200,
-      width: Math.max(industryW + 40, 500), height: 60,
-      color: WHITE,
+      x:      INDUSTRY_X,
+      y:      1238,
+      width:  800 - INDUSTRY_X,
+      height: 66,
+      // extended down to y=1238 to cover descender artifacts
+      color:  WHITE,
     });
-    page2.drawText(industry, { x: 465, y: H - 180, size: 40, font: bold, color: BLUE });
  
-    // ── Use case body: erase only the Lorem ipsum placeholder paragraphs.
-    // Original zone: y=988, height=256 → covers y=988 to y=1244.
-    // Heading baseline is at y=H-180=1260, so this does NOT touch the heading.
-    page2.drawRectangle({ x: L - 4, y: 988, width: MAX_W + 30, height: 256, color: WHITE });
+    // Shrink font if industry name is too wide for remaining space
+    const INDUSTRY_AVAIL_W = 800 - INDUSTRY_X - 4;
+    let industrySize = INDUSTRY_SIZE;
+    while (industrySize > 20 && bold.widthOfTextAtSize(industry, industrySize) > INDUSTRY_AVAIL_W) {
+      industrySize -= 1;
+    }
+    // Keep vertically aligned with the 40pt baseline when shrunk
+    const industryYAdj = (INDUSTRY_SIZE - industrySize) / 2;
+    page2.drawText(industry, {
+      x:    INDUSTRY_X,
+      y:    INDUSTRY_Y + industryYAdj,
+      size: industrySize,
+      font: bold,
+      color: BLUE,
+    });
+ 
+    // ── Use case body: erase Lorem ipsum placeholders and write use case titles.
+    // pdfplumber page 2: placeholder paragraphs span top≈200 to bottom≈460
+    // pdf-lib: y = H - 460 = 980  to  y = H - 200 = 1240  → height = 260
+    page2.drawRectangle({ x: L - 4, y: 980, width: MAX_W + 30, height: 260, color: WHITE });
  
     if (useCaseTitles.length > 0) {
-      const UC_SIZE    = 17;
-      const UC_LEADING = 44;
-      // Hyphen offset — align hyphen and text consistently
-      const HYPHEN_X   = L;
-      const TEXT_X     = L + 22;
+      const UC_SIZE     = 17;
+      const UC_LEADING  = 40;       // 6 × 40 = 240px < 260px zone — fits cleanly
+      const HYPHEN_X    = L;
+      const TEXT_X      = L + 22;
       const MAX_TITLE_W = MAX_W - 26;
  
       useCaseTitles.slice(0, 6).forEach((title, i) => {
-        const y = 1220 - i * UC_LEADING;
+        const y = 1218 - i * UC_LEADING;
  
-        // Simple hyphen prefix — same color/weight as body text in "Why Condense"
         page2.drawText("-", {
-          x: HYPHEN_X,
-          y,
-          size: UC_SIZE,
-          font: regular,
-          color: GREY_TEXT,  // matches the grey used in "Why Condense" body text
+          x: HYPHEN_X, y,
+          size: UC_SIZE, font: regular, color: GREY_TEXT,
         });
  
-        // Title text — regular weight, same grey as "Why Condense" body
         let label = title;
         while (label.length > 5 && regular.widthOfTextAtSize(label, UC_SIZE) > MAX_TITLE_W) {
           label = label.slice(0, -4) + "...";
         }
         page2.drawText(label, {
-          x: TEXT_X,
-          y,
-          size: UC_SIZE,
-          font: regular,
-          color: GREY_TEXT,  // matches the grey used in "Why Condense" body text
+          x: TEXT_X, y,
+          size: UC_SIZE, font: regular, color: GREY_TEXT,
         });
       });
     }
