@@ -2254,7 +2254,6 @@ if (!dbLoaded) return (
                 </div>
               ))}
           </div>
-        </div>
   }
            
               {/* MAIN CONTENT */}
