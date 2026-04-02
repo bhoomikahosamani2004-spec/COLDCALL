@@ -1510,8 +1510,10 @@ Return ONLY valid JSON:
     dbSave('v3_gtm_messages', String(id), result);
   } catch (err) {
     setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _status: "error" } : r));
+    showGtmToast(`❌ Generation failed: ${err.message}`, "error");
+  } finally {
+    setGtmRunning(null);
   }
-  setGtmRunning(null);
 };
 const showGtmToast = (msg, type = "info", duration = 4000) => {
   setGtmToast({ msg, type });
@@ -2161,8 +2163,15 @@ if (!dbLoaded) return (
           supabase.from('v3_messages').delete().eq('id', p.id);
           supabase.from('v3_edits').delete().eq('id', p.id);
         }
-        setResearch(prev => { const n = {...prev}; delete n[p.id]; return n; });
+       setResearch(prev => { const n = {...prev}; delete n[p.id]; return n; });
         setMessages(prev => { const n = {...prev}; delete n[p.id]; return n; });
+        setEdits(prev => { const n = {...prev}; Object.keys(n).filter(k => k.startsWith(p.id)).forEach(k => delete n[k]); return n; });
+        if (supabase) {
+          supabase.from('v3_prospects').delete().eq('id', p.id);
+          supabase.from('v3_research').delete().eq('id', p.id);
+          supabase.from('v3_messages').delete().eq('id', p.id);
+          supabase.from('v3_edits').delete().eq('id', p.id);
+        }
       }}
       title="Remove prospect"
       style={{ background: "none", border: "none", cursor: "pointer", color: C.textFaint, fontSize: 14, lineHeight: 1, padding: "0 2px", borderRadius: 3 }}
@@ -2331,8 +2340,14 @@ if (!dbLoaded) return (
           const remaining = gtmRows.filter(r => r._id !== row._id);
           setGtmSelected(remaining.length > 0 ? remaining[0]._id : null);
         }
-        setGtmRows(prev => prev.filter(r => r._id !== row._id));
-        if (supabase) supabase.from('v3_gtm_rows').delete().eq('id', String(row._id));
+       setGtmRows(prev => prev.filter(r => r._id !== row._id));
+        setGtmGenerated(prev => { const n = {...prev}; delete n[row._id]; return n; });
+        setGtmResearch(prev => { const n = {...prev}; delete n[String(row._id)]; return n; });
+        if (supabase) {
+          supabase.from('v3_gtm_rows').delete().eq('id', String(row._id));
+          supabase.from('v3_gtm_messages').delete().eq('id', String(row._id));
+          supabase.from('v3_gtm_research').delete().eq('id', String(row._id));
+        }
       }}
       title="Remove"
       style={{ background: "none", border: "none", cursor: "pointer", color: C.textFaint, fontSize: 13, lineHeight: 1, padding: "0 1px", borderRadius: 3 }}
