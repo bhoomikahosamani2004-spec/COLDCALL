@@ -2171,96 +2171,77 @@ if (!dbLoaded) return (
     )}
   </div>
 </div>
-   <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+<div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
     {prospects.length === 0 ? (
-      ...
-    ) : prospects.filter(...).map(p => (
-      ...
+      <div style={{ padding: "40px 20px", textAlign: "center" }}>
+        <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.25 }}>👤</div>
+        <div style={{ fontSize: 12, color: C.textDim, lineHeight: 1.7, fontFamily: FONT }}>Add your first prospect above<br/>or upload a CSV file</div>
+      </div>
+    ) : prospects.filter(p => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        if (!((p.name || "").toLowerCase().includes(q) || (p.company || "").toLowerCase().includes(q) || (p.jobTitle || "").toLowerCase().includes(q))) return false;
+      }
+      if (sidebarFilter === "followup1") {
+        if (!p.sentAt || p.status === "done") return false;
+        const d = getDaysUntilFollowup(p, 3);
+        return d !== null && d <= 0;
+      }
+      if (sidebarFilter === "followup2") {
+        if (!p.sentAt || p.status === "done") return false;
+        const d = getDaysUntilFollowup(p, 7);
+        return d !== null && d <= 0;
+      }
+      return true;
+    }).map(p => (
+      <div key={p.id} className="card-enter prospect-card" onClick={() => setSelected(p.id)} style={{ padding: "11px 14px", background: selected === p.id ? "#EEF5FF" : "#FFFFFF", borderBottom: "1px solid #F0F4F8", borderLeft: selected === p.id ? "3px solid #1B6EF3" : "3px solid transparent" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: selected === p.id ? C.navy : C.text, lineHeight: 1.3, fontFamily: FONT }}>{p.name}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {running === p.id && <Spinner />}
+            <button onClick={async e => {
+              e.stopPropagation();
+              if (selected === p.id) setSelected(null);
+              setProspects(prev => prev.filter(pr => pr.id !== p.id));
+              if (supabase) {
+                await Promise.all([
+                  supabase.from('v3_prospects').delete().eq('id', p.id),
+                  supabase.from('v3_research').delete().eq('id', p.id),
+                  supabase.from('v3_messages').delete().eq('id', p.id),
+                  supabase.from('v3_edits').delete().eq('id', p.id),
+                ]);
+              }
+              setResearch(prev => { const n = {...prev}; delete n[p.id]; return n; });
+              setMessages(prev => { const n = {...prev}; delete n[p.id]; return n; });
+              setEdits(prev => { const n = {...prev}; Object.keys(n).filter(k => k.startsWith(p.id)).forEach(k => delete n[k]); return n; });
+            }} title="Remove prospect" style={{ background: "none", border: "none", cursor: "pointer", color: C.textFaint, fontSize: 14, lineHeight: 1, padding: "0 2px", borderRadius: 3 }}
+              onMouseEnter={e => e.currentTarget.style.color = C.red}
+              onMouseLeave={e => e.currentTarget.style.color = C.textFaint}>✕</button>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: C.textMid, marginTop: 2, fontFamily: FONT }}>{p.company}</div>
+        {p.email && <div style={{ fontSize: 10, color: C.textDim, marginTop: 1 }}>✉️ {p.email}</div>}
+        <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+          <Badge status={p.status} />
+          {(p.status === "ready" || p.status === "following" || p.status === "error") && (
+            <button onClick={e => { e.stopPropagation(); runAgent(p); }} disabled={running !== null}
+              style={{ fontSize: 9, fontFamily: MONO, color: C.gold, background: C.goldDim, border: `1px solid ${C.gold}44`, padding: "2px 8px", borderRadius: 10, cursor: running !== null ? "not-allowed" : "pointer", opacity: running !== null ? 0.5 : 1 }}>↺ Regen</button>
+          )}
+        </div>
+        {p.status === "following" && (
+          <div style={{ marginTop: 5, display: "flex", flexWrap: "wrap", gap: 3 }}>
+            {[3, 7, 14].map(day => {
+              const d = getDaysUntilFollowup(p, day);
+              const isDue = d !== null && d <= 0, isSoon = d !== null && d > 0 && d <= 1;
+              return <span key={day} style={{ fontSize: 9, fontFamily: MONO, padding: "2px 6px", borderRadius: 10, background: isDue ? C.redDim : isSoon ? C.amberDim : "#F0F4F8", color: isDue ? C.red : isSoon ? C.amber : C.textDim, border: `1px solid ${isDue ? C.red+"44" : isSoon ? C.amber+"44" : "#E0E8F0"}` }}>D{day}: {isDue ? "DUE" : `${d}d`}</span>;
+            })}
+          </div>
+        )}
+      </div>
     ))}
   </div>
 </div>
-              {prospects.length === 0 ? (
-                <div style={{ padding: "40px 20px", textAlign: "center" }}>
-                  <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.25 }}>👤</div>
-                  <div style={{ fontSize: 12, color: C.textDim, lineHeight: 1.7, fontFamily: FONT }}>Add your first prospect above<br/>or upload a CSV file</div>
-                </div>
-             ) : prospects.filter(p => {
-  // Search filter
-  if (searchQuery.trim()) {
-    const q = searchQuery.toLowerCase();
-    if (!(
-      (p.name || "").toLowerCase().includes(q) ||
-      (p.company || "").toLowerCase().includes(q) ||
-      (p.jobTitle || "").toLowerCase().includes(q)
-    )) return false;
-  }
-  // Follow-up filter
-  if (sidebarFilter === "followup1") {
-    if (!p.sentAt || p.status === "done") return false;
-    const d = getDaysUntilFollowup(p, 3);
-    return d !== null && d <= 0;
-  }
-  if (sidebarFilter === "followup2") {
-    if (!p.sentAt || p.status === "done") return false;
-    const d = getDaysUntilFollowup(p, 7);
-    return d !== null && d <= 0;
-  }
-  return true;
-}).map(p => (
-                <div key={p.id} className="card-enter prospect-card" onClick={() => setSelected(p.id)} style={{ padding: "11px 14px", marginBottom: 0, background: selected === p.id ? "#EEF5FF" : "#FFFFFF", borderBottom: "1px solid #F0F4F8", borderLeft: selected === p.id ? "3px solid #1B6EF3" : "3px solid transparent" }}>
-                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-  <div style={{ fontWeight: 600, fontSize: 13, color: selected === p.id ? C.navy : C.text, lineHeight: 1.3, fontFamily: FONT }}>{p.name}</div>
-  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-    {running === p.id && <Spinner />}
-    <button
-     onClick={async e => {
-        e.stopPropagation();
-        if (selected === p.id) setSelected(null);
-        setProspects(prev => prev.filter(pr => pr.id !== p.id));
-        if (supabase) {
-          await Promise.all([
-            supabase.from('v3_prospects').delete().eq('id', p.id),
-            supabase.from('v3_research').delete().eq('id', p.id),
-            supabase.from('v3_messages').delete().eq('id', p.id),
-            supabase.from('v3_edits').delete().eq('id', p.id),
-          ]);
-        }
-       setResearch(prev => { const n = {...prev}; delete n[p.id]; return n; });
-        setMessages(prev => { const n = {...prev}; delete n[p.id]; return n; });
-        setEdits(prev => { const n = {...prev}; Object.keys(n).filter(k => k.startsWith(p.id)).forEach(k => delete n[k]); return n; });
-      }}
-      title="Remove prospect"
-      style={{ background: "none", border: "none", cursor: "pointer", color: C.textFaint, fontSize: 14, lineHeight: 1, padding: "0 2px", borderRadius: 3 }}
-      onMouseEnter={e => e.currentTarget.style.color = C.red}
-      onMouseLeave={e => e.currentTarget.style.color = C.textFaint}
-    >✕</button>
-  </div>
-</div>
-                  <div style={{ fontSize: 11, color: C.textMid, marginTop: 2, fontFamily: FONT }}>{p.company}</div>
-                  {p.email && <div style={{ fontSize: 10, color: C.textDim, marginTop: 1 }}>✉️ {p.email}</div>}
-                  <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-  <Badge status={p.status} />
-  {(p.status === "ready" || p.status === "following" || p.status === "error") && (
-    <button
-      onClick={e => { e.stopPropagation(); runAgent(p); }}
-      disabled={running !== null}
-      style={{ fontSize: 9, fontFamily: MONO, color: C.gold, background: C.goldDim, border: `1px solid ${C.gold}44`, padding: "2px 8px", borderRadius: 10, cursor: running !== null ? "not-allowed" : "pointer", opacity: running !== null ? 0.5 : 1 }}
-    >↺ Regen</button>
-  )}
-</div>
-                  {p.status === "following" && (
-                    <div style={{ marginTop: 5, display: "flex", flexWrap: "wrap", gap: 3 }}>
-                      {[3, 7, 14].map(day => {
-                        const d = getDaysUntilFollowup(p, day);
-                        const isDue = d !== null && d <= 0, isSoon = d !== null && d > 0 && d <= 1;
-                        return <span key={day} style={{ fontSize: 9, fontFamily: MONO, padding: "2px 6px", borderRadius: 10, background: isDue ? C.redDim : isSoon ? C.amberDim : "#F0F4F8", color: isDue ? C.red : isSoon ? C.amber : C.textDim, border: `1px solid ${isDue ? C.red + "44" : isSoon ? C.amber + "44" : "#E0E8F0"}` }}>D{day}: {isDue ? "DUE" : `${d}d`}</span>;
-                      })}
-                    </div>
-                  )}
-                </div>
-              ))}
-          </div>
-        </div>}
+</div>}
            
               {/* MAIN CONTENT */}
 <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
