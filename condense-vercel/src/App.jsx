@@ -875,12 +875,14 @@ const [exportingPDF, setExportingPDF] = useState(false);
 useEffect(() => {
   async function loadAll() {
     if (!supabase) { setDbLoaded(true); return; }
-const [p, r, m, e, rep, n, rat, tr, gtmR, gtmM] = await Promise.all([
+const [p, r, m, e, rep, n, rat, tr, gtmR, gtmM, gtmRes] = await Promise.all([
   dbLoad('v3_prospects'), dbLoad('v3_research'), dbLoad('v3_messages'),
   dbLoad('v3_edits'), dbLoad('v3_replies'), dbLoad('v3_notifications'),
   dbLoad('v3_ratings'), dbLoad('v3_training'),
-  dbLoad('v3_gtm_rows'), dbLoad('v3_gtm_messages'),
+  dbLoad('v3_gtm_rows'), dbLoad('v3_gtm_messages'), dbLoad('v3_gtm_research'),
 ]);
+// after setGtmGenerated(gtmM):
+setGtmResearch(gtmRes);
     setProspects(Object.values(p).sort((a, b) => {
   // Ready/Following first, then by newest created
   const statusOrder = { ready: 0, following: 1, replied: 2, generating: 3, researching: 4, done: 5, error: 6, idle: 7 };
@@ -971,6 +973,9 @@ const [gtmSidebarFilter, setGtmSidebarFilter] = useState("all");
 const [gtmBatchEnriching, setGtmBatchEnriching] = useState(false);
 const [gtmEnrichProgress, setGtmEnrichProgress] = useState(0);
 const gtmEnrichCancelRef = useRef(false);
+const [gtmResearch, setGtmResearch] = useState({});
+const [gtmResearchRunning, setGtmResearchRunning] = useState(null);
+const [activeGtmPanel, setActiveGtmPanel] = useState("email"); // email | research | stories
 const [gtmForm, setGtmForm] = useState({ Company: "", HQ: "", Employees: "", "Data Stack Signal": "", "Tool Used": "", "Use Case": "", "Cloud Provider": "", "Data Warehouse": "", "Buying Persona": "", "Prospect Name": "", "Integration Opportunity": "", email: "", phone: "" });
   
 
@@ -1023,6 +1028,11 @@ useEffect(() => {
   if (!dbLoaded) return;
   Object.entries(gtmGenerated).forEach(([id, val]) => dbSave('v3_gtm_messages', id, val));
 }, [gtmGenerated, dbLoaded]);
+  
+  useEffect(() => {
+  if (!dbLoaded) return;
+  Object.entries(gtmResearch).forEach(([id, val]) => dbSave('v3_gtm_research', id, val));
+}, [gtmResearch, dbLoaded]);
   
   useEffect(() => {
   localStorage.setItem('sender_profile', JSON.stringify(senderProfile));
@@ -1229,7 +1239,75 @@ const extraCtx = extraContext[id] || "";
       addLog(id, "❌ Error: " + err.message);
     } finally { setRunning(null); }
   };
+const runGtmResearch = async (row) => {
+  const id = String(row._id);
+  setGtmResearchRunning(row._id);
 
+  const company = row.Company || "";
+  const stack = row["Data Stack Signal"] || "";
+  const tool = row["Tool Used"] || "";
+  const useCase = row["Use Case"] || "";
+  const cloud = row["Cloud Provider"] || "";
+  const warehouse = row["Data Warehouse"] || "";
+  const persona = row["Buying Persona"] || "";
+  const integration = row["Integration Opportunity"] || "";
+
+  const prompt = `You are a B2B sales research agent for Condense (Kafka-based real-time data streaming platform by Zeliot, Bosch-backed).
+
+Research this company for outreach:
+- Company: ${company}
+- Data Stack: ${stack}
+- Tool Used: ${tool}
+- Use Case: ${useCase}
+- Cloud Provider: ${cloud}
+- Data Warehouse: ${warehouse}
+- Buying Persona: ${persona}
+- Integration Opportunity: ${integration}
+
+Provide deep research across ALL these areas:
+
+1. COMPANY OVERVIEW: What ${company} does, scale, HQ, revenue signals, team size
+2. CURRENT TECH STACK ANALYSIS: Deep dive on their ${stack} usage — how they likely use it, what scale, what complexity. How ${tool} fits in. Why ${warehouse} on ${cloud}.
+3. PAIN POINTS with current stack: 4 specific pains a ${persona} at ${company} faces with ${stack} + ${tool} at scale
+4. WHY CONDENSE FITS: How exactly Condense complements or replaces parts of their ${stack}/${tool} stack. Be specific — e.g. "Condense can replace their Kafka Connect layer with managed connectors" or "Condense reduces their Confluent licensing cost by 40%"
+5. CONDENSE FIT SCORE: "high", "medium", or "low". High = active Kafka/streaming usage + scale + data engineering needs. Explain why.
+6. TECH SIGNALS: What signals indicate they are a good fit (job postings patterns, engineering blog, tech stack choices)
+7. RECENT NEWS: Search "${company} news 2025 2026" — funding, product launches, expansions, data initiatives
+8. CONVERSATION HOOKS: 2 specific hooks for ${persona} based on their ${stack} + ${integration}
+9. REPLACEMENT OPPORTUNITY: Specifically which part of their current stack Condense can replace or complement and why
+10. PRE-READ LINKS: 2-3 relevant links Veera can reference
+
+Return ONLY valid JSON:
+{
+  "company_overview": "2-3 sentence summary of ${company}",
+  "current_stack_analysis": "3-4 sentences on how they use ${stack} + ${tool} + ${warehouse} on ${cloud}",
+  "replacement_opportunity": "Specific description of what Condense replaces or complements in their stack",
+  "condense_fit": {"score": "high|medium|low", "reason": "2-3 sentence explanation tied to their specific stack"},
+  "pain_points": ["pain 1 specific to ${stack}", "pain 2 specific to ${tool}", "pain 3 specific to ${warehouse}", "pain 4 specific to ${persona} role"],
+  "tech_stack_signals": ["signal 1", "signal 2", "signal 3"],
+  "recent_news": ["news 1", "news 2"],
+  "conversation_hooks": ["hook 1 referencing ${stack}", "hook 2 referencing ${integration}"],
+  "why_condense_fits": "2-3 sentences on exact fit",
+  "pre_read_links": [{"title": "...", "url": "https://...", "relevance": "..."}],
+  "confidence_score": 85
+}`;
+
+  try {
+    const data = await callClaude({
+      system: "You are a B2B research agent specializing in data infrastructure. Return ONLY valid JSON. Start with { and end with }. No markdown.",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 2500,
+    });
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+    const result = extractJSON(text);
+    setGtmResearch(prev => ({ ...prev, [id]: result }));
+    dbSave('v3_gtm_research', id, result);
+    showGtmToast(`✅ Research complete for ${company}`, "success");
+  } catch (err) {
+    showGtmToast(`❌ Research failed: ${err.message}`, "error");
+  }
+  setGtmResearchRunning(null);
+};
   const markSent = (id) => {
     setProspects(prev => prev.map(p => p.id === id ? { ...p, status: "following", sentAt: new Date().toISOString() } : p));
   };
@@ -2284,293 +2362,386 @@ if (!dbLoaded) return (
             })}
           </div>
         </div>
+       {/* RIGHT — email + research view */}
+<div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, overflow: "hidden" }}>
+  {(() => {
+    const row = gtmRows.find(r => r._id === gtmSelected);
+    if (!row) return <div style={{ padding: 40, textAlign: "center", color: C.textDim, fontFamily: MONO }}>Select a company</div>;
+    const gen = gtmGenerated[row._id];
+    const research = gtmResearch[String(row._id)];
 
-        {/* RIGHT — email view */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, overflow: "hidden" }}>
-          {(() => {
-            const row = gtmRows.find(r => r._id === gtmSelected);
-            if (!row) return <div style={{ padding: 40, textAlign: "center", color: C.textDim, fontFamily: MONO }}>Select a company</div>;
-            const gen = gtmGenerated[row._id];
+    return (
+      <>
+        {/* TOP: Signal chips + action buttons */}
+        <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, padding: "14px 18px", flexShrink: 0, marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+            <div>
+              <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: C.navy }}>{row.Company}</div>
+              {row._discoveredName && <div style={{ fontSize: 11, color: C.navy, fontFamily: FONT, fontWeight: 600, marginTop: 2 }}>👤 {row._discoveredName}</div>}
+              {row.email && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 1 }}>✉️ {row.email}</div>}
+              {row.phone && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 1 }}>📱 {row.phone}</div>}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              {row._status === "generating" && <><Spinner /><span style={{ fontSize: 11, color: C.gold, fontFamily: MONO }}>Generating...</span></>}
 
-            return (
-              <>
-                {/* Signal chips */}
-                <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, padding: "14px 18px", flexShrink: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-  <div>
-    <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: C.navy }}>{row.Company}</div>
-   {row._discoveredName && <div style={{ fontSize: 11, color: C.navy, fontFamily: FONT, fontWeight: 600, marginTop: 2 }}>👤 {row._discoveredName}</div>}
-   {row.email && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>✉️ {row.email}</div>}
-{row.phone && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 1 }}>📱 {row.phone}</div>}
-{row.linkedinUrl && <div style={{ fontSize: 10, color: "#0077B5", fontFamily: MONO, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>💼 {row.linkedinUrl}</div>} 
-  </div>
-  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-    {row._status === "generating" && <><Spinner /><span style={{ fontSize: 11, color: C.gold, fontFamily: MONO }}>Generating...</span></>}
+              {/* ENRICH */}
+              <button onClick={async () => {
+                setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: true } : r));
+                showGtmToast("🔍 Looking up via Apollo / Lusha...", "info", 8000);
+                try {
+                  const res = await fetch("/api/enrich", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: (row["Full Name"] || row["Prospect Name"] || "").trim(), company: row.Company, jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(), linkedinUrl: row.linkedinUrl || "" }),
+                  });
+                  const data = await res.json();
+                  if (data.found && (data.email || data.phone || data.name)) {
+                    const updated = { ...row, email: data.email || row.email, phone: data.phone || row.phone, _discoveredName: data.name || row._discoveredName, _enriching: false, _enriched: data.source };
+                    setGtmRows(prev => prev.map(r => r._id === row._id ? updated : r));
+                    dbSave('v3_gtm_rows', String(row._id), updated);
+                    showGtmToast(`✅ ${data.source}: ${data.name || ""} · ${data.email || "no email"}`, "success");
+                  } else {
+                    setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
+                    showGtmToast("❌ No contact found", "error");
+                  }
+                } catch (err) {
+                  setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
+                  showGtmToast(`❌ ${err.message}`, "error");
+                }
+              }} disabled={row._enriching}
+                style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: row._enriching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                {row._enriching ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enriched}` : "🔍 Enrich"}
+              </button>
 
-    {/* ENRICH BUTTON */}
-    <button
-     onClick={async () => {
-  setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: true } : r));
-  showGtmToast("🔍 Looking up via Apollo / Lusha...", "info", 8000);
-  try {
-    const res = await fetch("/api/enrich", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-     name: (row["Full Name"] || row["Prospect Name"] || "").trim(),
-     company: (row.Company || "").trim(),
-     jobTitle: (row["Job Title"] || "").trim(),
-     linkedinUrl: row.linkedinUrl || row.linkedinURL || "",
-}),
-    });
-  let data;
-     try { data = await res.json(); } catch(e) { 
-        setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
-        showGtmToast(`❌ Server error — check Vercel logs`, "error");
-        return;
-      }
-      if (data.found && (data.email || data.phone || data.name)) {
-      setGtmRows(prev => prev.map(r =>
-        r._id === row._id
-          ? { ...r, email: data.email || r.email, phone: data.phone || r.phone, _discoveredName: data.name || r._discoveredName, _enriching: false, _enriched: data.source }
-          : r
-      ));
-      dbSave('v3_gtm_rows', String(row._id), { ...row, email: data.email, phone: data.phone, _discoveredName: data.name, _enriched: data.source });
-      showGtmToast(`✅ ${data.source}: ${data.name ? data.name + " · " : ""}${data.email || "no email"} ${data.phone ? "· " + data.phone : ""}`, "success");
-    } else {
-      setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
-      showGtmToast(`❌ Nothing found for "${row["Buying Persona"] || row.Company}" — check your API keys`, "error");
-    }
-  } catch (err) {
-    setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
-    showGtmToast(`❌ Enrichment error: ${err.message}`, "error");
-  }
-}}
-      disabled={row._enriching}
-      style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: row._enriching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}
-    >
-      {row._enriching ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enriched}` : "🔍 Enrich"}
-    </button>
+              {/* ZOHO */}
+              {gen && (
+                <button onClick={async () => {
+                  setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: true, _zohoStatus: null } : r));
+                  try {
+                    await pushToZoho({ name: row._discoveredName || row["Buying Persona"], company: row.Company, jobTitle: row["Buying Persona"], email: row.email || "", phone: row.phone || "" }, gen, `Data Stack: ${row["Data Stack Signal"]} | Tool: ${row["Tool Used"]} | Integration: ${row["Integration Opportunity"]}`);
+                    setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: false, _zohoStatus: "success" } : r));
+                    setTimeout(() => setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoStatus: null } : r)), 4000);
+                  } catch {
+                    setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: false, _zohoStatus: "error" } : r));
+                    setTimeout(() => setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoStatus: null } : r)), 4000);
+                  }
+                }} disabled={row._zohoPushing}
+                  style={{ padding: "6px 12px", borderRadius: 6, fontSize: 11, fontFamily: FONT, fontWeight: 500, border: `1px solid ${row._zohoStatus === "success" ? "#B8EDD3" : "#E4629444"}`, background: row._zohoStatus === "success" ? "#F0FBF5" : "#FFF0F5", color: row._zohoStatus === "success" ? C.green : "#E46294", cursor: row._zohoPushing ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                  {row._zohoPushing ? <><Spinner /> Pushing...</> : row._zohoStatus === "success" ? "✅ Pushed!" : "☁️ Zoho"}
+                </button>
+              )}
 
-    {/* ZOHO PUSH BUTTON */}
-    {gen && (
-      <button
-        onClick={async () => {
-          setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: true, _zohoStatus: null } : r));
-          try {
-            await pushToZoho(
-              { name: row["Buying Persona"], company: row.Company, jobTitle: row["Buying Persona"], email: row.email || "", phone: row.phone || "" },
-              gen,
-              `Data Stack: ${row["Data Stack Signal"]} | Tool: ${row["Tool Used"]} | Integration: ${row["Integration Opportunity"]}`
-            );
-            setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: false, _zohoStatus: "success" } : r));
-            setTimeout(() => setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoStatus: null } : r)), 4000);
-          } catch {
-            setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: false, _zohoStatus: "error" } : r));
-            setTimeout(() => setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoStatus: null } : r)), 4000);
-          }
-        }}
-        disabled={row._zohoPushing}
-        style={{
-          padding: "6px 12px", borderRadius: 6, fontSize: 11, fontFamily: FONT, fontWeight: 500,
-          border: `1px solid ${row._zohoStatus === "success" ? "#B8EDD3" : row._zohoStatus === "error" ? "#FFCCCC" : "#E4629444"}`,
-          background: row._zohoStatus === "success" ? "#F0FBF5" : row._zohoStatus === "error" ? "#FFF5F5" : "#FFF0F5",
-          color: row._zohoStatus === "success" ? C.green : row._zohoStatus === "error" ? C.red : "#E46294",
-          cursor: row._zohoPushing ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5
-        }}
-      >
-        {row._zohoPushing ? <><Spinner /> Pushing...</> : row._zohoStatus === "success" ? "✅ Pushed!" : row._zohoStatus === "error" ? "❌ Failed" : "☁️ Zoho"}
-      </button>
-    )}
-   {/* FULL RESEARCH BUTTON */}
-<button
-  onClick={() => {
-    const newProspect = {
-      id: `p_gtm_${row._id}_${Date.now()}`,
-      name: row._discoveredName || row["Prospect Name"] || row["Full Name"] || row["Buying Persona"],
-      jobTitle: row["Buying Persona"] || row["Job Title"] || "",
-      company: row.Company,
-      email: row.email || "",
-      phone: row.phone || "",
-      linkedinUrl: row.linkedinUrl || "",
-      industry: row["Data Stack Signal"] || "",
-      region: row.HQ || "India",
-      jdText: `Data Stack: ${row["Data Stack Signal"]}. Tool: ${row["Tool Used"]}. Use Case: ${row["Use Case"]}. Cloud: ${row["Cloud Provider"]}. Warehouse: ${row["Data Warehouse"]}. Integration: ${row["Integration Opportunity"]}.`,
-      status: "idle",
-      createdAt: new Date().toISOString(),
-      sentAt: null,
-    };
-    setProspects(prev => [newProspect, ...prev]);
-    setActiveView("prospects");
-    setSelected(newProspect.id);
-    setTimeout(() => runAgent(newProspect), 400);
-    showGtmToast(`🔍 Running full research for ${row.Company}...`, "info", 6000);
-  }}
-  style={{ padding: "7px 14px", borderRadius: 6, border: "1px solid #0D9E6E44", background: "#F0FBF5", color: C.green, fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
->
-  🔍 Full Research
-</button>
-    {/* GENERATE BUTTON */}
-    {(row._status === "idle" || row._status === "error") && (
-      <button onClick={() => generateGtmEmail(row)} disabled={gtmRunning !== null} style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
-        ⚡ Generate
-      </button>
-    )}
-    {row._status === "ready" && (
-      <button onClick={() => generateGtmEmail(row)} disabled={gtmRunning !== null} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #D8E2EE", background: "#fff", color: C.textMid, fontSize: 11, fontFamily: FONT, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
-        ↺ Regenerate
-      </button>
-    )}
-  </div>
-</div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {[
-                      { v: row["Data Stack Signal"], c: "#1B6EF3" },
-                      { v: row["Tool Used"], c: "#7C3AED" },
-                      { v: row["Use Case"], c: "#D97706" },
-                      { v: row["Cloud Provider"], c: "#0D9E6E" },
-                      { v: row["Data Warehouse"], c: "#0A2540" },
-                      { v: row["Buying Persona"], c: "#E53E3E" },
-                      { v: row["Integration Opportunity"], c: "#1B6EF3" },
-                    ].filter(c => c.v).map(chip => (
-                      <span key={chip.v} style={{ fontSize: 10, fontFamily: MONO, color: chip.c, background: `${chip.c}11`, padding: "3px 10px", borderRadius: 20, border: `1px solid ${chip.c}22` }}>{chip.v}</span>
+              {/* RESEARCH + GENERATE — single combined button */}
+              <button
+                onClick={async () => {
+                  // Run research first, then generate email using research context
+                  await runGtmResearch(row);
+                  setActiveGtmPanel("research");
+                }}
+                disabled={gtmResearchRunning === row._id}
+                style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: research ? "linear-gradient(135deg, #0D9E6E, #16B87E)" : "linear-gradient(135deg, #7C3AED, #9F67FF)", color: "#fff", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: gtmResearchRunning === row._id ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6, opacity: gtmResearchRunning === row._id ? 0.7 : 1 }}>
+                {gtmResearchRunning === row._id ? <><Spinner /> Researching...</> : research ? "↺ Re-research" : "🔬 Research"}
+              </button>
+
+              {/* GENERATE EMAIL */}
+              <button onClick={() => { generateGtmEmail(row); setActiveGtmPanel("email"); }} disabled={gtmRunning !== null}
+                style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: gen ? "#fff" : "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: gen ? C.textMid : "#fff", border: gen ? "1px solid #D8E2EE" : "none", fontSize: 11, fontFamily: FONT, fontWeight: 600, cursor: gtmRunning !== null ? "not-allowed" : "pointer", opacity: gtmRunning !== null ? 0.5 : 1 }}>
+                {gtmRunning === row._id ? <><Spinner /> Generating...</> : gen ? "↺ Regenerate" : "⚡ Generate Email"}
+              </button>
+            </div>
+          </div>
+
+          {/* Signal chips */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {[
+              { v: row["Data Stack Signal"], c: "#1B6EF3" },
+              { v: row["Tool Used"], c: "#7C3AED" },
+              { v: row["Use Case"], c: "#D97706" },
+              { v: row["Cloud Provider"], c: "#0D9E6E" },
+              { v: row["Data Warehouse"], c: "#0A2540" },
+              { v: row["Buying Persona"], c: "#E53E3E" },
+              { v: row["Integration Opportunity"], c: "#1B6EF3" },
+            ].filter(c => c.v).map(chip => (
+              <span key={chip.v} style={{ fontSize: 10, fontFamily: MONO, color: chip.c, background: `${chip.c}11`, padding: "3px 10px", borderRadius: 20, border: `1px solid ${chip.c}22` }}>{chip.v}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* PANEL SWITCHER TABS */}
+        <div style={{ display: "flex", background: "#fff", border: "1px solid #E4ECF4", borderRadius: "10px 10px 0 0", borderBottom: "none", padding: "0 4px", flexShrink: 0 }}>
+          {[
+            { key: "email", label: "✉️ Messages", badge: gen ? "ready" : null },
+            { key: "research", label: "🔬 Research", badge: research ? "done" : null },
+            { key: "stories", label: "🏆 Stories" },
+          ].map(tab => (
+            <button key={tab.key} onClick={() => setActiveGtmPanel(tab.key)}
+              style={{ padding: "10px 18px", border: "none", background: "transparent", cursor: "pointer", borderBottom: activeGtmPanel === tab.key ? "2px solid #1B6EF3" : "2px solid transparent", color: activeGtmPanel === tab.key ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 12, fontWeight: activeGtmPanel === tab.key ? 600 : 400, display: "flex", alignItems: "center", gap: 6 }}>
+              {tab.label}
+              {tab.badge && <span style={{ fontSize: 8, fontFamily: MONO, color: tab.badge === "ready" ? C.green : C.blue, background: tab.badge === "ready" ? C.greenDim : C.blueDim, padding: "1px 6px", borderRadius: 8 }}>{tab.badge === "ready" ? "READY" : "DONE"}</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* PANEL: EMAIL */}
+        {activeGtmPanel === "email" && (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px" }}>
+            {gen ? (() => {
+              const GTM_TABS = [
+                { key: "email_body", label: "Email", icon: "✉️" },
+                { key: "email_followup1", label: "Email F/U 1", icon: "📧" },
+                { key: "email_followup2", label: "Email F/U 2", icon: "📧" },
+                { key: "connection_note", label: "Connection", icon: "🔗" },
+                { key: "day0_message", label: "Day 0", icon: "💬" },
+                { key: "day3_followup", label: "Day 3", icon: "📨" },
+                { key: "day7_followup", label: "Day 7", icon: "📨" },
+                { key: "day14_followup", label: "Day 14", icon: "📨" },
+              ];
+              const editKey = `gtm_${row._id}_${activeGtmTab}`;
+              const text = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
+              return (
+                <>
+                  <div style={{ display: "flex", borderBottom: "1px solid #EEF2F7", padding: "0 4px", flexShrink: 0, overflowX: "auto" }}>
+                    {GTM_TABS.map(tab => (
+                      <button key={tab.key} onClick={() => setActiveGtmTab(tab.key)}
+                        style={{ padding: "9px 12px", border: "none", background: "transparent", cursor: "pointer", borderBottom: activeGtmTab === tab.key ? "2px solid #1B6EF3" : "2px solid transparent", color: activeGtmTab === tab.key ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 11, fontWeight: activeGtmTab === tab.key ? 600 : 400, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                        {tab.icon} {tab.label}
+                      </button>
+                    ))}
+                    <div style={{ flex: 1 }} />
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "0 10px" }}>
+                      {gtmEdited[editKey] !== undefined && <button onClick={() => setGtmEdited(prev => { const n = {...prev}; delete n[editKey]; return n; })} style={{ fontSize: 10, color: C.textDim, background: "none", border: "none", cursor: "pointer" }}>↺</button>}
+                      <button onClick={() => navigator.clipboard.writeText(text)} style={{ fontSize: 11, color: C.gold, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: FONT }}>📋 Copy</button>
+                      {(activeGtmTab === "email_body" || activeGtmTab === "email_followup1" || activeGtmTab === "email_followup2") && (
+                        <button onClick={() => {
+                          const subj = activeGtmTab === "email_body" ? (gen.email_subject || "") : activeGtmTab === "email_followup1" ? `Re: ${gen.email_subject || ""}` : `Following up: ${gen.email_subject || ""}`;
+                          window.open(`mailto:${row.email || ""}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`, "_blank");
+                        }} style={{ fontSize: 11, color: C.amber, background: C.amberDim, border: `1px solid ${C.amber}33`, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✉️ Mail</button>
+                      )}
+                    </div>
+                  </div>
+                  <textarea value={text} onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
+                    style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }} />
+                  <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {!row._sentAt ? (
+                        <button onClick={() => {
+                          const updated = { ...row, _sentAt: new Date().toISOString() };
+                          setGtmRows(prev => prev.map(r => r._id === row._id ? updated : r));
+                          dbSave('v3_gtm_rows', String(row._id), updated);
+                          showGtmToast("✅ Marked as sent!", "success");
+                        }} style={{ fontSize: 11, color: C.green, background: C.greenDim, border: `1px solid ${C.green}44`, padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✓ Mark Sent</button>
+                      ) : (
+                        <span style={{ fontSize: 10, color: C.green, fontFamily: MONO }}>✅ Sent {new Date(row._sentAt).toLocaleDateString()}</span>
+                      )}
+                      <button onClick={() => { const next = gtmRows.find(r => r._id > row._id); if (next) setGtmSelected(next._id); }} style={{ fontSize: 11, color: C.textMid, background: "none", border: "1px solid #E4ECF4", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT }}>Next →</button>
+                    </div>
+                  </div>
+                </>
+              );
+            })() : (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 32 }}>
+                <div style={{ fontSize: 40, opacity: 0.2 }}>✉️</div>
+                <div style={{ fontSize: 14, color: C.textMid, fontFamily: FONT, textAlign: "center" }}>Click <strong>Generate Email</strong> to create outreach for {row.Company}</div>
+                <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>Or click <strong>Research</strong> first for deeper personalization</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PANEL: RESEARCH */}
+        {activeGtmPanel === "research" && (
+          <div style={{ flex: 1, overflowY: "auto", background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", padding: 20 }}>
+            {gtmResearchRunning === row._id ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: "60px 0" }}>
+                <Spinner />
+                <div style={{ fontSize: 13, color: C.textMid, fontFamily: FONT }}>Researching {row.Company}...</div>
+                <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>Analysing data stack, pain points, tech signals...</div>
+              </div>
+            ) : !research ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "60px 0" }}>
+                <div style={{ fontSize: 40, opacity: 0.2 }}>🔬</div>
+                <div style={{ fontSize: 14, color: C.textMid, fontFamily: FONT, textAlign: "center" }}>No research yet for {row.Company}</div>
+                <button onClick={() => runGtmResearch(row)} style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #7C3AED, #9F67FF)", color: "#fff", fontSize: 13, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
+                  🔬 Run Research Now
+                </button>
+                <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO, textAlign: "center", maxWidth: 300 }}>
+                  Analyses {row["Data Stack Signal"]} stack, identifies pain points, scores Condense fit
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+                {/* FIT SCORE */}
+                <div style={{ background: research.condense_fit?.score === "high" ? C.greenDim : research.condense_fit?.score === "medium" ? C.amberDim : C.redDim, border: `1px solid ${research.condense_fit?.score === "high" ? C.green : research.condense_fit?.score === "medium" ? C.amber : C.red}44`, borderRadius: 10, padding: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                    <span style={{ fontSize: 20 }}>{research.condense_fit?.score === "high" ? "🟢" : research.condense_fit?.score === "medium" ? "🟡" : "🔴"}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: research.condense_fit?.score === "high" ? C.green : research.condense_fit?.score === "medium" ? C.amber : C.red, fontFamily: FONT }}>
+                      {(research.condense_fit?.score || "").toUpperCase()} FIT — {row.Company}
+                    </span>
+                    <span style={{ fontSize: 10, fontFamily: MONO, color: C.textDim }}>Confidence: {research.confidence_score}%</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.7 }}>{research.condense_fit?.reason}</div>
+                </div>
+
+                {/* COMPANY + STACK ANALYSIS */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.textDim, letterSpacing: "0.08em", marginBottom: 8 }}>COMPANY OVERVIEW</div>
+                    <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.7 }}>{research.company_overview}</div>
+                  </div>
+                  <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.textDim, letterSpacing: "0.08em", marginBottom: 8 }}>CURRENT STACK ANALYSIS</div>
+                    <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.7 }}>{research.current_stack_analysis}</div>
+                  </div>
+                </div>
+
+                {/* REPLACEMENT OPPORTUNITY */}
+                <div style={{ background: "linear-gradient(135deg, #EEF5FF, #F5F0FF)", border: "1px solid #B8CCFF", borderRadius: 10, padding: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, fontFamily: FONT, marginBottom: 8 }}>⚡ How Condense Replaces / Complements Their Stack</div>
+                  <div style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.7 }}>{research.replacement_opportunity}</div>
+                </div>
+
+                {/* PAIN POINTS + TECH SIGNALS */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ background: "#FFFBF0", border: "1px solid #F0C070", borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.amber, letterSpacing: "0.08em", marginBottom: 8 }}>PAIN POINTS</div>
+                    {(research.pain_points || []).map((pt, i) => (
+                      <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "4px 0", display: "flex", gap: 8, lineHeight: 1.5 }}>
+                        <span style={{ color: C.amber, flexShrink: 0 }}>—</span>{pt}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background: "#F0F8FF", border: "1px solid #B8D4FF", borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.blue, letterSpacing: "0.08em", marginBottom: 8 }}>TECH SIGNALS</div>
+                    {(research.tech_stack_signals || []).map((s, i) => (
+                      <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "4px 0", display: "flex", gap: 8 }}>
+                        <span style={{ color: C.blue, flexShrink: 0 }}>·</span>{s}
+                      </div>
                     ))}
                   </div>
                 </div>
 
-                {gen ? (() => {
-                  // Message tabs for GTM
-                 const GTM_TABS = [
-  { key: "email_body", label: "Email", icon: "✉️" },
-  { key: "email_followup1", label: "Email F/U 1", icon: "📧" },
-  { key: "email_followup2", label: "Email F/U 2", icon: "📧" },
-  { key: "connection_note", label: "Connection", icon: "🔗" },
-  { key: "day0_message", label: "Day 0", icon: "💬" },
-  { key: "day3_followup", label: "Day 3", icon: "📨" },
-  { key: "day7_followup", label: "Day 7", icon: "📨" },
-  { key: "day14_followup", label: "Day 14", icon: "📨" },
-];
-                 
-                  const editKey = `gtm_${row._id}_${activeGtmTab}`;
-                  const text = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
+                {/* WHY CONDENSE FITS */}
+                <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 10, padding: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.green, fontFamily: FONT, marginBottom: 8 }}>Why Condense Fits</div>
+                  <div style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.7 }}>{research.why_condense_fits}</div>
+                </div>
 
-                  return (
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10 }}>
-                      {/* Tab bar */}
-                      <div style={{ display: "flex", borderBottom: "1px solid #EEF2F7", padding: "0 4px", flexShrink: 0, overflowX: "auto" }}>
-                        {GTM_TABS.map(tab => (
-                          <button key={tab.key} onClick={() => setActiveGtmTab(tab.key)}
-                            style={{ padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", borderBottom: activeGtmTab === tab.key ? "2px solid #1B6EF3" : "2px solid transparent", color: activeGtmTab === tab.key ? "#1B6EF3" : C.textDim, fontFamily: FONT, fontSize: 11, fontWeight: activeGtmTab === tab.key ? 600 : 400, display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-                            {tab.icon} {tab.label}
-                          </button>
-                        ))}
-                        <div style={{ flex: 1 }} />
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "0 12px" }}>
-                          {activeGtmTab === "email_body" && gen.email_subject && (
-                            <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Subj: {gen.email_subject}</span>
-                          )}
-                          {gtmEdited[editKey] !== undefined && (
-                            <button onClick={() => setGtmEdited(prev => { const n = {...prev}; delete n[editKey]; return n; })} style={{ fontSize: 10, color: C.textDim, background: "none", border: "none", cursor: "pointer" }}>↺</button>
-                          )}
-                          <button onClick={() => navigator.clipboard.writeText(text)} style={{ fontSize: 11, color: C.gold, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: FONT }}>📋 Copy</button>
-                          {(activeGtmTab === "email_body" || activeGtmTab === "email_followup1" || activeGtmTab === "email_followup2") && (
-  <button onClick={() => {
-    const subj = activeGtmTab === "email_body" 
-      ? (gen.email_subject || "") 
-      : activeGtmTab === "email_followup1" 
-        ? `Re: ${gen.email_subject || ""}` 
-        : `Following up: ${gen.email_subject || ""}`;
-    window.open(`mailto:${row.email || ""}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`, "_blank");
-  }} style={{ fontSize: 11, color: C.amber, background: C.amberDim, border: `1px solid ${C.amber}33`, padding: "4px 10px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✉️ Mail</button>
-)}
-                        </div>
+                {/* CONVERSATION HOOKS + RECENT NEWS */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.purple, letterSpacing: "0.08em", marginBottom: 8 }}>CONVERSATION HOOKS</div>
+                    {(research.conversation_hooks || []).map((h, i) => (
+                      <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "5px 0", borderBottom: "1px solid #EEF2F7", lineHeight: 1.5 }}>
+                        <span style={{ color: C.purple, fontWeight: 700 }}>{i + 1}.</span> {h}
                       </div>
-                      {/* Text area */}
-                      <textarea
-                        value={text}
-                        onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
-                        style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }}
-                      />
-                      {/* STAR RATING */}
-<div style={{ padding: "12px 16px", borderTop: "1px solid #EEF2F7", background: "#FAFCFF" }}>
-  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-    <span style={{ fontSize: 13 }}>⭐</span>
-    <span style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: FONT }}>Rate this message</span>
-    <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>— 4+ stars adds to training</span>
-  </div>
-  <div style={{ display: "flex", gap: 4 }}>
-    {[1,2,3,4,5].map(star => {
-      const ratingKey = `gtm_${row._id}_${activeGtmTab}_rating`;
-      const current = ratings[ratingKey]?.stars || 0;
-      return (
-        <button key={star} onClick={() => {
-          const newRating = { stars: star, message: text, messageType: `gtm_${activeGtmTab}`, prospect: row._discoveredName || row["Buying Persona"], company: row.Company, createdAt: new Date().toISOString() };
-          setRatings(prev => ({ ...prev, [ratingKey]: newRating }));
-          if (star >= 4) {
-            const ex = { id: `t_gtm_${Date.now()}`, ...newRating, feedback: "" };
-            setTrainingExamples(prev => [...prev, ex]);
-          }
-        }} style={{ fontSize: 20, background: "none", border: "none", cursor: "pointer", color: star <= current ? "#F5A623" : "#D8E2EE" }}>★</button>
-      );
-    })}
-  </div>
-</div>
-                      {/* Footer nav */}
-                    <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, flexWrap: "wrap", gap: 8 }}>
-  <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
-  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-    {/* MARK SENT */}
-    {!row._sentAt ? (
-      <button onClick={() => {
-        const updated = { ...row, _sentAt: new Date().toISOString() };
-        setGtmRows(prev => prev.map(r => r._id === row._id ? updated : r));
-        dbSave('v3_gtm_rows', String(row._id), updated);
-        showGtmToast("✅ Marked as sent — follow-up reminders activated", "success");
-      }} style={{ fontSize: 11, color: C.green, background: C.greenDim, border: `1px solid ${C.green}44`, padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✓ Mark Sent</button>
-    ) : (
-      <span style={{ fontSize: 10, color: C.green, fontFamily: MONO }}>✅ Sent {new Date(row._sentAt).toLocaleDateString()}</span>
-    )}
-    <button onClick={() => { const next = gtmRows.find(r => r._id > row._id); if (next) setGtmSelected(next._id); }} style={{ fontSize: 11, color: C.textMid, background: "none", border: "1px solid #E4ECF4", padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT }}>Next →</button>
-  </div>
-</div>
+                    ))}
+                  </div>
+                  <div style={{ background: "#F8FAFC", border: "1px solid #E4ECF4", borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.textDim, letterSpacing: "0.08em", marginBottom: 8 }}>RECENT NEWS</div>
+                    {(research.recent_news || []).map((n, i) => (
+                      <div key={i} style={{ fontSize: 12, color: C.textMid, padding: "4px 0", display: "flex", gap: 8, lineHeight: 1.5 }}>
+                        <span style={{ color: C.textDim, flexShrink: 0 }}>·</span>{n}
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-{/* FOLLOW-UP TIMELINE */}
-{row._sentAt && (
-  <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, padding: "14px 18px", flexShrink: 0 }}>
-    <div style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: FONT, marginBottom: 12 }}>Follow-Up Timeline</div>
-    <div style={{ display: "flex", gap: 0, position: "relative" }}>
-      <div style={{ position: "absolute", top: 14, left: "12.5%", right: "12.5%", height: 2, background: "#E4ECF4", zIndex: 0 }} />
-      {[{ label: "Sent", day: 0 }, { label: "Day 3", day: 3, key: "day3_followup" }, { label: "Day 7", day: 7, key: "day7_followup" }, { label: "Day 14", day: 14, key: "day14_followup" }].map(step => {
-        const target = new Date(new Date(row._sentAt).getTime() + step.day * 24 * 60 * 60 * 1000);
-        const d = Math.ceil((target - new Date()) / (1000 * 60 * 60 * 24));
-        const isDue = d <= 0;
-        return (
-          <div key={step.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, position: "relative", zIndex: 1 }}>
-            <div style={{ width: 26, height: 26, borderRadius: "50%", background: isDue ? C.greenDim : "#F0F4F8", border: `1px solid ${isDue ? C.green : "#D8E2EE"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: isDue ? C.green : C.textDim }}>
-              {isDue ? "✓" : "·"}
-            </div>
-            <div style={{ fontSize: 9, color: isDue ? C.green : C.textDim, fontFamily: MONO, fontWeight: isDue ? 700 : 400 }}>{step.label}</div>
-            {step.day > 0 && <div style={{ fontSize: 9, fontFamily: MONO, color: isDue ? C.red : C.amber }}>{isDue ? "OVERDUE" : `in ${d}d`}</div>}
-            {isDue && step.key && <button onClick={() => setActiveGtmTab(step.key)} style={{ fontSize: 9, color: C.green, background: C.greenDim, border: `1px solid ${C.green}44`, padding: "2px 8px", borderRadius: 4, cursor: "pointer", fontFamily: MONO }}>View →</button>}
-          </div>
-        );
-      })}
-    </div>
-  </div>
-)}
-                    </div>
-                  );
-                })() : (
-                  <div style={{ flex: 1, background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
-                    <div style={{ fontSize: 40, opacity: 0.2 }}>✉️</div>
-                    <div style={{ fontSize: 14, color: C.textMid, fontFamily: FONT }}>Click Generate Email to create a Dream11-style outreach for {row.Company}</div>
-                    <div style={{ fontSize: 11, color: C.textDim, fontFamily: MONO }}>Uses Gemini AI · tailored to {row["Data Stack Signal"]} + {row["Integration Opportunity"]}</div>
+                {/* PRE-READ LINKS */}
+                {research.pre_read_links?.length > 0 && (
+                  <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontSize: 10, fontFamily: MONO, color: C.gold, letterSpacing: "0.08em", marginBottom: 10 }}>📎 PRE-READ LINKS</div>
+                    {research.pre_read_links.map((link, i) => (
+                      <div key={i} style={{ padding: "7px 10px", background: "#F8FAFC", borderRadius: 6, marginBottom: 6, borderLeft: "3px solid #1B6EF3" }}>
+                        <a href={link.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.gold, textDecoration: "none", fontFamily: FONT, fontWeight: 500 }}>{link.title} ↗</a>
+                        <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginTop: 2 }}>{link.relevance}</div>
+                      </div>
+                    ))}
                   </div>
                 )}
-              </>
-            );
-          })()}
-        </div>
+
+                {/* USE RESEARCH TO IMPROVE EMAIL */}
+                <button onClick={() => { generateGtmEmail(row); setActiveGtmPanel("email"); }}
+                  style={{ padding: "12px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 13, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  ⚡ Generate Email Using This Research
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PANEL: STORIES */}
+        {activeGtmPanel === "stories" && (
+          <div style={{ flex: 1, overflowY: "auto", background: "#fff", border: "1px solid #E4ECF4", borderTop: "none", borderRadius: "0 0 10px 10px", padding: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 16 }}>🏆 Relevant Success Stories for {row.Company}</div>
+            {(() => {
+              const matched = findMatchingStories(row.Company, row["Data Stack Signal"] || "", research || {});
+              return (
+                <>
+                  {matched.length === 0 ? (
+                    <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, padding: "24px 0", textAlign: "center" }}>Run Research to match success stories</div>
+                  ) : matched.map((story, i) => (
+                    <div key={story.id} style={{ background: "#FFFFFF", border: `1px solid ${i === 0 ? "#B8CCFF" : "#E4ECF4"}`, borderRadius: 10, padding: 16, marginBottom: 10 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: FONT }}>{story.company}</div>
+                          <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{story.industry}</div>
+                        </div>
+                        {i === 0 && <span style={{ fontSize: 9, fontFamily: MONO, color: C.gold, background: C.goldDim, padding: "2px 8px", borderRadius: 10 }}>BEST MATCH</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: C.textMid, lineHeight: 1.7, marginBottom: 8 }}>{story.summary}</div>
+                      <div style={{ padding: "6px 10px", background: C.greenDim, borderRadius: 6, fontSize: 11, color: C.green }}>📈 {story.outcome}</div>
+                      <button onClick={() => navigator.clipboard.writeText(`${story.company} — ${story.summary} Result: ${story.outcome}`)}
+                        style={{ marginTop: 8, fontSize: 10, color: C.textDim, background: "none", border: "1px solid #E4ECF4", padding: "4px 10px", borderRadius: 4, cursor: "pointer", fontFamily: MONO }}>Copy</button>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #EEF2F7" }}>
+                    <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 10 }}>ALL STORIES</div>
+                    {SUCCESS_STORIES.filter(s => !matched.find(m => m.id === s.id)).map(story => (
+                      <div key={story.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #F0F4F8" }}>
+                        <div>
+                          <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, fontWeight: 500 }}>{story.company}</div>
+                          <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{story.industry}</div>
+                        </div>
+                        <button onClick={() => navigator.clipboard.writeText(`${story.company} — ${story.summary} Result: ${story.outcome}`)}
+                          style={{ fontSize: 10, color: C.textDim, background: "none", border: "1px solid #E4ECF4", padding: "4px 10px", borderRadius: 4, cursor: "pointer", fontFamily: MONO }}>Copy</button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* FOLLOW-UP TIMELINE */}
+        {row._sentAt && (
+          <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 10, padding: "12px 18px", flexShrink: 0, marginTop: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: FONT, marginBottom: 10 }}>Follow-Up Timeline</div>
+            <div style={{ display: "flex", gap: 0, position: "relative" }}>
+              <div style={{ position: "absolute", top: 13, left: "12.5%", right: "12.5%", height: 2, background: "#E4ECF4", zIndex: 0 }} />
+              {[{ label: "Sent", day: 0 }, { label: "Day 3", day: 3, key: "day3_followup" }, { label: "Day 7", day: 7, key: "day7_followup" }, { label: "Day 14", day: 14, key: "day14_followup" }].map(step => {
+                const target = new Date(new Date(row._sentAt).getTime() + step.day * 24 * 60 * 60 * 1000);
+                const d = Math.ceil((target - new Date()) / (1000 * 60 * 60 * 24));
+                const isDue = d <= 0;
+                return (
+                  <div key={step.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, position: "relative", zIndex: 1 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: isDue ? C.greenDim : "#F0F4F8", border: `1px solid ${isDue ? C.green : "#D8E2EE"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: isDue ? C.green : C.textDim }}>{isDue ? "✓" : "·"}</div>
+                    <div style={{ fontSize: 9, color: isDue ? C.green : C.textDim, fontFamily: MONO }}>{step.label}</div>
+                    {step.day > 0 && <div style={{ fontSize: 9, fontFamily: MONO, color: isDue ? C.red : C.amber }}>{isDue ? "OVERDUE" : `in ${d}d`}</div>}
+                    {isDue && step.key && <button onClick={() => { setActiveGtmPanel("email"); setActiveGtmTab(step.key); }} style={{ fontSize: 9, color: C.green, background: C.greenDim, border: `1px solid ${C.green}44`, padding: "2px 8px", borderRadius: 4, cursor: "pointer", fontFamily: MONO }}>View →</button>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  })()}
+</div>
+        
+    </div>
       </div>
     )}
   </div>
