@@ -3890,7 +3890,6 @@ if (!dbLoaded) return (
             ) : null}
           </div>
         </div>
-      </div>
       {/* TOAST */}
       {gtmToast && (
         <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", zIndex: 999, padding: "12px 24px", borderRadius: 10, background: gtmToast.type === "success" ? "#0D9E6E" : gtmToast.type === "error" ? "#E53E3E" : "#1B6EF3", color: "#FFFFFF", fontSize: 13, fontFamily: FONT, fontWeight: 500, boxShadow: "0 4px 24px rgba(0,0,0,0.18)", maxWidth: 500, textAlign: "center", animation: "fadeUp 0.2s ease", whiteSpace: "pre-wrap" }}>
