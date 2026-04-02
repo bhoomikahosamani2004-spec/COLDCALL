@@ -6,6 +6,7 @@
     "node": "24.x"
   },
  "dependencies": {
+     "pdf-lib": "^1.17.1",
     "@emailjs/browser": "^4.3.3",
     "@supabase/supabase-js": "^2.39.0",
     "react": "^18.2.0",
