@@ -2043,8 +2043,8 @@ if (!dbLoaded) return (
 
          {/* LEFT SIDEBAR */}
 {activeView === "prospects" && <div style={{ width: 300, background: "#FFFFFF", borderRight: "1px solid #E4ECF4", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "2px 0 8px rgba(10,37,64,0.04)" }}>
-    {/* Add Prospect Form */}
-    <div style={{ padding: "18px 16px", borderBottom: "1px solid #EEF2F7", flexShrink: 0 }}>
+            {/* Add Prospect Form */}
+            <div style={{ padding: "18px 16px", borderBottom: "1px solid #EEF2F7", overflowY: "auto", maxHeight: "45vh", flexShrink: 0  }}>
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, letterSpacing: "-0.01em" }}>Add Prospect</div>
                 <div style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Fill manually or paste a LinkedIn URL</div>
@@ -2115,8 +2115,8 @@ if (!dbLoaded) return (
             </div>
 
        {/* Prospect List */}
-<div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
-  <div style={{ padding: "10px 12px 4px", borderBottom: "1px solid #EEF2F7", flexShrink: 0 }}>
+<div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+              <div style={{ padding: "10px 12px 4px", borderBottom: "1px solid #EEF2F7" }}>
   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
     <span style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: DISPLAY }}>Prospects ({prospects.length})</span>
     {prospects.length > 0 && <span style={{ fontSize: 10, color: C.textDim }}>{prospects.filter(p=>p.status==="ready"||p.status==="following").length} active</span>}
@@ -2171,14 +2171,12 @@ if (!dbLoaded) return (
     )}
   </div>
 </div>
-            {prospects.length === 0 ? (
+              {prospects.length === 0 ? (
                 <div style={{ padding: "40px 20px", textAlign: "center" }}>
                   <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.25 }}>👤</div>
                   <div style={{ fontSize: 12, color: C.textDim, lineHeight: 1.7, fontFamily: FONT }}>Add your first prospect above<br/>or upload a CSV file</div>
                 </div>
-             ) : (
-              <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-             {prospects.filter(p => { 
+             ) : prospects.filter(p => {
   // Search filter
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
@@ -2254,8 +2252,10 @@ if (!dbLoaded) return (
                 </div>
               ))}
           </div>
-            {/* MAIN CONTENT */}
- <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
+        </div>}
+           
+              {/* MAIN CONTENT */}
+<div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", background: "#F5F7FA" }}>
 
 {/* DASHBOARD VIEW */}
   {activeView === "gtm" && (
@@ -2491,7 +2491,7 @@ if (!dbLoaded) return (
                 <button onClick={async () => {
                   setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: true, _zohoStatus: null } : r));
                   try {
-                    await pushToZoho({ name: row._discoveredName || row["Buying Persona"], company: row.Company, jobTitle: row["Buying Persona"], email: row.email || "", phone: row.phone || "" }, gen, `Data Stack: ${row["Data Stack Signal"]} | Tool: ${row["Tool Used"]} | Integration: ${row["Integration Opportunity"]}`);
+                    await pushToZoho({ name: row._discoveredName || row["Full Name"] || row["Prospect Name"] || "", company: row.Company, jobTitle: row["Job Title"] || row["Buying Persona"] || "", email: row.email || "", phone: row.phone || "" }, gen, `Data Stack: ${row["Data Stack Signal"]} | Tool: ${row["Tool Used"]} | Integration: ${row["Integration Opportunity"]}`);
                     setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoPushing: false, _zohoStatus: "success" } : r));
                     setTimeout(() => setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _zohoStatus: null } : r)), 4000);
                   } catch {
