@@ -2651,11 +2651,39 @@ if (!dbLoaded) return (
                   </div>
                 </div>
 
-                {/* WHY CONDENSE FITS */}
-                <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 10, padding: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.green, fontFamily: FONT, marginBottom: 8 }}>Why Condense Fits</div>
-                  <div style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.7 }}>{research.why_condense_fits}</div>
-                </div>
+               {/* WHY CONDENSE HELPS — styled bullets */}
+<div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 10, padding: 20 }}>
+  <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>⚡ Why Condense Helps {row.Company}</div>
+  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    {(research.why_condense_fits || "").split(". ").filter(s => s.trim()).map((point, i) => (
+      <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #B8EDD3" }}>
+        <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, fontFamily: MONO }}>→</span>
+        <span style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.6 }}>{point.trim()}{point.trim().endsWith(".") ? "" : "."}</span>
+      </div>
+    ))}
+  </div>
+</div>
+
+{/* INDUSTRY USE CASES — was missing from GTM */}
+{(() => {
+  const industryUC = findIndustryUseCases(row.Company, row["Data Stack Signal"] || "", research || {});
+  return (
+    <div style={{ background: "#FFFFFF", border: "1px solid #E4ECF4", borderRadius: 10, padding: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 6 }}>🎯 Relevant Use Cases for {row.Company}</div>
+      <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, marginBottom: 14 }}>Industry matched: {industryUC.id}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {industryUC.use_cases.map((uc, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", borderLeft: "3px solid #1B6EF3" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT, marginBottom: 3 }}>{i + 1}. {uc.title}</div>
+              <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, lineHeight: 1.6 }}>{uc.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+})()}
 
                 {/* CONVERSATION HOOKS + RECENT NEWS */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
