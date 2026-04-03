@@ -2647,11 +2647,12 @@ if (!dbLoaded) return (
                       )}
                     </div>
                   </div>
-                <textarea value={text} onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
-  style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }} />
+               <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+  <textarea value={text} onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
+    style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none", minHeight: 320 }} />
 
-{/* STAR RATING — GTM */}
-<div style={{ margin: "0 16px 12px", padding: "14px 16px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", flexShrink: 0 }}>
+  {/* STAR RATING — GTM */}
+  <div style={{ margin: "0 16px 12px", padding: "14px 16px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", flexShrink: 0 }}>
   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
     <span style={{ fontSize: 16 }}>⭐</span>
     <div>
@@ -2689,6 +2690,8 @@ if (!dbLoaded) return (
     style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontFamily: FONT, outline: "none", resize: "vertical", minHeight: 52, boxSizing: "border-box" }}
   />
 </div>
+
+</div>{/* closes scrollable wrapper */}
 
 <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
