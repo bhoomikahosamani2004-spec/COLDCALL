@@ -826,7 +826,17 @@ function SendButtons({ prospect, messageText, messageType, emailSubject, senderP
     </div>
   );
 }
-
+function replacePronouns(text, company) {
+  if (!text || !company) return text;
+  return text
+    .replace(/\bthey\b/gi, company)
+    .replace(/\btheir\b/gi, `${company}'s`)
+    .replace(/\bthem\b/gi, company)
+    .replace(/\bthe company\b/gi, company)
+    .replace(/\bthe organization\b/gi, company)
+    .replace(/\bthe platform\b/gi, company)
+    .replace(/\bthe team\b/gi, `${company}'s team`);
+}
 // Notification Bell
 function NotificationBell({ notifications, onClear }) {
   const [open, setOpen] = useState(false);
@@ -2816,10 +2826,10 @@ if (!dbLoaded) return (
   <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>⚡ Why Condense Helps {row.Company}</div>
   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
     {(research.why_condense_fits || "No data — re-run research").split(/\.\s+/).filter(s => s.trim().length > 5).map((point, i) => (
-      <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #B8EDD3" }}>
-        <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, fontFamily: MONO }}>→</span>
-        <span style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.6 }}>{point.trim()}{point.trim().endsWith(".") ? "" : "."}</span>
-      </div>
+  <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #B8EDD3" }}>
+    <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, fontFamily: MONO }}>→</span>
+    <span style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.6 }}>{replacePronouns(point.trim(), row.Company)}{point.trim().endsWith(".") ? "" : "."}</span>
+  </div>
     ))}
   </div>
 </div>
@@ -3770,11 +3780,11 @@ if (!dbLoaded) return (
     <div style={{ background: "#F0FBF5", border: "1px solid #B8EDD3", borderRadius: 10, padding: 20, marginBottom: 10 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, fontFamily: DISPLAY, marginBottom: 14 }}>⚡ Why Condense Helps {sel.company}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {(selResearch.why_condense_fits || "").split(". ").filter(s => s.trim()).map((point, i) => (
-          <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #B8EDD3" }}>
-            <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, fontFamily: MONO }}>→</span>
-            <span style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.6 }}>{point.trim()}{point.trim().endsWith(".") ? "" : "."}</span>
-          </div>
+       {(selResearch.why_condense_fits || "").split(". ").filter(s => s.trim()).map((point, i) => (
+  <div key={i} style={{ display: "flex", gap: 10, padding: "10px 14px", background: "#FFFFFF", borderRadius: 8, border: "1px solid #B8EDD3" }}>
+    <span style={{ color: C.green, fontWeight: 700, flexShrink: 0, fontFamily: MONO }}>→</span>
+    <span style={{ fontSize: 13, color: C.text, fontFamily: FONT, lineHeight: 1.6 }}>{replacePronouns(point.trim(), sel.company)}{point.trim().endsWith(".") ? "" : "."}</span>
+  </div>
         ))}
       </div>
     </div>
