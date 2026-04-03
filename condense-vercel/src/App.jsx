@@ -2647,9 +2647,50 @@ if (!dbLoaded) return (
                       )}
                     </div>
                   </div>
-                  <textarea value={text} onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
-                    style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }} />
-                  <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+                <textarea value={text} onChange={e => setGtmEdited(prev => ({ ...prev, [editKey]: e.target.value }))}
+  style={{ flex: 1, background: "#F8FAFC", border: "none", padding: "16px 20px", fontSize: 13, fontFamily: FONT, lineHeight: 1.85, color: C.navy, resize: "none", outline: "none" }} />
+
+{/* STAR RATING — GTM */}
+<div style={{ margin: "0 16px 12px", padding: "14px 16px", background: "#F8FAFC", borderRadius: 8, border: "1px solid #E4ECF4", flexShrink: 0 }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+    <span style={{ fontSize: 16 }}>⭐</span>
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.navy, fontFamily: FONT }}>Rate this message</div>
+      <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>5 stars adds it to training data</div>
+    </div>
+  </div>
+  <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+    {[1, 2, 3, 4, 5].map(star => {
+      const currentRating = ratings[editKey]?.stars || 0;
+      return (
+        <button key={star} onClick={() => {
+          const newRating = { stars: star, message: text, messageType: activeGtmTab, prospect: row._discoveredName || row["Full Name"] || row["Prospect Name"] || "", company: row.Company, createdAt: new Date().toISOString() };
+          setRatings(prev => ({ ...prev, [editKey]: newRating }));
+          if (star >= 4) {
+            const trainingEx = { id: `t_${Date.now()}`, ...newRating, feedback: ratingFeedback[editKey] || "" };
+            setTrainingExamples(prev => {
+              const exists = prev.find(t => t.id === trainingEx.id);
+              return exists ? prev : [...prev, trainingEx];
+            });
+          }
+        }} style={{ fontSize: 22, background: "none", border: "none", cursor: "pointer", color: star <= currentRating ? "#F5A623" : "#D8E2EE", transition: "all 0.15s", transform: star <= currentRating ? "scale(1.1)" : "scale(1)" }}>★</button>
+      );
+    })}
+    {ratings[editKey]?.stars > 0 && (
+      <span style={{ fontSize: 11, color: ratings[editKey].stars >= 4 ? C.green : C.textDim, fontFamily: MONO, marginLeft: 8, alignSelf: "center" }}>
+        {ratings[editKey].stars >= 4 ? "✅ Added to training!" : "Saved"}
+      </span>
+    )}
+  </div>
+  <textarea
+    value={ratingFeedback[editKey] || ""}
+    onChange={e => setRatingFeedback(prev => ({ ...prev, [editKey]: e.target.value }))}
+    placeholder="Optional: what did you like or want changed?"
+    style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8E2EE", color: C.text, borderRadius: 6, padding: "8px 12px", fontSize: 12, fontFamily: FONT, outline: "none", resize: "vertical", minHeight: 52, boxSizing: "border-box" }}
+  />
+</div>
+
+<div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <GlowButton
