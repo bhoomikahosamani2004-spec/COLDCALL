@@ -2288,18 +2288,7 @@ if (!dbLoaded) return (
         <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Upload India Tech GTM → Gemini generates Dream11-style emails per data stack signal</div>
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        {gtmRows.length > 0 && gtmRows.filter(r => r._status === "idle").length > 0 && !gtmBatchRunning && (
-  <button onClick={() => { setGtmBatchFrom(1); setGtmBatchTo(Math.min(30, gtmRows.filter(r => r._status === "idle").length)); setGtmBatchOpen(true); }} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-    ⚡ Batch Run ({gtmRows.filter(r => r._status === "idle").length})
-  </button>
-)}
-        {gtmBatchRunning && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 6, background: "rgba(27,110,243,0.1)", border: "1px solid #B8D4FF" }}>
-            <Spinner />
-            <span style={{ fontSize: 11, fontFamily: MONO, color: C.gold }}>{gtmBatchProgress}/{gtmRows.filter(r => r._status !== "ready").length} generating</span>
-            <button onClick={() => { gtmCancelRef.current = true; setGtmBatchRunning(false); }} style={{ fontSize: 10, color: C.red, background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
-          </div>
-        )}
+       
         <input ref={gtmFileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleGtmUpload} style={{ display: "none" }} />
         <button onClick={() => setShowGtmForm(true)} style={{ padding: "9px 18px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
   + Add Single
