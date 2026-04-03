@@ -1444,40 +1444,84 @@ COMPANY INTEL:
 - Buying Persona: ${persona}
 - Integration Opportunity: ${integration}
 
-STYLE — follow this EXACT Dream11 email format:
+STYLE — follow this EXACT Whatfix/Tech GTM email format (trained on real sent email):
 
-Subject: Condense — Complementing ${company}'s ${stack.includes("Kafka") ? "Kafka" : "event streaming"} data platform for scale and cost efficiency
+═══ REAL EXAMPLE — WHATFIX (SaaS/Data Platform) ═══
+Subject: Condense — Complementing Whatfix's Kafka data platform for scale and cost efficiency
 
-Greetings${firstName ? ` ${firstName}` : ""},
+Dear Swadesh,
+Greetings.!
 
-I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch. Condense is built for modern data engineering and analytics teams that need to operationalize real-time data across products, analytics platforms, and AI systems without the heavy operational complexity of managing distributed streaming infrastructure.
+I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch.
 
-Platforms like ${company} typically operate a modern data architecture built around [describe their stack: ${stack}], with [${tool}] complementing the pipeline. Teams running on ${cloud} leverage ${warehouse} as the analytical layer, with microservices generating large volumes of ${useCase.toLowerCase()} events across the platform.
+Today, platforms like Whatfix typically rely on Kafka-based architectures using tools such as Kafka, Fivetran, Airbyte, Hevo, Striim, Apache Spark / Apache Flink, and warehouses like Snowflake or Amazon Redshift. Teams often add tools like RudderStack or Segment, along with Kafka Connect or Debezium for CDC pipelines to move data across systems. While powerful, this results in multiple pipeline layers, higher infrastructure overhead, and rising total costs.
 
-Many teams complement this with tools like ${tool} for ${integration.toLowerCase()}, along with Kafka Connect or Debezium for CDC pipelines to move data across systems. While this architecture is powerful, it can also introduce operational complexity, multiple pipeline layers, and increasing infrastructure costs as event volumes grow. Condense is designed to complement this ecosystem by providing a high-performance Kafka-native data platform that simplifies and optimizes streaming data pipelines.
+Condense complements this by simplifying and optimizing streaming pipelines, with a strong focus on cost efficiency:
 
-Teams typically leverage Condense to:
-[Generate 4 bullet points specific to their Integration Opportunity: ${integration}]
-- [bullet 1 — cost/scale optimization specific to their stack]
-- [bullet 2 — real-time transformation specific to their use case]  
-- [bullet 3 — pipeline simplification specific to their tool]
-- [bullet 4 — reliability/delivery specific to their warehouse]
+- Reduce Kafka infrastructure costs – optimize compute, storage, and data movement for high-volume workloads
+- Lower total cost of ownership (TCO) – consolidate ingestion, processing, and delivery into a single platform, reducing spend across multiple tools, licensing, and operational overhead
+- Enable in-stream transformations – process, filter, and enrich data directly within the stream for faster insights and fewer downstream resources
+- Simplify ingestion and CDC layers – eliminate the need for multiple connectors and pipelines
+- Ensure reliable, low-latency delivery – consistently move data to analytics and operational systems in real time
 
 As a pre-read, sharing the below information on Condense.
-* Condense Overview: https://docs.zeliot.in/condense
-* Case Studies: https://www.zeliot.in/blog
-* About Zeliot: www.zeliot.in/quick-links
-* Get Started with Condense: https://www.zeliot.in/try-now
+- Condense Overview: https://docs.zeliot.in/condense
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot: www.zeliot.in/quick-links
+- Get Started with Condense: https://www.zeliot.in/try-now
 
-Given ${company}'s focus on ${integration.toLowerCase()}, I thought this could be relevant to your data platform initiatives.
+Given Whatfix's focus on real-time analytics and fraud detection, this could be highly relevant — especially in optimizing both performance and cost.
 
-Would you be open to a 30-minute discussion to explore how Condense could complement your existing ${stack.includes("Kafka") ? "Kafka," : ""} ${tool}, and streaming architecture?
+Can we schedule a quick 30-minute call to understand your current architecture and identify where Condense can help optimize performance and cost?
+
+Looking forward to your thoughts.
 
 Thanks & Regards,
 Veera Raghavan
 Head of Enterprise Sales
 📞 9353094136
 ✉️ veera.raghavan@zeliot.in
+═══ END REAL EXAMPLE ═══
+
+NOW generate for ${company} following this EXACT structure:
+
+PARA 1: "Dear ${firstName ? firstName : ""}," then next line "Greetings.!" then blank line, then: "I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch."
+
+PARA 2 (MANDATORY — NEVER SKIP): "Today, platforms like ${company} typically rely on Kafka-based architectures using tools such as [LIST ALL: ${stack}, ${tool}, and infer related tools like Apache Spark / Apache Flink, Kafka Connect, Debezium], and warehouses like [${warehouse}]. Teams often add tools like [infer: RudderStack, Segment, or similar] for ${integration.toLowerCase()}, along with Kafka Connect or Debezium for CDC pipelines. While powerful, this results in multiple pipeline layers, higher infrastructure overhead, and rising total costs."
+
+PARA 3: "Condense complements this by simplifying and optimizing streaming pipelines, with a strong focus on cost efficiency:"
+
+BULLETS (4-5 specific to ${integration}):
+- Each bullet must be specific to their exact stack and integration opportunity
+- Format: "- [Title] – [description specific to their stack/use case]"
+- Always include: TCO reduction, in-stream transformations, CDC simplification, reliable delivery
+
+PRE-READ BLOCK (MANDATORY — NEVER OMIT — WORD FOR WORD):
+As a pre-read, sharing the below information on Condense.
+- Condense Overview: https://docs.zeliot.in/condense
+- Case Studies: https://www.zeliot.in/blog
+- About Zeliot: www.zeliot.in/quick-links
+- Get Started with Condense: https://www.zeliot.in/try-now
+
+PARA 4: "Given ${company}'s focus on ${integration.toLowerCase()}, this could be highly relevant — especially in optimizing both performance and cost."
+
+CTA: "Can we schedule a quick 30-minute call to understand your current architecture and identify where Condense can help optimize performance and cost?"
+
+CLOSING: "Looking forward to your thoughts."
+
+SIGN-OFF (always exactly):
+Thanks & Regards,
+Veera Raghavan
+Head of Enterprise Sales
+📞 9353094136
+✉️ veera.raghavan@zeliot.in
+
+CRITICAL RULES — VIOLATION = WRONG OUTPUT:
+1. ALWAYS name ALL tools from their stack explicitly in Para 2 — ${stack}, ${tool}, AND infer Kafka Connect, Debezium, Spark/Flink if Kafka is involved. Never generic.
+2. Pre-read block is MANDATORY every single time — exact links, exact format
+3. Greeting is ALWAYS "Greetings [FirstName]"
+4. Bullets must reference their SPECIFIC ${integration} — never copy-paste generic bullets
+5. Subject line: "Condense — Complementing ${company}'s ${stack.includes("Kafka") ? "Kafka" : "streaming"} data platform for scale and cost efficiency"
 
 ALSO generate:
 - connection_note: Max 300 chars, warm, reference their data stack, no pitch
