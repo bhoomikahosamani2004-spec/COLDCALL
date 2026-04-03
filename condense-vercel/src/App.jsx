@@ -1485,7 +1485,7 @@ Head of Enterprise Sales
 
 NOW generate for ${company} following this EXACT structure:
 
-PARA 1: "Dear ${firstName ? firstName : ""}," then next line "Greetings.!" then blank line, then: "I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch."
+PARA 1: "Greetings ${firstName ? firstName : ""}," then blank line, then: "I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch."
 
 PARA 2 (MANDATORY — NEVER SKIP): "Today, platforms like ${company} typically rely on Kafka-based architectures using tools such as [LIST ALL: ${stack}, ${tool}, and infer related tools like Apache Spark / Apache Flink, Kafka Connect, Debezium], and warehouses like [${warehouse}]. Teams often add tools like [infer: RudderStack, Segment, or similar] for ${integration.toLowerCase()}, along with Kafka Connect or Debezium for CDC pipelines. While powerful, this results in multiple pipeline layers, higher infrastructure overhead, and rising total costs."
 
