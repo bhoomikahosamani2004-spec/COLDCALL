@@ -981,6 +981,7 @@ const [gtmBatchTo, setGtmBatchTo] = useState(30);
 const gtmEnrichCancelRef = useRef(false);
 const [gtmResearch, setGtmResearch] = useState({});
 const [gtmResearchRunning, setGtmResearchRunning] = useState(null);
+const [enrichAllConfirm, setEnrichAllConfirm] = useState(false);
 const [activeGtmPanel, setActiveGtmPanel] = useState("email"); // email | research | stories
 const [gtmForm, setGtmForm] = useState({ Company: "", HQ: "", Employees: "", "Data Stack Signal": "", "Tool Used": "", "Use Case": "", "Cloud Provider": "", "Data Warehouse": "", "Buying Persona": "", "Prospect Name": "", "Integration Opportunity": "", email: "", phone: "" });
   
@@ -1730,17 +1731,41 @@ if (!dbLoaded) return (
   </div>
   <span style={{ fontSize: 11, opacity: 0.9 }}>{senderProfile.name || "Set Profile"}</span>
 </button>
+          
+          {/* Prospects-page-only controls */}
+            {activeView === "prospects" && (
+              <>
+                {batchRunning && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 6, background: "rgba(27,110,243,0.25)", border: "1px solid rgba(61,139,255,0.4)" }}>
+                    <Spinner />
+                    <span style={{ fontSize: 11, fontFamily: MONO, color: "#FFFFFF" }}>Batch {batchProgress.current}/{batchProgress.total}</span>
+                    <button onClick={() => { batchCancelRef.current = true; setBatchRunning(false); }} style={{ fontSize: 10, fontFamily: MONO, color: "#FF8080", background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
+                  </div>
+                )}
+                {!batchRunning && prospects.filter(p => p.status === "idle").length > 0 && (
+                  <GlowButton onClick={() => setBatchOpen(true)} primary>⚡ Batch Run</GlowButton>
+                )}
+              </>
+            )}
+
+            {/* GTM-page-only controls */}
+            {activeView === "gtm" && (
+              <>
+                {gtmBatchRunning && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 6, background: "rgba(27,110,243,0.25)", border: "1px solid rgba(61,139,255,0.4)" }}>
+                    <Spinner />
+                    <span style={{ fontSize: 11, fontFamily: MONO, color: "#FFFFFF" }}>GTM Batch {gtmBatchProgress}/{gtmRows.filter(r => r._status !== "ready").length}</span>
+                    <button onClick={() => { gtmCancelRef.current = true; setGtmBatchRunning(false); }} style={{ fontSize: 10, fontFamily: MONO, color: "#FF8080", background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
+                  </div>
+                )}
+                {!gtmBatchRunning && gtmRows.filter(r => r._status === "idle").length > 0 && (
+                  <GlowButton onClick={() => { setGtmBatchFrom(1); setGtmBatchTo(Math.min(30, gtmRows.filter(r => r._status === "idle").length)); setGtmBatchOpen(true); }} primary>⚡ Batch Run ({gtmRows.filter(r => r._status === "idle").length})</GlowButton>
+                )}
+              </>
+            )}
+
+            {/* 🔔 Notification bell — always visible on all pages */}
             <NotificationBell notifications={dueNotifs} onClear={() => setNotifications(prev => prev.map(n => ({ ...n, cleared: true })))} />
-            {batchRunning && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 6, background: "rgba(27,110,243,0.25)", border: "1px solid rgba(61,139,255,0.4)" }}>
-                <Spinner />
-                <span style={{ fontSize: 11, fontFamily: MONO, color: "#FFFFFF" }}>Batch {batchProgress.current}/{batchProgress.total}</span>
-                <button onClick={() => { batchCancelRef.current = true; setBatchRunning(false); }} style={{ fontSize: 10, fontFamily: MONO, color: "#FF8080", background: "none", border: "none", cursor: "pointer" }}>✕ Stop</button>
-              </div>
-            )}
-            {!batchRunning && prospects.filter(p => p.status === "idle").length > 0 && (
-              <GlowButton onClick={() => setBatchOpen(true)} primary>⚡ Batch Run</GlowButton>
-            )}
           </div>
         </div>
         {/* SENDER PROFILE SIDE PANEL */}
@@ -2283,7 +2308,7 @@ if (!dbLoaded) return (
   📊 Upload Excel
 </button>
 {gtmRows.length > 0 && !gtmBatchEnriching && (
-  <button onClick={runGtmBulkEnrich} style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
+  <button onClick={() => setEnrichAllConfirm(true)} style={{ padding: "9px 18px", borderRadius: 6, border: "1px solid #7C3AED44", background: "#FAF5FF", color: "#7C3AED", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
     🔍 Enrich All ({gtmRows.filter(r => !r._enriched).length})
   </button>
 )}
@@ -4072,6 +4097,31 @@ if (!dbLoaded) return (
           </div>
         </div>
         )}  
+      {/* ENRICH ALL CONFIRMATION MODAL */}
+{enrichAllConfirm && (
+  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setEnrichAllConfirm(false)}>
+    <div style={{ background: "#FFFFFF", borderRadius: 12, width: "min(420px, 96vw)", boxShadow: "0 8px 40px rgba(10,37,64,0.22)", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: "#0A2540", padding: "20px 24px" }}>
+        <div style={{ fontFamily: "'Sora', sans-serif", fontSize: 16, fontWeight: 700, color: "#FFFFFF" }}>Enrich All Contacts?</div>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 4, fontFamily: "monospace" }}>This will use Apollo/Lusha credits</div>
+      </div>
+      <div style={{ padding: "20px 24px" }}>
+        <div style={{ fontSize: 13, color: "#4A6080", fontFamily: "'Inter', sans-serif", lineHeight: 1.7, marginBottom: 20 }}>
+          You are about to enrich <strong style={{ color: "#0A2540" }}>{gtmRows.filter(r => !r._enriched).length} companies</strong> using Apollo/Lusha. Each lookup consumes API credits.<br/><br/>
+          Do you want to proceed?
+        </div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button onClick={() => setEnrichAllConfirm(false)} style={{ padding: "10px 22px", borderRadius: 6, border: "1px solid #E4ECF4", background: "#F8FAFC", color: "#4A6080", fontFamily: "'Inter', sans-serif", fontSize: 13, cursor: "pointer", fontWeight: 500 }}>
+            No, cancel
+          </button>
+          <button onClick={() => { setEnrichAllConfirm(false); runGtmBulkEnrich(); }} style={{ padding: "10px 24px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, #7C3AED, #9F67FF)", color: "#FFFFFF", fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: 13, cursor: "pointer", boxShadow: "0 2px 10px rgba(124,58,237,0.3)" }}>
+            Yes, enrich all
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
      </>        
   );
 }
