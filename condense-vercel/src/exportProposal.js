@@ -1,4 +1,5 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
  
 // ---------------------------------------------------------------------------
 // safe() — strip non-latin1 glyphs so pdf-lib never crashes
@@ -16,7 +17,7 @@ function safe(str) {
 }
  
 // ---------------------------------------------------------------------------
-// fitLines() — greedy word-wrap, no truncation unless truly overflows
+// fitLines() — greedy word-wrap
 // ---------------------------------------------------------------------------
 function fitLines(text, { font, size, maxWidth, maxLines }) {
   const words = String(text || "").split(/\s+/).filter(Boolean);
@@ -80,9 +81,27 @@ function resolveIndustry(sel, research) {
 }
  
 // ---------------------------------------------------------------------------
+// LOW_FIT_TEXT — standard sentence shown when condense_fit.score === "low"
+// ---------------------------------------------------------------------------
+const LOW_FIT_TEXT =
+  "Go from Idea to production grade data pipeline in Minutes and build " +
+  "vertical data pipelines through an AI-driven IDE while agents on " +
+  "Condense handle Kafka, scale your logic and ensure uptime all inside " +
+  "your cloud.";
+ 
+// ---------------------------------------------------------------------------
 // buildWhyText()
+//   low fit  → always use LOW_FIT_TEXT
+//   medium / high (or unknown) → 2nd sentence from research.why_condense_fits
 // ---------------------------------------------------------------------------
 function buildWhyText(research) {
+  const fitScore = (research?.condense_fit?.score || "").toLowerCase();
+ 
+  if (fitScore === "low") {
+    return safe(LOW_FIT_TEXT);
+  }
+ 
+  // medium, high, or score not yet determined — pull 2nd sentence from research
   const raw = safe(
     research.why_condense_fits ||
     research.whyFit ||
@@ -90,13 +109,10 @@ function buildWhyText(research) {
     ""
   );
   if (!raw) return "";
- 
-  const trimmed = raw.trim();
-  const sentences = trimmed
+  const sentences = raw.trim()
     .split(/(?<=[.!?])\s+/)
     .map(s => s.trim())
     .filter(Boolean);
- 
   return sentences.slice(1, 2).join(" ");
 }
  
@@ -110,7 +126,12 @@ export async function exportProposalPDF({
     onStart?.();
     if (!sel) throw new Error("No prospect selected");
  
-    const company  = safe(sel.company  || "Your Company");
+    // Normalize company name: collapse multiple spaces, trim spaces inside brackets
+    const company  = safe(sel.company || "Your Company")
+                       .replace(/\s+/g, " ")
+                       .replace(/\(\s+/g, "(")
+                       .replace(/\s+\)/g, ")")
+                       .trim();
     const contact  = safe(sel.name     || "");
     const role     = safe(sel.jobTitle || "");
     const research = selResearch || {};
@@ -123,28 +144,36 @@ export async function exportProposalPDF({
       : null;
     const useCaseTitles = (industryUC?.use_cases || []).map(uc => safe(uc.title));
  
-    // ── Load template ────────────────────────────────────────────────────────
-    const templateUrl = process.env.PUBLIC_URL
-      ? `${process.env.PUBLIC_URL}/Template.pdf`
-      : "/Template.pdf";
-    const templateBytes = await fetch(templateUrl).then((r) => {
-      if (!r.ok) throw new Error(`Failed to load template: ${r.status} ${r.statusText}`);
-      return r.arrayBuffer();
-    });
+    const BASE = process.env.PUBLIC_URL || "";
  
-    const pdfDoc  = await PDFDocument.load(templateBytes);
-    const bold    = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    // ── Load template + fonts in parallel ───────────────────────────────────
+    const [templateBytes, regularBytes, mediumBytes] = await Promise.all([
+      fetch(`${BASE}/Template.pdf`).then(r => {
+        if (!r.ok) throw new Error(`Template load failed: ${r.status}`);
+        return r.arrayBuffer();
+      }),
+      fetch(`${BASE}/Manrope-Regular.ttf`).then(r => r.arrayBuffer()),
+      fetch(`${BASE}/Manrope-Medium.ttf`).then(r => r.arrayBuffer()),
+    ]);
  
-    const WHITE     = rgb(1,     1,     1);
-    const BLUE      = rgb(0.118, 0.451, 0.745);
-    const GREY_TEXT = rgb(0.30,  0.38,  0.47);
-    const DARK      = rgb(0.04,  0.09,  0.16);
+    const pdfDoc = await PDFDocument.load(templateBytes);
+    pdfDoc.registerFontkit(fontkit);
  
-    // pdf-lib: origin bottom-left, y increases upward. Page = 1080 × 1440 pt.
+    const fontRegular = await pdfDoc.embedFont(regularBytes); // 400 — body text
+    const fontMedium  = await pdfDoc.embedFont(mediumBytes);  // 500 — headings
+ 
+    // ── Design system colours ────────────────────────────────────────────────
+    const WHITE     = rgb(1,          1,          1         );
+    const BLUE      = rgb(37 / 255,  125 / 255,  240 / 255 ); // #257DF0
+    const GREY_TEXT = rgb(118 / 255, 118 / 255,  120 / 255 ); // #767678
+    const DARK      = rgb(28 / 255,   29 / 255,   33 / 255 ); // #1C1D21
+ 
+    // pdf-lib: origin bottom-left, y increases upward.
+    // All coordinates below measured from Template.pdf via pdfplumber.
+    // Page = 1080 × 1440 pt. pdf-lib y = 1440 - pdfplumber_bottom.
     const H     = 1440;
-    const L     = 80;
-    const MAX_W = 920;
+    const L     = 80;   // left margin (pdfplumber x0=80)
+    const MAX_W = 900;  // text width (pdfplumber x1 up to ~981)
  
     // ══════════════════════════════════════════════════════════════════════════
     // PAGE 1
@@ -152,40 +181,54 @@ export async function exportProposalPDF({
     const page1 = pdfDoc.getPages()[0];
  
     // ── "for [Company]"
-    const FOR_SIZE = 24;
-    const FOR_STR  = "for ";
-    const forW     = regular.widthOfTextAtSize(FOR_STR, FOR_SIZE);
-    const compW    = bold.widthOfTextAtSize(company, FOR_SIZE);
+    // pdfplumber: "for" x0=80 x1=111.6, company x0=116.4, top=196 bottom=220
+    // pdf-lib baseline y = H - bottom = 1440 - 220 = 1220
+    const FOR_SIZE  = 24;
+    const FOR_Y     = H - 220; // 1220
+    const forW      = fontMedium.widthOfTextAtSize("for", FOR_SIZE);
+    const spaceW    = fontMedium.widthOfTextAtSize(" ",   FOR_SIZE);
+ 
+    // Erase the full line width so leftover template text never bleeds through
+    // when the company name is shorter than the original placeholder text.
     page1.drawRectangle({
-      x: L - 2, y: H - 220,
-      width: Math.max(forW + compW + 40, 700), height: 24,
+      x: L - 2, y: FOR_Y - 4,
+      width: MAX_W + 30, height: 30,
       color: WHITE,
     });
-    page1.drawText(FOR_STR, { x: L,        y: H - 220, size: FOR_SIZE, font: regular, color: DARK });
-    page1.drawText(company,  { x: L + forW, y: H - 220, size: FOR_SIZE, font: bold,    color: BLUE });
+    page1.drawText("for",   { x: L,                 y: FOR_Y, size: FOR_SIZE, font: fontMedium, color: DARK });
+    page1.drawText(company, { x: L + forW + spaceW, y: FOR_Y, size: FOR_SIZE, font: fontMedium, color: BLUE });
  
     // ── Contact name + Job title
-    page1.drawRectangle({ x: 758, y: H - 250, width: 325, height: 100, color: WHITE });
+    // pdfplumber: contact top=168 bottom=184 → pdf-lib y = H-184 = 1256
+    //             role   top=204 bottom=220 → pdf-lib y = H-220 = 1220
+    page1.drawRectangle({ x: 758, y: H - 260, width: 325, height: 110, color: WHITE });
     if (contact) {
-      page1.drawText(contact, { x: 765, y: H - 184, size: 16, font: regular, color: DARK });
+      page1.drawText(contact, { x: 765, y: H - 184, size: 16, font: fontRegular, color: DARK });
     }
     if (role) {
       const ROLE_SIZE  = 16;
       const ROLE_MAX_W = 270;
-      const roleLines  = fitLines(role, { font: regular, size: ROLE_SIZE, maxWidth: ROLE_MAX_W, maxLines: 3 });
+      const roleLines  = fitLines(role, { font: fontRegular, size: ROLE_SIZE, maxWidth: ROLE_MAX_W, maxLines: 3 });
       const ROLE_Y     = [H - 220, H - 238, H - 256];
       roleLines.forEach((line, i) => {
-        if (line) page1.drawText(line, { x: 765, y: ROLE_Y[i], size: ROLE_SIZE, font: regular, color: GREY_TEXT });
+        if (line) page1.drawText(line, { x: 765, y: ROLE_Y[i], size: ROLE_SIZE, font: fontRegular, color: GREY_TEXT });
       });
     }
  
-    // ── "Why is Condense the Best Fit" body text
-    page1.drawRectangle({ x: L - 4, y: 50, width: MAX_W + 30, height: 140, color: WHITE });
-    const WHY_SIZE = 18;
-    const WHY_Y    = [160, 132, 104, 76];
-    const whyLines = fitLines(whyText, { font: regular, size: WHY_SIZE, maxWidth: MAX_W, maxLines: 4 });
+    // ── "Why is Condense the Best Fit" — body text
+    // pdfplumber placeholder: first line top=1260 bottom=1280, last line bottom=1364
+    // pdf-lib erase zone: y = H-1364-4 = 72, height = (H-1260+4) - 72 = 112
+    // 4 lines at 28pt leading fit in 112pt: y = 164, 136, 108, 80
+    const WHY_SIZE = 20;
+    const WHY_LEAD = 28;
+    const WHY_TOP  = 164; // top line baseline in pdf-lib coords
+    page1.drawRectangle({ x: L - 4, y: 72, width: MAX_W + 30, height: 112, color: WHITE });
+    const whyLines = fitLines(whyText, { font: fontRegular, size: WHY_SIZE, maxWidth: MAX_W, maxLines: 4 });
     whyLines.forEach((line, i) => {
-      if (line) page1.drawText(line, { x: L, y: WHY_Y[i], size: WHY_SIZE, font: regular, color: GREY_TEXT });
+      if (line) page1.drawText(line, {
+        x: L, y: WHY_TOP - i * WHY_LEAD,
+        size: WHY_SIZE, font: fontRegular, color: GREY_TEXT,
+      });
     });
  
     // ══════════════════════════════════════════════════════════════════════════
@@ -193,78 +236,53 @@ export async function exportProposalPDF({
     // ══════════════════════════════════════════════════════════════════════════
     const page2 = pdfDoc.getPages()[1];
  
-    // ── Industry name: replace "(Industry Name)" only — do NOT touch the rest.
-    //
-    // Exact positions measured from Template.pdf with pdfplumber (y = top-from-top):
-    //   "Help"      x0=371.29  x1=456.75  top=140  bottom=180
-    //   "(Industry" x0=464.75  x1=638.03  top=140  bottom=180
-    //   "Name)"     x0=646.03  x1=770.19  top=140  bottom=180
-    //
-    // pdf-lib y-from-bottom conversions (page height = 1440):
-    //   baseline  = 1440 - 180 = 1260
-    //   glyph top = 1440 - 140 = 1300
-    //
-    // Strategy: white-rectangle over x=464 to x=800, y=1256 to y=1304 (48pt tall),
-    // then draw industry name in bold blue starting at x=464.
+    // ── Industry name: replace "(Industry Name)" only
+    // pdfplumber: "(Industry" x0=464.75, top=140, bottom=180
+    // pdf-lib: baseline y = H-180 = 1260, glyph top = H-140 = 1300
+    // Next block starts at top=200 → pdf-lib y = H-200 = 1240
+    // Erase from x=464, y=1238 (just below next block), height=66 (covers full glyph+descenders)
+    const INDUSTRY_X    = 464;
+    const INDUSTRY_Y    = H - 180; // 1260
+    const INDUSTRY_SIZE = 40;
  
-    const INDUSTRY_X    = 464;    // x0 of "(Industry" — pdfplumber exact
-    const INDUSTRY_Y    = 1260;   // baseline in pdf-lib coords (H - 180)
-    const INDUSTRY_SIZE = 40;     // same as template heading
- 
-    // Erase the placeholder — 4px padding above/below glyph bounds
     page2.drawRectangle({
-      x:      INDUSTRY_X,
-      y:      1238,
-      width:  800 - INDUSTRY_X,
-      height: 66,
-      // extended down to y=1238 to cover descender artifacts
-      color:  WHITE,
+      x: INDUSTRY_X, y: 1238,
+      width: 1000 - INDUSTRY_X, height: 66,
+      color: WHITE,
     });
  
-    // Shrink font if industry name is too wide for remaining space
-    const INDUSTRY_AVAIL_W = 800 - INDUSTRY_X - 4;
     let industrySize = INDUSTRY_SIZE;
-    while (industrySize > 20 && bold.widthOfTextAtSize(industry, industrySize) > INDUSTRY_AVAIL_W) {
+    const INDUSTRY_AVAIL_W = 1000 - INDUSTRY_X - 4;
+    while (industrySize > 20 && fontMedium.widthOfTextAtSize(industry, industrySize) > INDUSTRY_AVAIL_W) {
       industrySize -= 1;
     }
-    // Keep vertically aligned with the 40pt baseline when shrunk
-    const industryYAdj = (INDUSTRY_SIZE - industrySize) / 2;
     page2.drawText(industry, {
-      x:    INDUSTRY_X,
-      y:    INDUSTRY_Y + industryYAdj,
-      size: industrySize,
-      font: bold,
-      color: BLUE,
+      x: INDUSTRY_X,
+      y: INDUSTRY_Y + (INDUSTRY_SIZE - industrySize) / 2,
+      size: industrySize, font: fontMedium, color: BLUE,
     });
  
-    // ── Use case body: erase Lorem ipsum placeholders and write use case titles.
-    // pdfplumber page 2: placeholder paragraphs span top≈200 to bottom≈460
-    // pdf-lib: y = H - 460 = 980  to  y = H - 200 = 1240  → height = 260
-    page2.drawRectangle({ x: L - 4, y: 980, width: MAX_W + 30, height: 260, color: WHITE });
+    // ── Use case body: erase placeholder and write titles
+    // pdfplumber: placeholder top=200, last bottom=444
+    // pdf-lib erase: y = H-444-4 = 992, height = (H-200+4)-992 = 252
+    // 6 items at 43pt leading: y = 1216, 1173, 1130, 1087, 1044, 1001 — all within zone ✓
+    page2.drawRectangle({ x: L - 4, y: 992, width: MAX_W + 30, height: 252, color: WHITE });
  
     if (useCaseTitles.length > 0) {
-      const UC_SIZE     = 17;
-      const UC_LEADING  = 40;       // 6 × 40 = 240px < 260px zone — fits cleanly
+      const UC_SIZE     = 20;
+      const UC_LEADING  = 43;
       const HYPHEN_X    = L;
-      const TEXT_X      = L + 22;
-      const MAX_TITLE_W = MAX_W - 26;
+      const TEXT_X      = L + fontRegular.widthOfTextAtSize("- ", UC_SIZE);
+      const MAX_TITLE_W = MAX_W - (TEXT_X - L);
  
       useCaseTitles.slice(0, 6).forEach((title, i) => {
-        const y = 1218 - i * UC_LEADING;
- 
-        page2.drawText("-", {
-          x: HYPHEN_X, y,
-          size: UC_SIZE, font: regular, color: GREY_TEXT,
-        });
- 
+        const y = 1216 - i * UC_LEADING;
+        page2.drawText("-", { x: HYPHEN_X, y, size: UC_SIZE, font: fontRegular, color: GREY_TEXT });
         let label = title;
-        while (label.length > 5 && regular.widthOfTextAtSize(label, UC_SIZE) > MAX_TITLE_W) {
+        while (label.length > 5 && fontRegular.widthOfTextAtSize(label, UC_SIZE) > MAX_TITLE_W) {
           label = label.slice(0, -4) + "...";
         }
-        page2.drawText(label, {
-          x: TEXT_X, y,
-          size: UC_SIZE, font: regular, color: GREY_TEXT,
-        });
+        page2.drawText(label, { x: TEXT_X, y, size: UC_SIZE, font: fontRegular, color: GREY_TEXT });
       });
     }
  
