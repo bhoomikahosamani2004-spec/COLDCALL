@@ -2341,8 +2341,24 @@ if (!dbLoaded) return (
         <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.25 }}>👤</div>
         <div style={{ fontSize: 12, color: C.textDim, lineHeight: 1.7, fontFamily: FONT }}>Add your first prospect above<br/>or upload a CSV file</div>
       </div>
-    
-    }).map(p => (
+      ) : prospects.filter(p => {
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          if (!((p.name||"").toLowerCase().includes(q) || (p.company||"").toLowerCase().includes(q))) return false;
+        }
+        if (prospectDateFilter !== "all" && p.uploadDate !== prospectDateFilter) return false;
+        if (sidebarFilter === "followup1") {
+          if (!p.sentAt || p.status === "done") return false;
+          const d = getDaysUntilFollowup(p, 3);
+          return d !== null && d <= 0;
+        }
+        if (sidebarFilter === "followup2") {
+          if (!p.sentAt || p.status === "done") return false;
+          const d = getDaysUntilFollowup(p, 7);
+          return d !== null && d <= 0;
+        }
+        return true;
+      }).map(p => (
       <div key={p.id} className="card-enter prospect-card" onClick={() => setSelected(p.id)} style={{ padding: "11px 14px", background: selected === p.id ? "#EEF5FF" : "#FFFFFF", borderBottom: "1px solid #F0F4F8", borderLeft: selected === p.id ? "3px solid #1B6EF3" : "3px solid transparent" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div style={{ fontWeight: 600, fontSize: 13, color: selected === p.id ? C.navy : C.text, lineHeight: 1.3, fontFamily: FONT }}>{p.name}</div>
