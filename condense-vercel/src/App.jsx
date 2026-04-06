@@ -2294,7 +2294,10 @@ if (!dbLoaded) return (
 
 {/* DATE FILTER */}
 {(() => {
-  const dates = [...new Set(prospects.map(p => p.uploadDate).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+const dates = [...new Set(
+  prospects.map(p => p.uploadDate || (p.createdAt ? p.createdAt.split("T")[0] : null))
+  .filter(Boolean)
+)].sort((a, b) => b.localeCompare(a));
   if (dates.length === 0) return null;
   return (
     <div style={{ marginBottom: 8 }}>
@@ -2346,7 +2349,8 @@ if (!dbLoaded) return (
           const q = searchQuery.toLowerCase();
           if (!((p.name||"").toLowerCase().includes(q) || (p.company||"").toLowerCase().includes(q))) return false;
         }
-        if (prospectDateFilter !== "all" && p.uploadDate !== prospectDateFilter) return false;
+        const pDate = p.uploadDate || (p.createdAt ? p.createdAt.split("T")[0] : null);
+if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
         if (sidebarFilter === "followup1") {
           if (!p.sentAt || p.status === "done") return false;
           const d = getDaysUntilFollowup(p, 3);
@@ -3678,7 +3682,13 @@ if (!dbLoaded) return (
                     {activeMsg && (() => {
                       const msgDef = FOLLOWUP_SCHEDULE.find(m => m.key === activeMsg);
                       const editKey = `${sel.id}_${activeMsg}`;
-                      const text = edits[editKey] ?? selMessages[activeMsg] ?? "";
+                      const storedText = edits[editKey] ?? selMessages[activeMsg] ?? "";
+const isFollowup = ["day3_followup","day7_followup","day14_followup","email_followup1","email_followup2"].includes(activeMsg);
+const firstName = sel?.name?.split(" ")[0] || "";
+const alreadyGreeted = /^(hi |greetings|dear )/i.test(storedText.trimStart());
+const text = (isFollowup && firstName && !alreadyGreeted && edits[editKey] === undefined)
+  ? `Hi ${firstName},\n\n${storedText}`
+  : storedText;
                       const maxLen = activeMsg === "connection_note" ? 300 : null;
                       const isEmail = activeMsg === "email_body";
                       return (
