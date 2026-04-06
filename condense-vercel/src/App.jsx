@@ -1164,7 +1164,7 @@ const handleFileUpload = (e) => {
 );
 
 const companyIdx = idx(["company name", "company", "organization", "org", "employer"]);
-const nameIdx = idx(["full name", "contact name", "person name",, "name"]);
+const nameIdx = idx(["full name", "contact name", "person name", "name"]);
 const firstNameIdx = idx(["first name", "firstname", "first_name"]);
 const lastNameIdx = idx(["last name", "lastname", "last_name"]);
 const titleIdx = idx(["title", "job title", "position", "designation", "role"]);
@@ -1549,7 +1549,7 @@ Head of Enterprise Sales
 
 NOW generate for ${company} following this EXACT structure:
 
-PARA 1: "Greetings ${firstName ? firstName : ""}," then blank line, then: "I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch."
+PARA 1: Start with "Hi ${firstName || "there"}," then a blank line, then the Condense intro. Use the EXACT name "${firstName || "there"}" — never write [Prospect Name] or any placeholder., then: "I'm reaching out to introduce Condense, a deep-tech real-time data platform from Zeliot, backed by Bosch."
 
 PARA 2 (MANDATORY — NEVER SKIP): "Today, platforms like ${company} typically rely on Kafka-based architectures using tools such as [LIST ALL: ${stack}, ${tool}, and infer related tools like Apache Spark / Apache Flink, Kafka Connect, Debezium], and warehouses like [${warehouse}]. Teams often add tools like [infer: RudderStack, Segment, or similar] for ${integration.toLowerCase()}, along with Kafka Connect or Debezium for CDC pipelines. While powerful, this results in multiple pipeline layers, higher infrastructure overhead, and rising total costs."
 
@@ -2724,10 +2724,10 @@ if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
                 { key: "day14_followup", label: "Day 14", icon: "📨" },
               ];
               const editKey = `gtm_${row._id}_${activeGtmTab}`;
-              const rawText = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
+             const rawText = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
 const gtmFollowupKeys = ["day3_followup","day7_followup","day14_followup","email_followup1","email_followup2"];
-const gtmFirstName = (row._discoveredName || row["Full Name"] || row["Prospect Name"] || "").split(" ")[0];
-const gtmAlreadyGreeted = /^(hi |greetings )/i.test(rawText.trimStart());
+const gtmFirstName = (row._discoveredName || row["Full Name"] || row["Prospect Name"] || "").split(" ")[0].trim();
+const gtmAlreadyGreeted = /^(hi |greetings|dear |hope)/i.test(rawText.trimStart());
 const text = (gtmFollowupKeys.includes(activeGtmTab) && gtmFirstName && !gtmAlreadyGreeted && gtmEdited[editKey] === undefined)
   ? `Hi ${gtmFirstName},\n\n${rawText}`
   : rawText;
@@ -3688,10 +3688,10 @@ const text = (gtmFollowupKeys.includes(activeGtmTab) && gtmFirstName && !gtmAlre
                     {activeMsg && (() => {
                       const msgDef = FOLLOWUP_SCHEDULE.find(m => m.key === activeMsg);
                       const editKey = `${sel.id}_${activeMsg}`;
-                      const storedText = edits[editKey] ?? selMessages[activeMsg] ?? "";
+                     const storedText = edits[editKey] ?? selMessages[activeMsg] ?? "";
 const isFollowup = ["day3_followup","day7_followup","day14_followup","email_followup1","email_followup2"].includes(activeMsg);
 const firstName = sel?.name?.split(" ")[0] || "";
-const alreadyGreeted = /^(hi |greetings|dear )/i.test(storedText.trimStart());
+const alreadyGreeted = /^(hi |greetings|dear |hope)/i.test(storedText.trimStart());
 const text = (isFollowup && firstName && !alreadyGreeted && edits[editKey] === undefined)
   ? `Hi ${firstName},\n\n${storedText}`
   : storedText;
