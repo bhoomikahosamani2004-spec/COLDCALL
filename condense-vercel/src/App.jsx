@@ -608,24 +608,20 @@ As a pre-read, sharing the below information on Condense.
 Omitting this block is a HARD ERROR. It must appear in every email_body without exception.
 - Total length: 350-500 words
 - No asterisks, no markdown, no bold in email body
-- Use bullet points (- ) for use cases only — never numbered lists in email
-- Sign-off: Always end email with "Best regards," on its own line, then on separate lines: sender name, title, company, phone. If senderProfile is provided use those details, otherwise default to:
-Best regards,
-Veera Raghavan
-Enterprise Business (India)
-Zeliot
-+91 935-309-4136
+- Sign-off: Do NOT include any signature, "Best regards", name, title, company or phone at the end of any email. End the email with the closing sentence only.
 
 REMINDER: Para 1 = Condense intro only. Para 2 = their role + company. This order is MANDATORY.
 SPACING: Always separate paragraphs with a blank line (double newline \n\n). Never run paragraphs together without a blank line between them.
- email_followup1: 3-4 short paragraphs. Send 3 days after the first email. 
+email_followup1: 3-4 short paragraphs. Send 3 days after the first email.
+   DO NOT start with "Greetings" or any salutation — start directly with the content.
    Take a completely different angle from email_body — reference a tech signal 
    OR recent company news OR a relevant success story metric (e.g. "40% TCO reduction", 
-   "99.95% uptime"). Never mention job openings. Same Veera sign-off. 
+   "99.95% uptime"). Never mention job openings. No signature at end.
    End with soft CTA for 30 mins next week.
-   email_followup2: 2-3 short paragraphs. Final nudge, 7 days after first email. 
+   email_followup2: 2-3 short paragraphs. Final nudge, 7 days after first email.
+   DO NOT start with "Greetings" or any salutation — start directly with the content.
    Reference one specific Condense outcome metric. Keep door open — no desperation. 
-   Never mention job openings. Same Veera sign-off.
+   Never mention job openings. No signature at end.
 
 GLOBAL RULE FOR ALL 9 OUTPUTS: Never reference job openings, hiring signals, 
 or open positions in any message — LinkedIn or email. Use tech signals, 
@@ -1003,6 +999,7 @@ const [zohoPushing, setZohoPushing] = useState(false);
 const [zohoPushStatus, setZohoPushStatus] = useState({});
 const [searchQuery, setSearchQuery] = useState("");
 const [sidebarFilter, setSidebarFilter] = useState("all");
+const [prospectDateFilter, setProspectDateFilter] = useState("all");
 const [ratings, setRatings] = useState({});
 const [ratingFeedback, setRatingFeedback] = useState({});
 const [trainingExamples, setTrainingExamples] = useState([]);
@@ -1148,7 +1145,8 @@ useEffect(() => {
   const addProspect = () => {
     if (!form.name || !form.company) return;
     const id = `p_${Date.now()}`;
-   setProspects(prev => [{ ...form, id, status: "idle", createdAt: new Date().toISOString(), sentAt: null }, ...prev]);
+    const uploadDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+setProspects(prev => [{ ...form, id, status: "idle", createdAt: new Date().toISOString(), uploadDate, sentAt: null }, ...prev]);
     setSelected(id);
     setForm({ name: "", jobTitle: "", company: "", linkedinUrl: "", email: "", phone: "", jdText: "" });
     setShowJD(false);
@@ -1184,18 +1182,20 @@ const linkedinIdx = idx(["person linkedin url", "linkedin url", "linkedin", "pro
       const name = fullName || [firstName, lastName].filter(Boolean).join(" ");
       const company = get(companyIdx);
       if (!name && !company) continue;
-      added.push({
-        id: `p_${Date.now()}_${i}`,
-        name: name || "Unknown",
-        jobTitle: get(titleIdx),
-        company: company || "Unknown",
-        email: get(emailIdx),
-        phone: get(phoneIdx),
-        linkedinUrl: get(linkedinIdx),
-        status: "idle",
-        createdAt: new Date().toISOString(),
-        sentAt: null,
-      });
+      const uploadDate = new Date().toISOString().split("T")[0];
+added.push({
+  id: `p_${Date.now()}_${i}`,
+  name: name || "Unknown",
+  jobTitle: get(titleIdx),
+  company: company || "Unknown",
+  email: get(emailIdx),
+  phone: get(phoneIdx),
+  linkedinUrl: get(linkedinIdx),
+  status: "idle",
+  createdAt: new Date().toISOString(),
+  uploadDate,
+  sentAt: null,
+});
     }
     setProspects(prev => [...added, ...prev]);
     setUploadStatus(`✅ ${added.length} prospects imported!`);
@@ -1237,18 +1237,20 @@ const applyMapping = () => {
     const name = fullName || [firstName, lastName].filter(Boolean).join(" ");
      const company = get("company");
     if (!name && !company) return;
-    added.push({
-      id: `p_${Date.now()}_${i}`,
-      name: name || "Unknown",
-      jobTitle: get("jobTitle"),
-      company: company || "Unknown",
-      email: get("email"),
-      phone: get("phone"),
-      linkedinUrl: get("linkedinUrl"),
-      status: "idle",
-      createdAt: new Date().toISOString(),
-      sentAt: null,
-    });
+   const uploadDate = new Date().toISOString().split("T")[0];
+added.push({
+  id: `p_${Date.now()}_${i}`,
+  name: name || "Unknown",
+  jobTitle: get("jobTitle"),
+  company: company || "Unknown",
+  email: get("email"),
+  phone: get("phone"),
+  linkedinUrl: get("linkedinUrl"),
+  status: "idle",
+  createdAt: new Date().toISOString(),
+  uploadDate,
+  sentAt: null,
+});
   });
   setProspects(prev => [...added, ...prev]);
   setShowMapper(false);
@@ -1372,9 +1374,15 @@ Return ONLY valid JSON:
   }
   setGtmResearchRunning(null);
 };
-  const markSent = (id) => {
-    setProspects(prev => prev.map(p => p.id === id ? { ...p, status: "following", sentAt: new Date().toISOString() } : p));
-  };
+  const markSent = (id, messageKey) => {
+  const sentAt = new Date().toISOString();
+  setProspects(prev => prev.map(p => p.id === id ? { 
+    ...p, 
+    status: "following", 
+    sentAt,
+    sentLog: { ...(p.sentLog || {}), [messageKey || "email_body"]: sentAt }
+  } : p));
+};
  async function pushToZoho(prospect, messages, description) {
   const res = await fetch("/api/zoho-push", {
     method: "POST",
@@ -1566,12 +1574,7 @@ CTA: "Can we schedule a quick 30-minute call to understand your current architec
 
 CLOSING: "Looking forward to your thoughts."
 
-SIGN-OFF (always exactly):
-Thanks & Regards,
-Veera Raghavan
-Head of Enterprise Sales
-📞 9353094136
-✉️ veera.raghavan@zeliot.in
+Do NOT include any sign-off, signature, name, phone or email at the end. End with the closing sentence only.
 
 CRITICAL RULES — VIOLATION = WRONG OUTPUT:
 1. ALWAYS name ALL tools from their stack explicitly in Para 2 — ${stack}, ${tool}, AND infer Kafka Connect, Debezium, Spark/Flink if Kafka is involved. Never generic.
@@ -1586,10 +1589,8 @@ ALSO generate:
 - day3_followup: 50-80 words, different angle — reference ${warehouse} or ${cloud}
 - day7_followup: 30-50 words, reference a Condense metric (40% TCO reduction or 99.95% uptime)
 - day14_followup: 20-35 words, final nudge
-- email_followup1: 3-4 short paragraphs, send 3 days after first email. Different angle — reference ${warehouse} or ${cloud} or a specific Condense metric (40% TCO reduction, 99.95% uptime). Same Veera sign-off. End with soft CTA for 30 mins.
-- email_followup2: 2-3 short paragraphs, final nudge 7 days after first email. Reference one Condense outcome metric. Keep door open. Same Veera sign-off.
-
-- email_followup2: 2-3 short paragraphs, final nudge 7 days after first email. Reference one Condense outcome metric. Keep door open. Same Veera sign-off.
+- email_followup1: 3-4 short paragraphs, send 3 days after first email. DO NOT start with "Greetings" or any salutation. Different angle — reference ${warehouse} or ${cloud} or a specific Condense metric (40% TCO reduction, 99.95% uptime). No signature at end. End with soft CTA for 30 mins.
+- email_followup2: 2-3 short paragraphs, final nudge 7 days after first email. DO NOT start with "Greetings" or any salutation. Reference one Condense outcome metric. Keep door open. No signature at end.
 
 Return ONLY valid JSON:
 {
@@ -2253,13 +2254,73 @@ if (!dbLoaded) return (
     <span style={{ fontSize: 11, fontWeight: 600, color: C.navy, fontFamily: DISPLAY }}>Prospects ({prospects.length})</span>
     {prospects.length > 0 && <span style={{ fontSize: 10, color: C.textDim }}>{prospects.filter(p=>p.status==="ready"||p.status==="following").length} active</span>}
   </div>
-                {/* FOLLOW-UP FILTER BUTTONS */}
-<div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+              {/* FOLLOW-UP FILTER BUTTONS */}
+<div style={{ display: "flex", gap: 4, marginBottom: 6, flexWrap: "wrap" }}>
   {[
     { label: "All", value: "all" },
     { label: "📧 E+3 Due", value: "followup1" },
     { label: "📧 E+7 Due", value: "followup2" },
   ].map(f => {
+    const count = f.value === "all" ? prospects.length
+      : prospects.filter(p => {
+          if (!p.sentAt || p.status === "done") return false;
+          const day = f.value === "followup1" ? 3 : 7;
+          const d = getDaysUntilFollowup(p, day);
+          return d !== null && d <= 0;
+        }).length;
+    const isActive = (sidebarFilter || "all") === f.value;
+    return (
+      <button
+        key={f.value}
+        onClick={() => setSidebarFilter(f.value)}
+        style={{
+          padding: "4px 10px", borderRadius: 20, border: `1px solid ${isActive ? C.gold : "#E4ECF4"}`,
+          background: isActive ? C.goldDim : "#F8FAFC",
+          color: isActive ? C.gold : C.textDim,
+          fontSize: 10, fontFamily: MONO, cursor: "pointer", fontWeight: isActive ? 700 : 400,
+          display: "flex", alignItems: "center", gap: 4
+        }}
+      >
+        {f.label}
+        {count > 0 && (
+          <span style={{ background: isActive ? C.gold : "#E4ECF4", color: isActive ? "#fff" : C.textMid, borderRadius: 8, padding: "0px 5px", fontSize: 9, fontWeight: 700 }}>
+            {count}
+          </span>
+        )}
+      </button>
+    );
+  })}
+</div>
+
+{/* DATE FILTER */}
+{(() => {
+  const dates = [...new Set(prospects.map(p => p.uploadDate).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+  if (dates.length === 0) return null;
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 9, color: C.textDim, fontFamily: MONO, letterSpacing: "0.08em", marginBottom: 4 }}>FILTER BY UPLOAD DATE</div>
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        <button
+          onClick={() => setProspectDateFilter("all")}
+          style={{ padding: "3px 10px", borderRadius: 20, border: `1px solid ${prospectDateFilter === "all" ? C.navy : "#E4ECF4"}`, background: prospectDateFilter === "all" ? C.navy : "#F8FAFC", color: prospectDateFilter === "all" ? "#fff" : C.textDim, fontSize: 9, fontFamily: MONO, cursor: "pointer", fontWeight: prospectDateFilter === "all" ? 700 : 400 }}>
+          All dates
+        </button>
+        {dates.map(date => {
+          const count = prospects.filter(p => p.uploadDate === date).length;
+          const isActive = prospectDateFilter === date;
+          const label = new Date(date + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+          return (
+            <button key={date} onClick={() => setProspectDateFilter(date)}
+              style={{ padding: "3px 10px", borderRadius: 20, border: `1px solid ${isActive ? C.navy : "#E4ECF4"}`, background: isActive ? C.navy : "#F8FAFC", color: isActive ? "#fff" : C.textDim, fontSize: 9, fontFamily: MONO, cursor: "pointer", fontWeight: isActive ? 700 : 400, display: "flex", alignItems: "center", gap: 4 }}>
+              {label}
+              <span style={{ background: isActive ? "rgba(255,255,255,0.25)" : "#E4ECF4", color: isActive ? "#fff" : C.textMid, borderRadius: 8, padding: "0px 5px", fontSize: 9, fontWeight: 700 }}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+})()}
     const count = f.value === "all" ? prospects.length
       : prospects.filter(p => {
           if (!p.sentAt || p.status === "done") return false;
@@ -2309,12 +2370,13 @@ if (!dbLoaded) return (
         <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.25 }}>👤</div>
         <div style={{ fontSize: 12, color: C.textDim, lineHeight: 1.7, fontFamily: FONT }}>Add your first prospect above<br/>or upload a CSV file</div>
       </div>
-    ) : prospects.filter(p => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        if (!((p.name || "").toLowerCase().includes(q) || (p.company || "").toLowerCase().includes(q) || (p.jobTitle || "").toLowerCase().includes(q))) return false;
-      }
-      if (sidebarFilter === "followup1") {
+    } : prospects.filter(p => {
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    if (!((p.name || "").toLowerCase().includes(q) || (p.company || "").toLowerCase().includes(q) || (p.jobTitle || "").toLowerCase().includes(q))) return false;
+  }
+  if (prospectDateFilter !== "all" && p.uploadDate !== prospectDateFilter) return false;
+  if (sidebarFilter === "followup1") {
         if (!p.sentAt || p.status === "done") return false;
         const d = getDaysUntilFollowup(p, 3);
         return d !== null && d <= 0;
@@ -2360,6 +2422,11 @@ if (!dbLoaded) return (
               style={{ fontSize: 9, fontFamily: MONO, color: C.gold, background: C.goldDim, border: `1px solid ${C.gold}44`, padding: "2px 8px", borderRadius: 10, cursor: running !== null ? "not-allowed" : "pointer", opacity: running !== null ? 0.5 : 1 }}>↺ Regen</button>
           )}
         </div>
+        {p.sentLog && Object.keys(p.sentLog).length > 0 && (
+  <div style={{ marginTop: 4, fontSize: 9, color: C.green, fontFamily: MONO }}>
+    ✅ {Object.keys(p.sentLog).length} msg{Object.keys(p.sentLog).length > 1 ? "s" : ""} sent
+  </div>
+)}
         {p.status === "following" && (
           <div style={{ marginTop: 5, display: "flex", flexWrap: "wrap", gap: 3 }}>
             {[3, 7, 14].map(day => {
@@ -2751,7 +2818,14 @@ if (!dbLoaded) return (
 </div>{/* closes scrollable wrapper */}
 
 <div style={{ padding: "10px 16px", borderTop: "1px solid #EEF2F7", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-                    <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
+                   <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+  <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{activeGtmTab === "connection_note" ? `${text.length}/300 chars` : `${text.split(" ").length} words`}</span>
+  {row._sentLog?.[activeGtmTab] && (
+    <span style={{ fontSize: 9, color: C.green, fontFamily: MONO }}>
+      ✅ Sent {new Date(row._sentLog[activeGtmTab]).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+    </span>
+  )}
+</div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <GlowButton
                         small
@@ -2771,12 +2845,17 @@ if (!dbLoaded) return (
                         {exportingPDF ? <><Spinner /> PDF...</> : "📄 Export PDF"}
                       </GlowButton>
                       {!row._sentAt ? (
-                        <button onClick={() => {
-                          const updated = { ...row, _sentAt: new Date().toISOString() };
-                          setGtmRows(prev => prev.map(r => r._id === row._id ? updated : r));
-                          dbSave('v3_gtm_rows', String(row._id), updated);
-                          showGtmToast("✅ Marked as sent!", "success");
-                        }} style={{ fontSize: 11, color: C.green, background: C.greenDim, border: `1px solid ${C.green}44`, padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✓ Mark Sent</button>
+                      <button onClick={() => {
+  const sentAt = new Date().toISOString();
+  const updated = { 
+    ...row, 
+    _sentAt: sentAt,
+    _sentLog: { ...(row._sentLog || {}), [activeGtmTab]: sentAt }
+  };
+  setGtmRows(prev => prev.map(r => r._id === row._id ? updated : r));
+  dbSave('v3_gtm_rows', String(row._id), updated);
+  showGtmToast(`✅ Marked as sent — ${new Date(sentAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`, "success");
+}} style={{ fontSize: 11, color: C.green, background: C.greenDim, border: `1px solid ${C.green}44`, padding: "5px 12px", borderRadius: 6, cursor: "pointer", fontFamily: FONT, fontWeight: 500 }}>✓ Mark Sent</button>
                       ) : (
                         <span style={{ fontSize: 10, color: C.green, fontFamily: MONO }}>✅ Sent {new Date(row._sentAt).toLocaleDateString()}</span>
                       )}
@@ -3671,7 +3750,14 @@ if (!dbLoaded) return (
       </div>
     ) : (
       <button
-        onClick={() => setEdits(prev => ({ ...prev, [`${sel.id}_sent_${activeMsg}`]: { sentAt: new Date().toISOString() } }))}
+       onClick={() => {
+  const sentAt = new Date().toISOString();
+  setEdits(prev => ({ ...prev, [`${sel.id}_sent_${activeMsg}`]: { sentAt } }));
+  setProspects(prev => prev.map(p => p.id === sel.id ? {
+    ...p,
+    sentLog: { ...(p.sentLog || {}), [activeMsg]: sentAt }
+  } : p));
+}}
         style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 6, border: "1px solid #B8EDD3", background: "#F0FBF5", color: C.green, fontSize: 12, fontFamily: FONT, fontWeight: 500, cursor: "pointer", transition: "all 0.15s" }}
         onMouseEnter={e => e.currentTarget.style.background = "#D8F5E8"}
         onMouseLeave={e => e.currentTarget.style.background = "#F0FBF5"}
