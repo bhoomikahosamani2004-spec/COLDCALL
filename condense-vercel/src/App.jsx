@@ -412,7 +412,6 @@ LINKEDIN MESSAGE STRUCTURE:
   • "Given [Company]'s focus on [X], we see strong alignment..."
   • 2-3 specific use cases for their role (NO bullet points on LinkedIn — write as flowing sentences)
   • "I would be happy to share more details. Would you be open to a 30-minute discussion next week?"
-  • Sign as: Veera Raghavan | Enterprise Business (India) | Zeliot | +91 935-309-4136
 - day3_followup: 50-80 words. Different angle — reference tech signal OR recent news. Keep door open.
 - day7_followup: 30-50 words. Reference a success story metric. Ask for 30 mins or email ID.
 - day14_followup: 20-35 words. Final gentle nudge. "Looking forward to your guidance."
@@ -1165,7 +1164,7 @@ const handleFileUpload = (e) => {
 );
 
 const companyIdx = idx(["company name", "company", "organization", "org", "employer"]);
-const nameIdx = idx(["full name", "contact name", "person name"]);
+const nameIdx = idx(["full name", "contact name", "person name",, "name"]);
 const firstNameIdx = idx(["first name", "firstname", "first_name"]);
 const lastNameIdx = idx(["last name", "lastname", "last_name"]);
 const titleIdx = idx(["title", "job title", "position", "designation", "role"]);
@@ -1586,11 +1585,12 @@ CRITICAL RULES — VIOLATION = WRONG OUTPUT:
 ALSO generate:
 - connection_note: Max 300 chars, warm, reference their data stack, no pitch
 - day0_message: 80-120 words, reference their exact stack (${stack} + ${tool}), one CTA
-- day3_followup: 50-80 words, different angle — reference ${warehouse} or ${cloud}
-- day7_followup: 30-50 words, reference a Condense metric (40% TCO reduction or 99.95% uptime)
-- day14_followup: 20-35 words, final nudge
-- email_followup1: 3-4 short paragraphs, send 3 days after first email. DO NOT start with "Greetings" or any salutation. Different angle — reference ${warehouse} or ${cloud} or a specific Condense metric (40% TCO reduction, 99.95% uptime). No signature at end. End with soft CTA for 30 mins.
-- email_followup2: 2-3 short paragraphs, final nudge 7 days after first email. DO NOT start with "Greetings" or any salutation. Reference one Condense outcome metric. Keep door open. No signature at end.
+- day3_followup: 50-80 words. MUST start with "Hi ${firstName ? firstName : ""},\n\n" then different angle — reference ${warehouse} or ${cloud}
+- day7_followup: 30-50 words. MUST start with "Hi ${firstName ? firstName : ""},\n\n" then reference a Condense metric
+- day14_followup: 20-35 words. MUST start with "Hi ${firstName ? firstName : ""},\n\n" then final nudge
+- email_followup1: ...same as before but also MUST start with "Hi ${firstName ? firstName : ""},\n\n"
+- email_followup2: ...same as before but also MUST start with "Hi ${firstName ? firstName : ""},\n\n"
+
 
 Return ONLY valid JSON:
 {
@@ -2724,7 +2724,13 @@ if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
                 { key: "day14_followup", label: "Day 14", icon: "📨" },
               ];
               const editKey = `gtm_${row._id}_${activeGtmTab}`;
-              const text = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
+              const rawText = gtmEdited[editKey] !== undefined ? gtmEdited[editKey] : gen[activeGtmTab] || "";
+const gtmFollowupKeys = ["day3_followup","day7_followup","day14_followup","email_followup1","email_followup2"];
+const gtmFirstName = (row._discoveredName || row["Full Name"] || row["Prospect Name"] || "").split(" ")[0];
+const gtmAlreadyGreeted = /^(hi |greetings )/i.test(rawText.trimStart());
+const text = (gtmFollowupKeys.includes(activeGtmTab) && gtmFirstName && !gtmAlreadyGreeted && gtmEdited[editKey] === undefined)
+  ? `Hi ${gtmFirstName},\n\n${rawText}`
+  : rawText;
               return (
                 <>
                   <div style={{ display: "flex", borderBottom: "1px solid #EEF2F7", padding: "0 4px", flexShrink: 0, overflowX: "auto" }}>
