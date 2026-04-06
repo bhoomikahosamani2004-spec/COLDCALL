@@ -173,7 +173,7 @@ async function dbLoad(table) {
 }
 
 // ─── GEMINI API WRAPPER ───────────────────────────────────────────────────────
-async function callClaude({ system, messages, max_tokens = 1500 }) {
+async function callClaude({ system, messages, max_tokens = 1500, _retry = 0 }) {
   const contents = messages.map((msg) => {
     const role = msg.role === "assistant" ? "model" : "user";
     let parts;
@@ -197,15 +197,54 @@ async function callClaude({ system, messages, max_tokens = 1500 }) {
   };
   if (system) body.system_instruction = { parts: [{ text: system }] };
 
-  const res = await fetch("/api/gemini", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-  });
-  if (!res.ok) { const e = await res.text(); throw new Error(`Gemini error ${res.status}: ${e}`); }
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || "Gemini API error");
-  const candidate = data.candidates?.[0];
-  const text = candidate?.content?.parts?.map((p) => p.text || "").join("") || "";
-  return { content: [{ type: "text", text }], stop_reason: "end_turn" };
+  try {
+    const res = await fetch("/api/gemini", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+
+    if (res.status === 429 || res.status === 503) {
+      if (_retry < 3) {
+        const wait = (_retry + 1) * 8000;
+        console.warn(`Gemini ${res.status} — retrying in ${wait/1000}s (attempt ${_retry + 1}/3)`);
+        await new Promise(r => setTimeout(r, wait));
+        return callClaude({ system, messages, max_tokens, _retry: _retry + 1 });
+      }
+      throw new Error(`Gemini rate limit after 3 retries`);
+    }
+
+    if (!res.ok) {
+      const e = await res.text();
+      throw new Error(`Gemini error ${res.status}: ${e.slice(0, 200)}`);
+    }
+
+    const data = await res.json();
+    if (data.error) {
+      const code = data.error.code || data.error.status || "";
+      if ((code === 429 || String(code).includes("EXHAUSTED") || String(code).includes("QUOTA")) && _retry < 3) {
+        const wait = (_retry + 1) * 8000;
+        console.warn(`Gemini quota — retrying in ${wait/1000}s`);
+        await new Promise(r => setTimeout(r, wait));
+        return callClaude({ system, messages, max_tokens, _retry: _retry + 1 });
+      }
+      throw new Error(data.error.message || "Gemini API error");
+    }
+
+    const candidate = data.candidates?.[0];
+    if (!candidate) throw new Error("Gemini returned no candidates — prompt may have been blocked");
+    
+    const text = candidate?.content?.parts?.map((p) => p.text || "").join("") || "";
+    if (!text.trim()) throw new Error("Gemini returned empty response — increase max_tokens or shorten prompt");
+    
+    return { content: [{ type: "text", text }], stop_reason: "end_turn" };
+
+  } catch (err) {
+    if (_retry < 2 && !err.message.includes("blocked") && !err.message.includes("empty")) {
+      console.warn(`callClaude failed, retrying: ${err.message}`);
+      await new Promise(r => setTimeout(r, 5000));
+      return callClaude({ system, messages, max_tokens, _retry: _retry + 1 });
+    }
+    throw err;
+  }
 }
 
 function extractJSON(text) {
@@ -280,7 +319,7 @@ Provide detailed research across ALL these areas:
   const data = await callClaude({
     system: "You are a B2B research agent. Return ONLY valid JSON. Start with { and end with }. No markdown, no preamble.",
     messages: [{ role: "user", content: researchPrompt }],
-    max_tokens: 2500,
+    max_tokens: 3000,
   });
   const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
   const json = extractJSON(text);
@@ -620,7 +659,7 @@ Return ONLY this JSON:
   const data2 = await callClaude({
     system: "You are Veera Raghavan. Study the training examples and replicate the style precisely. Return ONLY valid JSON. Start with { and end with }.",
     messages: [{ role: "user", content: prompt }],
-    max_tokens: 2200,
+    max_tokens: 4000,
   });
   const text2 = (data2.content || []).filter(b => b.type === "text").map(b => b.text).join("");
   onLog(`✅ Messages crafted using ${topExamples.length} training examples + ${matchedStories.length} success stories`);
@@ -1235,8 +1274,8 @@ const extraCtx = extraContext[id] || "";
       setResearch(prev => ({ ...prev, [id]: researchData }));
 
       updateStatus("generating");
-      addLog(id, "⏳ Pausing 30s to respect API rate limits...");
-      await new Promise(r => setTimeout(r, 30000));
+      addLog(id, "✍️ Generating messages...");
+      await new Promise(r => setTimeout(r, 3000));
       const industryUC = findIndustryUseCases(prospect.company, prospect.industry || "", researchData);
       const useCasesStr = industryUC.use_cases.map(uc => `• ${uc.title} – ${uc.desc}`).join("\n");
       const industryIntro = industryUC.intro.replace(/\[COMPANY\]/g, prospect.company);
@@ -1252,9 +1291,17 @@ const extraCtx = extraContext[id] || "";
       updateStatus("ready");
       addLog(id, "🚀 Agent complete! Review and send messages below.");
     } catch (err) {
-      updateStatus("error");
-      addLog(id, "❌ Error: " + err.message);
-    } finally { setRunning(null); }
+  updateStatus("error");
+  const msg = err.message || "Unknown error";
+  if (msg.includes("max_tokens") || msg.includes("empty")) {
+    addLog(id, "❌ Gemini truncated the response. Try again — it usually works on retry.");
+  } else if (msg.includes("blocked")) {
+    addLog(id, "❌ Gemini blocked this prompt. Try adding more company context.");
+  } else {
+    addLog(id, "❌ Error: " + msg);
+  }
+  addLog(id, "💡 Click ↺ Regen to retry this prospect.");
+} finally { setRunning(null); }
   };
 const runGtmResearch = async (row) => {
   const id = String(row._id);
@@ -1313,7 +1360,7 @@ Return ONLY valid JSON:
     const data = await callClaude({
       system: "You are a B2B research agent specializing in data infrastructure. Return ONLY valid JSON. Start with { and end with }. No markdown.",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 2500,
+     max_tokens: 3000,
     });
     const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
     const result = extractJSON(text);
@@ -1561,7 +1608,7 @@ Return ONLY valid JSON:
     const data = await callClaude({
       system: "You are Veera Raghavan. Return ONLY valid JSON. Start with { and end with }. No markdown.",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 2000,
+      max_tokens: 3500,
     });
     const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
     const result = extractJSON(text);
