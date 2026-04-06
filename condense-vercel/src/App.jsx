@@ -252,11 +252,19 @@ function extractJSON(text) {
   let s = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").replace(/<[^>]+>/g, "").trim();
   const start = s.indexOf("{"); const end = s.lastIndexOf("}");
   if (start === -1 || end === -1) throw new Error("No JSON in response");
- const parsed = JSON.parse(s.slice(start, end + 1));
-if (parsed.email_body) {
-  parsed.email_body = parsed.email_body.replace(/\n{3,}/g, "\n\n");
-}
-return parsed;
+  const parsed = JSON.parse(s.slice(start, end + 1));
+  const messageFields = ["email_body","email_followup1","email_followup2","day0_message","day3_followup","day7_followup","day14_followup","connection_note"];
+  messageFields.forEach(field => {
+    if (parsed[field] && typeof parsed[field] === "string") {
+      parsed[field] = parsed[field]
+        .replace(/\\n/g, "\n")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+  });
+  return parsed;
 }
 
 function stripCites(text) {
