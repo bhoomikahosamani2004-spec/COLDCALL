@@ -2321,36 +2321,7 @@ if (!dbLoaded) return (
     </div>
   );
 })()}
-    const count = f.value === "all" ? prospects.length
-      : prospects.filter(p => {
-          if (!p.sentAt || p.status === "done") return false;
-          const day = f.value === "followup1" ? 3 : 7;
-          const d = getDaysUntilFollowup(p, day);
-          return d !== null && d <= 0;
-        }).length;
-    const isActive = (sidebarFilter || "all") === f.value;
-    return (
-      <button
-        key={f.value}
-        onClick={() => setSidebarFilter(f.value)}
-        style={{
-          padding: "4px 10px", borderRadius: 20, border: `1px solid ${isActive ? C.gold : "#E4ECF4"}`,
-          background: isActive ? C.goldDim : "#F8FAFC",
-          color: isActive ? C.gold : C.textDim,
-          fontSize: 10, fontFamily: MONO, cursor: "pointer", fontWeight: isActive ? 700 : 400,
-          display: "flex", alignItems: "center", gap: 4
-        }}
-      >
-        {f.label}
-        {count > 0 && (
-          <span style={{ background: isActive ? C.gold : "#E4ECF4", color: isActive ? "#fff" : C.textMid, borderRadius: 8, padding: "0px 5px", fontSize: 9, fontWeight: 700 }}>
-            {count}
-          </span>
-        )}
-      </button>
-    );
-  })}
-</div>
+   
   <div style={{ position: "relative" }}>
     <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.textDim, pointerEvents: "none" }}>🔍</span>
     <input
