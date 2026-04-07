@@ -35,8 +35,15 @@ module.exports = async function handler(req, res) {
         }),
       });
 
-      if (apolloRes.ok) {
-        const apolloData = await apolloRes.json();
+     if (apolloRes.ok) {
+        let apolloData = null;
+        try {
+          const raw = await apolloRes.text();
+          if (raw?.trim()) apolloData = JSON.parse(raw);
+          else console.warn("Apollo returned empty body");
+        } catch (parseErr) {
+          console.error("Apollo phone parse error:", parseErr.message);
+        }
         const person = apolloData?.person;
         if (person) {
           // Apollo returns phone_numbers as an array
@@ -81,8 +88,16 @@ module.exports = async function handler(req, res) {
       console.log("Lusha phone status:", lushaRes.status);
 
       if (lushaRes.ok) {
-        const lushaData = await lushaRes.json();
-        console.log("Lusha phone response:", JSON.stringify(lushaData).slice(0, 300));
+        let lushaData = null;
+        try {
+          const raw = await lushaRes.text();
+          console.log("Lusha phone response:", raw.slice(0, 300));
+          if (raw?.trim()) lushaData = JSON.parse(raw);
+          else console.warn("Lusha returned empty body");
+        } catch (parseErr) {
+          console.error("Lusha phone parse error:", parseErr.message);
+          lushaData = null;
+        }
 
         const d = lushaData?.contact?.data || lushaData;
         // Lusha phone fields vary by API version — try all known shapes
