@@ -1174,8 +1174,8 @@ const idx = (keys) => headers.findIndex(h =>
 
 const companyIdx = idx(["company name", "company", "organization", "org", "employer"]);
 const nameIdx = idx(["full name", "contact name", "person name",]);
-const firstNameIdx = idx(["first name", "firstname", "first_name"]);
-const lastNameIdx = idx(["last name", "lastname", "last_name"]);
+const firstNameIdx = headers.findIndex(h => h.toLowerCase().trim() === "first name" || h.toLowerCase().trim() === "firstname");
+const lastNameIdx = headers.findIndex(h => h.toLowerCase().trim() === "last name" || h.toLowerCase().trim() === "lastname");
 const titleIdx = idx(["title", "job title", "position", "designation", "role"]);
 const emailIdx = idx(["email", "mail"]);
 const phoneIdx = idx(["phone", "mobile", "whatsapp"]);
