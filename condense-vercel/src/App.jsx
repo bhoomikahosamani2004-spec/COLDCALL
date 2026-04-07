@@ -1167,15 +1167,14 @@ const handleFileUpload = (e) => {
 
   const parseRows = (rows) => {
     const headers = rows[0].map(h => (h || "").toString().toLowerCase().trim());
-  // Exact-first matcher: tries exact match first, then partial
-const idx = (keys) => headers.findIndex(h => 
+    const idx = (keys) => headers.findIndex(h => 
   keys.some(k => h.toLowerCase().replace(/\s+/g, " ").trim().includes(k.toLowerCase()))
 );
 
 const companyIdx = idx(["company name", "company", "organization", "org", "employer"]);
-const nameIdx = idx(["full name", "contact name", "person name",]);
-const firstNameIdx = headers.findIndex(h => h.toLowerCase().trim() === "first name" || h.toLowerCase().trim() === "firstname");
-const lastNameIdx = headers.findIndex(h => h.toLowerCase().trim() === "last name" || h.toLowerCase().trim() === "lastname");
+const nameIdx = idx(["full name", "contact name", "person name"]);
+const firstNameIdx = idx(["first name", "firstname", "first_name"]);
+const lastNameIdx = idx(["last name", "lastname", "last_name"]);
 const titleIdx = idx(["title", "job title", "position", "designation", "role"]);
 const emailIdx = idx(["email", "mail"]);
 const phoneIdx = idx(["phone", "mobile", "whatsapp"]);
@@ -1626,9 +1625,9 @@ Return ONLY valid JSON:
     setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _status: "ready" } : r));
     // Save to Supabase
     dbSave('v3_gtm_messages', String(id), result);
-    } catch (err) {
-    setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
-    showGtmToast(`❌ Enrich failed: ${err.message}`, "error");
+  } catch (err) {
+    setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _status: "error" } : r));
+    showGtmToast(`❌ Generation failed: ${err.message}`, "error");
   } finally {
     setGtmRunning(null);
   }
@@ -2645,13 +2644,10 @@ if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
       setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
       showGtmToast("❌ No contact found via Apollo/Lusha", "error");
     }
-} catch (err) {
+  } catch (err) {
     setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
-    const msg = err.message?.includes("404") 
-      ? "❌ Contact not found in Apollo/Lusha database" 
-      : `❌ Enrich failed: ${err.message}`;
-    showGtmToast(msg, "error");
-  }finally {
+    showGtmToast(`❌ Enrich failed: ${err.message}`, "error");
+   } finally {
     setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
   }
 }} disabled={row._enriching || !!row._enriched}
