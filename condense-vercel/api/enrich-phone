@@ -1,6 +1,5 @@
 // /api/enrich-phone.js
 // Fetches ONLY phone numbers from Apollo (with reveal_phone_number=true) → Lusha fallback
-// Kept separate because phone lookup costs extra credits on both Apollo and Lusha
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
@@ -31,22 +30,29 @@ module.exports = async function handler(req, res) {
           organization_name: company,
           title: jobTitle || "",
           linkedin_url: linkedinUrl || undefined,
-          reveal_phone_number: true, // <-- extra credit cost, only here
+          reveal_phone_number: true,
         }),
       });
 
-     if (apolloRes.ok) {
+      // Read body ONCE regardless of status
+      const apolloRaw = await apolloRes.text();
+
+      if (!apolloRes.ok) {
+        console.warn(`Apollo phone skipped — status ${apolloRes.status}:`, apolloRaw.slice(0, 200));
+      } else {
         let apolloData = null;
         try {
-          const raw = await apolloRes.text();
-          if (raw?.trim()) apolloData = JSON.parse(raw);
-          else console.warn("Apollo returned empty body");
+          if (apolloRaw?.trim()) {
+            apolloData = JSON.parse(apolloRaw);
+          } else {
+            console.warn("Apollo returned empty body");
+          }
         } catch (parseErr) {
-          console.error("Apollo phone parse error:", parseErr.message);
+          console.error("Apollo phone parse error:", parseErr.message, "| raw:", apolloRaw.slice(0, 100));
         }
+
         const person = apolloData?.person;
         if (person) {
-          // Apollo returns phone_numbers as an array
           const phoneEntry =
             person.phone_numbers?.find(p => p.sanitized_number) ||
             person.phone_numbers?.[0];
@@ -59,9 +65,6 @@ module.exports = async function handler(req, res) {
             console.log("Apollo matched person but no phone returned");
           }
         }
-      } else {
-        const errText = await apolloRes.text();
-        console.warn(`Apollo phone skipped — status ${apolloRes.status}:`, errText.slice(0, 200));
       }
     } catch (err) {
       console.error("Apollo phone fetch error:", err.message);
@@ -87,35 +90,39 @@ module.exports = async function handler(req, res) {
 
       console.log("Lusha phone status:", lushaRes.status);
 
-      if (lushaRes.ok) {
+      // Read body ONCE
+      const lushaRaw = await lushaRes.text();
+      console.log("Lusha phone response:", lushaRaw.slice(0, 300));
+
+      if (!lushaRes.ok) {
+        console.warn(`Lusha phone skipped — status ${lushaRes.status}:`, lushaRaw.slice(0, 200));
+      } else {
         let lushaData = null;
         try {
-          const raw = await lushaRes.text();
-          console.log("Lusha phone response:", raw.slice(0, 300));
-          if (raw?.trim()) lushaData = JSON.parse(raw);
-          else console.warn("Lusha returned empty body");
+          if (lushaRaw?.trim()) {
+            lushaData = JSON.parse(lushaRaw);
+          } else {
+            console.warn("Lusha returned empty body");
+          }
         } catch (parseErr) {
-          console.error("Lusha phone parse error:", parseErr.message);
-          lushaData = null;
+          console.error("Lusha phone parse error:", parseErr.message, "| raw:", lushaRaw.slice(0, 100));
         }
 
-        const d = lushaData?.contact?.data || lushaData;
-        // Lusha phone fields vary by API version — try all known shapes
-        phone =
-          d?.phoneNumbers?.[0]?.number ||
-          d?.phoneNumbers?.[0]?.localNumber ||
-          d?.phoneNumbers?.[0]?.internationalNumber ||
-          "";
+        if (lushaData) {
+          const d = lushaData?.contact?.data || lushaData;
+          phone =
+            d?.phoneNumbers?.[0]?.number ||
+            d?.phoneNumbers?.[0]?.localNumber ||
+            d?.phoneNumbers?.[0]?.internationalNumber ||
+            "";
 
-        if (phone) {
-          source = "Lusha";
-          console.log("Lusha phone hit:", phone);
-        } else {
-          console.warn("Lusha returned no phone:", lushaData);
+          if (phone) {
+            source = "Lusha";
+            console.log("Lusha phone hit:", phone);
+          } else {
+            console.warn("Lusha returned no phone:", JSON.stringify(lushaData).slice(0, 200));
+          }
         }
-      } else {
-        const errText = await lushaRes.text();
-        console.warn(`Lusha phone skipped — status ${lushaRes.status}:`, errText.slice(0, 200));
       }
     } catch (err) {
       console.error("Lusha phone fetch error:", err.message);
