@@ -967,29 +967,6 @@ setGtmGenerated(gtmM);
     setDbLoaded(true);    
   }
   loadAll();
-setDbLoaded(true);
-
-    if (supabase) {
-      const channel = supabase
-        .channel('v3_prospects_changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'v3_prospects' }, (payload) => {
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            setProspects(prev => {
-              const exists = prev.find(p => p.id === payload.new.id);
-              const newProspect = payload.new.data;
-              if (exists) return prev.map(p => p.id === payload.new.id ? newProspect : p);
-              return [newProspect, ...prev];
-            });
-          }
-          if (payload.eventType === 'DELETE') {
-            setProspects(prev => prev.filter(p => p.id !== payload.old.id));
-          }
-        })
-        .subscribe();
-      return () => supabase.removeChannel(channel);
-    }
-  }
-  loadAll();
 }, []);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState(() => {
