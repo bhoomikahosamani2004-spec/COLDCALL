@@ -2619,29 +2619,37 @@ if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
               {row._status === "generating" && <><Spinner /><span style={{ fontSize: 11, color: C.gold, fontFamily: MONO }}>Generating...</span></>}
 
               {/* ENRICH */}
-              <button onClick={async () => {
-                setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: true } : r));
-                showGtmToast("🔍 Looking up via Apollo / Lusha...", "info", 8000);
-                try {
-                  const res = await fetch("/api/enrich", {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name: (row["Full Name"] || row["Prospect Name"] || "").trim(), company: row.Company, jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(), linkedinUrl: row.linkedinUrl || "" }),
-                  });
-                  const data = await res.json();
-                  if (data.found && (data.email || data.phone || data.name)) {
-                    const updated = { ...row, email: data.email || row.email, phone: data.phone || row.phone, _discoveredName: data.name || row._discoveredName, _enriching: false, _enriched: data.source };
-                    setGtmRows(prev => prev.map(r => r._id === row._id ? updated : r));
-                    dbSave('v3_gtm_rows', String(row._id), updated);
-                    showGtmToast(`✅ ${data.source}: ${data.name || ""} · ${data.email || "no email"}`, "success");
-                  } else {
-                    setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
-                    showGtmToast("❌ No contact found", "error");
-                  }
-                } catch (err) {
-                  setGtmRows(prev => prev.map(r => r._id === row._id ? { ...r, _enriching: false } : r));
-                  showGtmToast(`❌ ${err.message}`, "error");
-                }
-              }} disabled={row._enriching}
+              onClick={async () => {
+  const rowId = row._id;
+  setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: true } : r));
+  showGtmToast("🔍 Looking up via Apollo / Lusha...", "info", 8000);
+  try {
+    const res = await fetch("/api/enrich", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        name: (row["Full Name"] || row["Prospect Name"] || "").trim(), 
+        company: row.Company, 
+        jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(), 
+        linkedinUrl: row.linkedinUrl || "" 
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.found && (data.email || data.phone || data.name)) {
+      const updated = { ...row, email: data.email || row.email, phone: data.phone || row.phone, _discoveredName: data.name || row._discoveredName, _enriching: false, _enriched: data.source };
+      setGtmRows(prev => prev.map(r => r._id === rowId ? updated : r));
+      dbSave('v3_gtm_rows', String(rowId), updated);
+      showGtmToast(`✅ ${data.source}: ${data.name || ""} · ${data.email || "no email"}`, "success");
+    } else {
+      setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
+      showGtmToast("❌ No contact found via Apollo/Lusha", "error");
+    }
+  } catch (err) {
+    setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
+    showGtmToast(`❌ Enrich failed: ${err.message}`, "error");
+  }
+}}
+                disabled={row._enriching}
                 style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: row._enriching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
                 {row._enriching ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enriched}` : "🔍 Enrich"}
               </button>
