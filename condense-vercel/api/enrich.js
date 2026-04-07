@@ -62,7 +62,7 @@ module.exports = async function handler(req, res) {
     try {
       console.log("Trying Lusha for:", firstName, lastName, company);
     const lushaRes = await fetch(
-  `https://api.lusha.com/v2/person?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&companyName=${encodeURIComponent(company)}`,
+  `https://api.lusha.com/v1/person?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&company=${encodeURIComponent(company)}`,
         {
           method: "GET",
           headers: {
