@@ -2654,6 +2654,51 @@ if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
   style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: row._enriching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
   {row._enriching ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enriched}` : "🔍 Enrich"}
 </button>
+              {!row.phone && (
+  <button
+    onClick={async () => {
+      const rowId = row._id;
+      setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _phoneFetching: true } : r));
+      showGtmToast("📱 Looking up phone via Apollo / Lusha...", "info", 8000);
+      try {
+        const res = await fetch("/api/enrich-phone", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: (row["Full Name"] || row["Prospect Name"] || row._discoveredName || "").trim(),
+            company: row.Company,
+            jobTitle: (row["Job Title"] || row["Buying Persona"] || "").trim(),
+            linkedinUrl: row.linkedinUrl || "",
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.found && data.phone) {
+          const updated = { ...row, phone: data.phone, _phoneFetching: false };
+          setGtmRows(prev => prev.map(r => r._id === rowId ? updated : r));
+          dbSave('v3_gtm_rows', String(rowId), updated);
+          showGtmToast(`📱 Phone found via ${data.source}: ${data.phone}`, "success");
+        } else {
+          setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _phoneFetching: false } : r));
+          showGtmToast("❌ No phone found from Apollo/Lusha", "error");
+        }
+      } catch (err) {
+        setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _phoneFetching: false } : r));
+        showGtmToast(`❌ Phone lookup failed: ${err.message}`, "error");
+      }
+    }}
+    disabled={row._phoneFetching}
+    style={{
+      padding: "6px 12px", borderRadius: 6,
+      border: "1px solid #0D9E6E44",
+      background: "#F0FBF5",
+      color: "#0D9E6E", fontSize: 11, fontFamily: FONT, fontWeight: 500,
+      cursor: row._phoneFetching ? "not-allowed" : "pointer",
+      display: "flex", alignItems: "center", gap: 5
+    }}
+  >
+    {row._phoneFetching ? <><Spinner /> Fetching...</> : "📱 Fetch Phone"}
+  </button>
+)}
 
               {/* ZOHO */}
               {gen && (
@@ -3563,6 +3608,50 @@ const text = (gtmFollowupKeys.includes(activeGtmTab) && gtmFirstName && !gtmAlre
     {enriching === sel.id ? <><Spinner /> Enriching...</> 
      : enrichedData[sel.id] ? `✅ via ${enrichedData[sel.id].source}` 
      : "🔍 Enrich"}
+  </button>
+)}
+                      {!sel.phone && (
+  <button
+    onClick={async () => {
+      setEnriching(sel.id + "_phone");
+      try {
+        const res = await fetch("/api/enrich-phone", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: sel.name,
+            company: sel.company,
+            jobTitle: sel.jobTitle,
+            linkedinUrl: sel.linkedinUrl,
+          }),
+        });
+        const data = await res.json();
+        if (data.found && data.phone) {
+          setProspects(prev =>
+            prev.map(p => p.id === sel.id ? { ...p, phone: data.phone } : p)
+          );
+          addLog(sel.id, `📱 Phone found via ${data.source}: ${data.phone}`);
+        } else {
+          addLog(sel.id, "❌ No phone found from Apollo/Lusha");
+        }
+      } catch (err) {
+        addLog(sel.id, `❌ Phone lookup failed: ${err.message}`);
+      }
+      setEnriching(null);
+    }}
+    disabled={enriching === sel.id + "_phone"}
+    style={{
+      padding: "8px 14px", borderRadius: 6,
+      border: "1px solid #0D9E6E44",
+      background: "#F0FBF5",
+      color: "#0D9E6E", fontSize: 11, fontFamily: FONT, fontWeight: 500,
+      cursor: enriching === sel.id + "_phone" ? "not-allowed" : "pointer",
+      display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s"
+    }}
+  >
+    {enriching === sel.id + "_phone"
+      ? <><Spinner /> Fetching...</>
+      : "📱 Fetch Phone"}
   </button>
 )}
 {sel.status === "ready" && <GlowButton onClick={() => markSent(sel.id)} color={C.green} primary>✓ Mark Sent</GlowButton>}
