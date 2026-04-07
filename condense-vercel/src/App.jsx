@@ -1625,9 +1625,12 @@ Return ONLY valid JSON:
     setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _status: "ready" } : r));
     // Save to Supabase
     dbSave('v3_gtm_messages', String(id), result);
-  } catch (err) {
-    setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _status: "error" } : r));
-    showGtmToast(`❌ Generation failed: ${err.message}`, "error");
+} catch (err) {
+    setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
+    const msg = err.message?.includes("404") 
+      ? "❌ Contact not found in Apollo/Lusha database" 
+      : `❌ Enrich failed: ${err.message}`;
+    showGtmToast(msg, "error");
   } finally {
     setGtmRunning(null);
   }
