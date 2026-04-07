@@ -1625,12 +1625,9 @@ Return ONLY valid JSON:
     setGtmRows(prev => prev.map(r => r._id === id ? { ...r, _status: "ready" } : r));
     // Save to Supabase
     dbSave('v3_gtm_messages', String(id), result);
-} catch (err) {
+    } catch (err) {
     setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
-    const msg = err.message?.includes("404") 
-      ? "❌ Contact not found in Apollo/Lusha database" 
-      : `❌ Enrich failed: ${err.message}`;
-    showGtmToast(msg, "error");
+    showGtmToast(`❌ Enrich failed: ${err.message}`, "error");
   } finally {
     setGtmRunning(null);
   }
@@ -2647,10 +2644,13 @@ if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
       setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
       showGtmToast("❌ No contact found via Apollo/Lusha", "error");
     }
-  } catch (err) {
+} catch (err) {
     setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
-    showGtmToast(`❌ Enrich failed: ${err.message}`, "error");
-   } finally {
+    const msg = err.message?.includes("404") 
+      ? "❌ Contact not found in Apollo/Lusha database" 
+      : `❌ Enrich failed: ${err.message}`;
+    showGtmToast(msg, "error");
+  }finally {
     setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
   }
 }} disabled={row._enriching || !!row._enriched}
