@@ -1167,14 +1167,31 @@ const handleFileUpload = (e) => {
 
   const parseRows = (rows) => {
     const headers = rows[0].map(h => (h || "").toString().toLowerCase().trim());
-    const idx = (keys) => headers.findIndex(h => 
-  keys.some(k => h.toLowerCase().replace(/\s+/g, " ").trim().includes(k.toLowerCase()))
-);
+  // Exact-first matcher: tries exact match first, then partial
+const idx = (keys) => {
+  // Try exact match first
+  let found = headers.findIndex(h =>
+    keys.some(k => h.toLowerCase().replace(/\s+/g, " ").trim() === k.toLowerCase())
+  );
+  if (found !== -1) return found;
+  // Fall back to includes
+  return headers.findIndex(h =>
+    keys.some(k => h.toLowerCase().replace(/\s+/g, " ").trim().includes(k.toLowerCase()))
+  );
+};
 
+const firstNameIdx = idx(["first name", "firstname", "first_name", "fname"]);
+const lastNameIdx = idx(["last name", "lastname", "last_name", "lname", "surname"]);
+// Only match "name" if it's NOT already claimed by first/last name columns
+const nameIdx = (() => {
+  const candidates = ["full name", "contact name", "person name", "name"];
+  return headers.findIndex((h, i) => {
+    if (i === firstNameIdx || i === lastNameIdx) return false;
+    const norm = h.toLowerCase().replace(/\s+/g, " ").trim();
+    return candidates.some(k => norm === k || norm.includes(k));
+  });
+})();
 const companyIdx = idx(["company name", "company", "organization", "org", "employer"]);
-const nameIdx = idx(["full name", "contact name", "person name", "name"]);
-const firstNameIdx = idx(["first name", "firstname", "first_name"]);
-const lastNameIdx = idx(["last name", "lastname", "last_name"]);
 const titleIdx = idx(["title", "job title", "position", "designation", "role"]);
 const emailIdx = idx(["email", "mail"]);
 const phoneIdx = idx(["phone", "mobile", "whatsapp"]);
