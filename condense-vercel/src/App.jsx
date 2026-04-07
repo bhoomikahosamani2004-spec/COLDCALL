@@ -2647,8 +2647,10 @@ if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
   } catch (err) {
     setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
     showGtmToast(`❌ Enrich failed: ${err.message}`, "error");
+   } finally {
+    setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
   }
-}} disabled={row._enriching}
+}} disabled={row._enriching || !!row._enriched}
   style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: row._enriching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
   {row._enriching ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enriched}` : "🔍 Enrich"}
 </button>
