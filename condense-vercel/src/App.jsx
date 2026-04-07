@@ -2618,8 +2618,8 @@ if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               {row._status === "generating" && <><Spinner /><span style={{ fontSize: 11, color: C.gold, fontFamily: MONO }}>Generating...</span></>}
 
-              {/* ENRICH */}
-              onClick={async () => {
+            {/* ENRICH */}
+<button onClick={async () => {
   const rowId = row._id;
   setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: true } : r));
   showGtmToast("🔍 Looking up via Apollo / Lusha...", "info", 8000);
@@ -2648,11 +2648,10 @@ if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
     setGtmRows(prev => prev.map(r => r._id === rowId ? { ...r, _enriching: false } : r));
     showGtmToast(`❌ Enrich failed: ${err.message}`, "error");
   }
-}}
-                disabled={row._enriching}
-                style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: row._enriching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-                {row._enriching ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enriched}` : "🔍 Enrich"}
-              </button>
+}} disabled={row._enriching}
+  style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #7C3AED44", background: row._enriched ? "#F5F0FF" : "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT, fontWeight: 500, cursor: row._enriching ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+  {row._enriching ? <><Spinner /> Enriching...</> : row._enriched ? `✅ ${row._enriched}` : "🔍 Enrich"}
+</button>
 
               {/* ZOHO */}
               {gen && (
