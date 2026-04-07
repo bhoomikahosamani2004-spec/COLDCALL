@@ -61,8 +61,12 @@ module.exports = async function handler(req, res) {
   if (process.env.LUSHA_API_KEY) {
     try {
       console.log("Trying Lusha for:", firstName, lastName, company);
-    const lushaRes = await fetch(
-  `https://api.lusha.com/v1/person?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&company=${encodeURIComponent(company)}`,
+   
+      console.log("Lusha status:", lushaRes.status);
+      const lushaData = await lushaRes.json();
+      console.log("Lusha response:", JSON.stringify(lushaData).slice(0, 300));
+      const lushaRes = await fetch(
+  `https://api.lusha.com/v2/person?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&companyName=${encodeURIComponent(company)}&revealEmails=true&revealPhones=true`,
         {
           method: "GET",
           headers: {
@@ -70,11 +74,6 @@ module.exports = async function handler(req, res) {
           },
         }
       );
-
-      console.log("Lusha status:", lushaRes.status);
-      const lushaData = await lushaRes.json();
-      console.log("Lusha response:", JSON.stringify(lushaData).slice(0, 300));
-
       // ✅ FIX 2: Check array length properly
      const d = lushaData?.contact?.data || lushaData;
 const email = d?.emailAddresses?.[0]?.email || d?.emailAddresses?.[0]?.emailAddress || "";
