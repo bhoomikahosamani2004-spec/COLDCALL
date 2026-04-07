@@ -1,0 +1,124 @@
+// /api/enrich-phone.js
+// Fetches ONLY phone numbers from Apollo (with reveal_phone_number=true) → Lusha fallback
+// Kept separate because phone lookup costs extra credits on both Apollo and Lusha
+
+module.exports = async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).end();
+  const { name, company, jobTitle, linkedinUrl } = req.body;
+  if (!company) return res.status(400).json({ found: false, error: "Company is required" });
+
+  const cleanName = (name || "").trim();
+  const firstName = cleanName.split(" ")[0];
+  const lastName = cleanName.split(" ").slice(1).join(" ");
+  console.log("PHONE ENRICH REQUEST:", { name: cleanName, company, jobTitle });
+
+  let phone = "";
+  let source = null;
+
+  // ── APOLLO (with phone reveal) ─────────────────────────────────────────────
+  if (process.env.APOLLO_API_KEY) {
+    try {
+      const apolloRes = await fetch("https://api.apollo.io/v1/people/match", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+          "X-Api-Key": process.env.APOLLO_API_KEY,
+        },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          organization_name: company,
+          title: jobTitle || "",
+          linkedin_url: linkedinUrl || undefined,
+          reveal_phone_number: true, // <-- extra credit cost, only here
+        }),
+      });
+
+      if (apolloRes.ok) {
+        const apolloData = await apolloRes.json();
+        const person = apolloData?.person;
+        if (person) {
+          // Apollo returns phone_numbers as an array
+          const phoneEntry =
+            person.phone_numbers?.find(p => p.sanitized_number) ||
+            person.phone_numbers?.[0];
+          phone = phoneEntry?.sanitized_number || phoneEntry?.raw_number || "";
+
+          if (phone) {
+            source = "Apollo";
+            console.log("Apollo phone hit:", phone);
+          } else {
+            console.log("Apollo matched person but no phone returned");
+          }
+        }
+      } else {
+        const errText = await apolloRes.text();
+        console.warn(`Apollo phone skipped — status ${apolloRes.status}:`, errText.slice(0, 200));
+      }
+    } catch (err) {
+      console.error("Apollo phone fetch error:", err.message);
+    }
+  } else {
+    console.warn("APOLLO_API_KEY not set — skipping Apollo phone");
+  }
+
+  // ── LUSHA — fallback if Apollo found nothing ───────────────────────────────
+  if (!phone && process.env.LUSHA_API_KEY) {
+    try {
+      console.log("Trying Lusha phone for:", firstName, lastName, company);
+
+      const lushaRes = await fetch(
+        `https://api.lusha.com/v2/person?firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&companyName=${encodeURIComponent(company)}&revealPhones=true`,
+        {
+          method: "GET",
+          headers: {
+            "api_key": process.env.LUSHA_API_KEY,
+          },
+        }
+      );
+
+      console.log("Lusha phone status:", lushaRes.status);
+
+      if (lushaRes.ok) {
+        const lushaData = await lushaRes.json();
+        console.log("Lusha phone response:", JSON.stringify(lushaData).slice(0, 300));
+
+        const d = lushaData?.contact?.data || lushaData;
+        // Lusha phone fields vary by API version — try all known shapes
+        phone =
+          d?.phoneNumbers?.[0]?.number ||
+          d?.phoneNumbers?.[0]?.localNumber ||
+          d?.phoneNumbers?.[0]?.internationalNumber ||
+          "";
+
+        if (phone) {
+          source = "Lusha";
+          console.log("Lusha phone hit:", phone);
+        } else {
+          console.warn("Lusha returned no phone:", lushaData);
+        }
+      } else {
+        const errText = await lushaRes.text();
+        console.warn(`Lusha phone skipped — status ${lushaRes.status}:`, errText.slice(0, 200));
+      }
+    } catch (err) {
+      console.error("Lusha phone fetch error:", err.message);
+    }
+  } else if (!process.env.LUSHA_API_KEY && !phone) {
+    console.warn("LUSHA_API_KEY not set — skipping Lusha phone");
+  }
+
+  if (phone) {
+    return res.json({ found: true, phone, source });
+  }
+
+  return res.status(404).json({
+    found: false,
+    error: "No phone found from Apollo or Lusha",
+    debug: {
+      apollo_key_set: !!process.env.APOLLO_API_KEY,
+      lusha_key_set: !!process.env.LUSHA_API_KEY,
+    },
+  });
+};
