@@ -776,24 +776,7 @@ const b64 = compressed;
                 </div>
               )}
 
-              {/* Empty state hint */}
-              {!preview && !editForm && !scanning && !scanError && (
-                <div style={{ display: "flex", gap: 14, padding: "20px 0" }}>
-                  {[
-                    { icon: "📸", title: "Point & Capture", desc: "Use your camera to scan a physical card" },
-                    { icon: "🖼️", title: "Upload Photo",    desc: "Upload a card image from your device"   },
-                    { icon: "🤖", title: "AI Extracts",     desc: "Claude reads name, title, email, phone"  },
-                    { icon: "⚡", title: "Run Agent",       desc: "Generate personalised outreach instantly" },
-                  ].map(s => (
-                    <div key={s.title} style={{ flex: 1, background: "#F8FAFC", border: "1px solid #E4ECF4",
-                      borderRadius: 10, padding: "14px 12px", textAlign: "center" }}>
-                      <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: C.navy, marginBottom: 3 }}>{s.title}</div>
-                      <div style={{ fontSize: 10, color: C.textDim, lineHeight: 1.5 }}>{s.desc}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
+             
             </div>
 
             {/* ── SELECTED PROSPECT DETAIL ────────────────────────────────── */}
@@ -828,11 +811,18 @@ const b64 = compressed;
                           color: C.navy, letterSpacing: "-0.02em", marginBottom: 4 }}>
                           {sel.name || "Unknown"}
                         </h2>
-                        <div style={{ fontSize: 12, color: C.textMid, fontFamily: MONO }}>
-                          {sel.jobTitle && <span>{sel.jobTitle}</span>}
-                          {sel.jobTitle && sel.company && <span style={{ color: C.textDim, margin: "0 8px" }}>·</span>}
-                          {sel.company && <span style={{ color: C.gold }}>{sel.company}</span>}
-                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 2 }}>
+  {sel.jobTitle && (
+    <div style={{ fontSize: 12, color: C.textMid, fontFamily: FONT, fontWeight: 500 }}>
+      {sel.jobTitle}
+    </div>
+  )}
+  {sel.company && (
+    <div style={{ fontSize: 12, color: C.gold, fontFamily: FONT, fontWeight: 600 }}>
+      {sel.company}
+    </div>
+  )}
+</div>
                         <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
                           {sel.email     && <span style={{ fontSize: 10, color: C.textMid, fontFamily: MONO }}>✉️ {sel.email}</span>}
                           {sel.phone     && <span style={{ fontSize: 10, color: C.textMid, fontFamily: MONO }}>📱 {sel.phone}</span>}
