@@ -264,36 +264,40 @@ const selStories = sel && selR ? findMatchingStories?.(sel.company, sel.industry
   const addLog = (id, msg) =>
     setLogs(prev => ({ ...prev, [id]: [...(prev[id] || []), msg] }));
   const runScannedAgent = async (prospect) => {
-  // Update status to researching in scanned state
   setScannedProspects(prev => prev.map(p =>
     p.id === prospect.id ? { ...p, status: "researching" } : p
   ));
-  
-  // Call the main runAgent from App.jsx
+
   await runAgent?.(prospect);
 
-  // Wait a moment for App.jsx state to settle, then copy
-  // research + messages out of the main state into scanned-specific state
-  setTimeout(() => {
-    setScannedProspects(prev => prev.map(p => {
-      if (p.id !== prospect.id) return p;
-      const updated = { ...p, status: "ready" };
-      scannedDbSave("v3_scanned_prospects", p.id, updated);
-      return updated;
-    }));
-
+  // Poll until research + messages appear in App.jsx props (max 30 checks)
+  let attempts = 0;
+  const poll = setInterval(() => {
+    attempts++;
     const r = research[prospect.id];
     const m = messages[prospect.id];
 
-    if (r) {
-      setScannedResearch(prev => ({ ...prev, [prospect.id]: r }));
-      scannedDbSave("v3_scanned_research", prospect.id, r);
+    if ((r || m) || attempts > 30) {
+      clearInterval(poll);
+
+      setScannedProspects(prev => prev.map(p => {
+        if (p.id !== prospect.id) return p;
+        const updated = { ...p, status: m ? "ready" : p.status };
+        scannedDbSave("v3_scanned_prospects", p.id, updated);
+        return updated;
+      }));
+
+      if (r) {
+        setScannedResearch(prev => ({ ...prev, [prospect.id]: r }));
+        scannedDbSave("v3_scanned_research", prospect.id, r);
+      }
+      if (m) {
+        setScannedMessages(prev => ({ ...prev, [prospect.id]: m }));
+        scannedDbSave("v3_scanned_messages", prospect.id, m);
+        setActiveMsg("connection_note");
+      }
     }
-    if (m) {
-      setScannedMessages(prev => ({ ...prev, [prospect.id]: m }));
-      scannedDbSave("v3_scanned_messages", prospect.id, m);
-    }
-  }, 3000);
+  }, 1000);
 };
 
   // ── Scanner: file upload ──────────────────────────────────────────────────
