@@ -292,12 +292,27 @@ const selStories = sel && selR ? findMatchingStories?.(sel.company, sel.industry
 
   const addLog = (id, msg) =>
     setLogs(prev => ({ ...prev, [id]: [...(prev[id] || []), msg] }));
-  const runScannedAgent = async (prospect) => {
-  setScannedProspects(prev => prev.map(p =>
-    p.id === prospect.id ? { ...p, status: "researching" } : p
-  ));
-
-  await runAgent?.(prospect);
+  useEffect(() => {
+  scannedProspects.forEach(p => {
+    if (p.status !== "researching" && p.status !== "generating") return;
+    const r = research[p.id];
+    const m = messages[p.id];
+    if (m) {
+      setScannedProspects(prev => prev.map(sp => {
+        if (sp.id !== p.id) return sp;
+        const updated = { ...sp, status: "ready" };
+        scannedDbSave("v3_scanned_prospects", sp.id, updated);
+        return updated;
+      }));
+      setScannedResearch(prev => ({ ...prev, [p.id]: r }));
+      setScannedMessages(prev => ({ ...prev, [p.id]: m }));
+      if (r) scannedDbSave("v3_scanned_research", p.id, r);
+      scannedDbSave("v3_scanned_messages", p.id, m);
+      setActiveMsg("connection_note");
+      setActiveTab("messages");
+    }
+  });
+}, [research, messages]);
 
   // Poll until research + messages appear in App.jsx props (max 30 checks)
   let attempts = 0;
@@ -327,6 +342,14 @@ const selStories = sel && selR ? findMatchingStories?.(sel.company, sel.industry
       }
     }
   }, 1000);
+};
+const runScannedAgent = async (prospect) => {
+  setScannedProspects(prev => prev.map(p =>
+    p.id === prospect.id ? { ...p, status: "researching" } : p
+  ));
+  setRunning(prospect.id);
+  await runAgent?.(prospect);
+  setRunning(null);
 };
 
   // ── Scanner: file upload ──────────────────────────────────────────────────
