@@ -151,7 +151,7 @@ Return this exact shape (use empty string "" for any field not found on the card
 }` },
       ],
     }],
-    generationConfig: { maxOutputTokens: 1000, temperature: 0.1, responseMimeType: "application/json" },
+    generationConfig: { maxOutputTokens: 1000, temperature: 0.1 },
   };
 
   const response = await fetch("/api/gemini", {
@@ -168,25 +168,54 @@ Return this exact shape (use empty string "" for any field not found on the card
   const data = await response.json();
   if (data.error) throw new Error(data.error.message || "Gemini API error");
 
-  const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("") || "";
-  if (!text.trim()) throw new Error("Empty response from Gemini — try again");
+const text = (data.candidates?.[0]?.content?.parts || [])
+  .map(p => p.text || "").join("").trim();
+if (!text) throw new Error("Empty response from Gemini — try again");
 
-  const start = text.indexOf("{");
-  const end   = text.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("No JSON in response");
-  return JSON.parse(text.slice(start, end + 1));
+// Strip markdown fences if Gemini wraps in ```json
+const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+const start = cleaned.indexOf("{");
+const end   = cleaned.lastIndexOf("}");
+if (start === -1 || end === -1) throw new Error("No JSON in response");
+return JSON.parse(cleaned.slice(start, end + 1));
 }
 
 // ─── FILE → BASE64 ───────────────────────────────────────────────────────────
+// ─── FILE → COMPRESSED BASE64 ─────────────────────────────────────────────────
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = () => resolve(reader.result.split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      // Resize to max 1200px on longest side
+      const MAX = 1200;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width > height) {
+          height = Math.round((height / width) * MAX);
+          width = MAX;
+        } else {
+          width = Math.round((width / height) * MAX);
+          height = MAX;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width  = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+
+      // Compress as JPEG at 0.75 quality
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+      URL.revokeObjectURL(url);
+      resolve(dataUrl.split(",")[1]); // return base64 only
+    };
+
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Failed to load image")); };
+    img.src = url;
   });
 }
-
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function ScannedProspects({
   prospects = [], setProspects,
@@ -360,7 +389,19 @@ const selStories = sel && selR ? findMatchingStories?.(sel.company, sel.industry
     setScanning(true); setScanError(""); setScanSuccess("");
     setExtracted(null); setEditForm(null);
     try {
-      const b64  = dataUrl.split(",")[1];
+      const compressed = (() => {
+  const MAX = 1200;
+  let { width: w, height: h } = canvasRef.current;
+  if (w > MAX || h > MAX) {
+    if (w > h) { h = Math.round((h/w)*MAX); w = MAX; }
+    else { w = Math.round((w/h)*MAX); h = MAX; }
+  }
+  const c2 = document.createElement("canvas");
+  c2.width = w; c2.height = h;
+  c2.getContext("2d").drawImage(canvasRef.current, 0, 0, w, h);
+  return c2.toDataURL("image/jpeg", 0.75).split(",")[1];
+})();
+const b64 = compressed;
       const data = await extractCardWithClaude(b64, "image/jpeg");
       setExtracted(data);
       setEditForm({ ...data });
