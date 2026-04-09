@@ -117,7 +117,7 @@ async function extractCardWithClaude(base64Image, mediaType) {
       role: "user",
       parts: [
         { inline_data: { mime_type: mediaType, data: base64Image } },
-        { text: "You are extracting data from a business card image.
+   { text: `You are extracting data from a business card image.
 Extract all available contact information and return ONLY valid JSON — no preamble, no markdown, no code fences.
 
 Return this exact shape (use empty string "" for any field not found on the card):
@@ -133,7 +133,7 @@ Return this exact shape (use empty string "" for any field not found on the card
   "industry": "Infer industry from company/title (e.g. Automotive, SaaS, Healthcare)",
   "region": "Country or region inferred from address/phone/domain",
   "notes": "Any other useful text on the card"
-}" },
+}` },
       ],
     }],
     generationConfig: { maxOutputTokens: 1000, temperature: 0.1, responseMimeType: "application/json" },
