@@ -110,25 +110,15 @@ function PrimaryBtn({ onClick, disabled, children, color = C.gold }) {
   );
 }
 
-// ─── CLAUDE API: Extract business card ───────────────────────────────────────
+// ─── CARD EXTRACTION via /api/gemini (same Gemini route used by the rest of the app) ──
 async function extractCardWithClaude(base64Image, mediaType) {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: { type: "base64", media_type: mediaType, data: base64Image },
-          },
-          {
-            type: "text",
-            text: `You are extracting data from a business card image.
-Extract all available contact information and return ONLY valid JSON — no preamble, no markdown.
+  const body = {
+    contents: [{
+      role: "user",
+      parts: [
+        { inline_data: { mime_type: mediaType, data: base64Image } },
+        { text: "You are extracting data from a business card image.
+Extract all available contact information and return ONLY valid JSON — no preamble, no markdown, no code fences.
 
 Return this exact shape (use empty string "" for any field not found on the card):
 {
@@ -143,23 +133,32 @@ Return this exact shape (use empty string "" for any field not found on the card
   "industry": "Infer industry from company/title (e.g. Automotive, SaaS, Healthcare)",
   "region": "Country or region inferred from address/phone/domain",
   "notes": "Any other useful text on the card"
-}`,
-          },
-        ],
-      }],
-    }),
+}" },
+      ],
+    }],
+    generationConfig: { maxOutputTokens: 1000, temperature: 0.1, responseMimeType: "application/json" },
+  };
+
+  const response = await fetch("/api/gemini", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     const err = await response.text();
-    throw new Error(`Claude API error ${response.status}: ${err.slice(0, 200)}`);
+    throw new Error(`Gemini API error ${response.status}: ${err.slice(0, 200)}`);
   }
 
   const data = await response.json();
-  const text = data.content?.filter(b => b.type === "text").map(b => b.text).join("") || "";
+  if (data.error) throw new Error(data.error.message || "Gemini API error");
+
+  const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("") || "";
+  if (!text.trim()) throw new Error("Empty response from Gemini — try again");
+
   const start = text.indexOf("{");
   const end   = text.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("No JSON in Claude response");
+  if (start === -1 || end === -1) throw new Error("No JSON in response");
   return JSON.parse(text.slice(start, end + 1));
 }
 
@@ -748,26 +747,105 @@ export default function ScannedProspects({
                     {/* Action buttons */}
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0, marginLeft: 16, flexWrap: "wrap", justifyContent: "flex-end" }}>
                       <Badge status={sel.status} />
+
+                      {/* Run Agent / Regen */}
                       {(sel.status === "idle" || sel.status === "error") && (
                         <PrimaryBtn onClick={() => runAgent?.(sel)} disabled={running !== null} color={C.gold}>
                           {running === sel.id ? <><Spinner /> Running...</> : "⚡ Run Agent"}
                         </PrimaryBtn>
                       )}
+                      {(sel.status === "ready" || sel.status === "following") && (
+                        <button onClick={() => runAgent?.(sel)} disabled={running !== null}
+                          style={{ padding: "7px 14px", borderRadius: 6, border: `1px solid ${C.gold}44`,
+                            background: C.goldDim, color: C.gold, fontSize: 11, fontFamily: FONT,
+                            fontWeight: 500, cursor: running ? "not-allowed" : "pointer",
+                            display: "flex", alignItems: "center", gap: 5, opacity: running ? 0.5 : 1 }}>
+                          ↺ Regen
+                        </button>
+                      )}
+
+                      {/* Mark Sent */}
                       {sel.status === "ready" && (
                         <PrimaryBtn onClick={() => markSent?.(sel.id)} color={C.green}>
                           ✓ Mark Sent
                         </PrimaryBtn>
                       )}
-                      {!sel.email && (
-                        <button onClick={() => enrichProspect?.(sel)}
-                          disabled={enriching === sel.id}
-                          style={{ padding: "8px 14px", borderRadius: 6, border: "1px solid #7C3AED44",
-                            background: "#FAF5FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT,
-                            fontWeight: 500, cursor: enriching === sel.id ? "not-allowed" : "pointer",
+
+                      {/* Enrich — always show (mirrors Prospects page) */}
+                      <button onClick={() => enrichProspect?.(sel)}
+                        disabled={enriching === sel.id}
+                        style={{ padding: "8px 14px", borderRadius: 6,
+                          border: sel._enriched ? "1px solid #B8EDD3" : "1px solid #7C3AED44",
+                          background: sel._enriched ? "#F0FBF5" : "#FAF5FF",
+                          color: sel._enriched ? C.green : "#7C3AED",
+                          fontSize: 11, fontFamily: FONT, fontWeight: 500,
+                          cursor: enriching === sel.id ? "not-allowed" : "pointer",
+                          display: "flex", alignItems: "center", gap: 5 }}>
+                        {enriching === sel.id
+                          ? <><Spinner /> Enriching...</>
+                          : sel._enriched ? `✅ via ${sel._enriched}` : "🔍 Enrich"}
+                      </button>
+
+                      {/* Fetch Phone — show if no phone */}
+                      {!sel.phone && (
+                        <button onClick={async () => {
+                          setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, _phoneFetching: true } : p));
+                          try {
+                            const res = await fetch("/api/enrich-phone", {
+                              method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ name: sel.name, company: sel.company, jobTitle: sel.jobTitle, linkedinUrl: sel.linkedinUrl || "" }),
+                            });
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                            const data = await res.json();
+                            if (data.found && data.phone) {
+                              setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, phone: data.phone, _phoneFetching: false } : p));
+                            } else {
+                              setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, _phoneFetching: false } : p));
+                            }
+                          } catch {
+                            setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, _phoneFetching: false } : p));
+                          }
+                        }} disabled={sel._phoneFetching}
+                          style={{ padding: "8px 14px", borderRadius: 6, border: "1px solid #0D9E6E44",
+                            background: "#F0FBF5", color: C.green, fontSize: 11, fontFamily: FONT,
+                            fontWeight: 500, cursor: sel._phoneFetching ? "not-allowed" : "pointer",
                             display: "flex", alignItems: "center", gap: 5 }}>
-                          {enriching === sel.id ? <><Spinner /> Enriching...</> : "🔍 Enrich"}
+                          {sel._phoneFetching ? <><Spinner /> Fetching...</> : "📱 Fetch Phone"}
                         </button>
                       )}
+
+                      {/* Zoho CRM Push */}
+                      {selM && (
+                        <button onClick={async () => {
+                          setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, _zohoPushing: true, _zohoStatus: null } : p));
+                          try {
+                            const res = await fetch("/api/zoho-push", {
+                              method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ prospect: sel, messages: selM, description: selR?.why_condense_fits || "" }),
+                            });
+                            const d = await res.json();
+                            const ok = d.data?.[0]?.status === "success";
+                            setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, _zohoPushing: false, _zohoStatus: ok ? "success" : "error" } : p));
+                            setTimeout(() => setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, _zohoStatus: null } : p)), 4000);
+                          } catch {
+                            setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, _zohoPushing: false, _zohoStatus: "error" } : p));
+                            setTimeout(() => setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, _zohoStatus: null } : p)), 4000);
+                          }
+                        }} disabled={sel._zohoPushing}
+                          style={{ padding: "8px 14px", borderRadius: 6, fontSize: 11, fontFamily: FONT, fontWeight: 500,
+                            border: `1px solid ${sel._zohoStatus === "success" ? "#B8EDD3" : sel._zohoStatus === "error" ? "#FFCCCC" : "#E4629444"}`,
+                            background: sel._zohoStatus === "success" ? "#F0FBF5" : sel._zohoStatus === "error" ? "#FFF5F5" : "#FFF0F5",
+                            color: sel._zohoStatus === "success" ? C.green : sel._zohoStatus === "error" ? C.red : "#E46294",
+                            cursor: sel._zohoPushing ? "not-allowed" : "pointer",
+                            display: "flex", alignItems: "center", gap: 5 }}>
+                          {sel._zohoPushing ? <><Spinner /> Pushing...</>
+                            : sel._zohoStatus === "success" ? "✅ Pushed!"
+                            : sel._zohoStatus === "error" ? "❌ Failed"
+                            : "☁️ Zoho CRM"}
+                        </button>
+                      )}
+
+                      {/* Export PDF */}
                       {selM && exportProposalPDF && (
                         <button onClick={() => exportProposalPDF({ sel, selResearch: selR, selMessages: selM,
                           selMatchedStories: selStories, findIndustryUseCases,
@@ -779,9 +857,11 @@ export default function ScannedProspects({
                             background: "#F5F0FF", color: "#7C3AED", fontSize: 11, fontFamily: FONT,
                             fontWeight: 500, cursor: exportingPDF ? "not-allowed" : "pointer",
                             display: "flex", alignItems: "center", gap: 5 }}>
-                          {exportingPDF ? <><Spinner /> PDF...</> : "📄 Export"}
+                          {exportingPDF ? <><Spinner /> PDF...</> : "📄 Export PDF"}
                         </button>
                       )}
+
+                      {/* Complete */}
                       {sel.status === "following" && (
                         <button onClick={() => setProspects(prev => prev.map(p => p.id === sel.id ? { ...p, status: "done" } : p))}
                           style={{ padding: "8px 14px", borderRadius: 6, border: `1px solid ${C.green}44`,
