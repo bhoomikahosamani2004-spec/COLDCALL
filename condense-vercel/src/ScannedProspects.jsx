@@ -313,17 +313,33 @@ const selStories = sel && selR ? findMatchingStories?.(sel.company, sel.industry
     }
   });
 }, [research, messages]);
+  // Deduplicate scannedProspects on load
+useEffect(() => {
+  setScannedProspects(prev => {
+    const seen = new Set();
+    return prev.filter(p => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  });
+}, []);
 
   
 const runScannedAgent = async (prospect) => {
-  setScannedProspects(prev => prev.map(p =>
-    p.id === prospect.id ? { ...p, status: "researching" } : p
-  ));
+  // Prevent duplicate entries in scannedProspects
+  setScannedProspects(prev => {
+    const exists = prev.filter(p => p.id === prospect.id);
+    if (exists.length > 1) {
+      // deduplicate — keep only the first
+      return prev.filter((p, i) => p.id !== prospect.id || i === prev.findIndex(x => x.id === prospect.id));
+    }
+    return prev.map(p => p.id === prospect.id ? { ...p, status: "researching" } : p);
+  });
   setRunning(prospect.id);
   await runAgent?.(prospect);
   setRunning(null);
 };
-
   // ── Scanner: file upload ──────────────────────────────────────────────────
   const handleFileSelect = async (file) => {
     if (!file) return;
