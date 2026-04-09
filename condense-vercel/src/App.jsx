@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import ScannedProspects from "./ScannedProspects";
 import { exportProposalPDF } from "./exportProposal";
 
 import { createClient } from '@supabase/supabase-js';
@@ -1865,6 +1866,7 @@ if (!dbLoaded) return (
             {[
             { key: "prospects", label: "🎯 Prospects" },
             { key: "gtm", label: "📊 Tech GTM" },
+            { key: "scanned", label: "📷 Scanned" }
             { key: "dashboard", label: "📊 Dashboard" },
             { key: "training", label: "🧠 Training" },
 ].map(v => (
@@ -3562,7 +3564,38 @@ const text = (gtmFollowupKeys.includes(activeGtmTab) && gtmFirstName && !gtmAlre
     </div>
   </div>
 )}
+  
+{activeView === "training" && (
+  <div style={{ maxWidth: 900, margin: "0 auto" }} className="card-enter">
+    ...
+  </div>
+)}
 
+{/* ── SCANNED PROSPECTS ── */}
+{activeView === "scanned" && (
+  <ScannedProspects
+    prospects={prospects} setProspects={setProspects}
+    research={research} setResearch={setResearch}
+    messages={messages} setMessages={setMessages}
+    edits={edits} setEdits={setEdits}
+    ratings={ratings} setRatings={setRatings}
+    ratingFeedback={ratingFeedback} setRatingFeedback={setRatingFeedback}
+    trainingExamples={trainingExamples} setTrainingExamples={setTrainingExamples}
+    replies={replies}
+    extraContext={extraContext} setExtraContext={setExtraContext}
+    running={running} setRunning={setRunning}
+    senderProfile={senderProfile}
+    runAgent={runAgent}
+    enrichProspect={enrichProspect} enriching={enriching}
+    markSent={markSent}
+    dbSave={dbSave}
+    findIndustryUseCases={findIndustryUseCases}
+    findMatchingStories={findMatchingStories}
+    SUCCESS_STORIES={SUCCESS_STORIES}
+    FOLLOWUP_SCHEDULE={FOLLOWUP_SCHEDULE}
+    exportProposalPDF={exportProposalPDF}
+  />
+)}
 {activeView === "prospects" && !sel ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 20 }}>
                 <div style={{ width: 72, height: 72, borderRadius: 16, background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 32px rgba(27,110,243,0.25)" }}>
