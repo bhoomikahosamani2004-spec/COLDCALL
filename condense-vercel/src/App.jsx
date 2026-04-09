@@ -3667,14 +3667,17 @@ const text = (gtmFollowupKeys.includes(activeGtmTab) && gtmFirstName && !gtmAlre
             linkedinUrl: sel.linkedinUrl,
           }),
         });
-        let data;
+       let data;
         try {
           const raw = await res.text();
           if (!raw?.trim()) throw new Error("Empty response from server");
           data = JSON.parse(raw);
         } catch (parseErr) {
-          throw new Error("Phone lookup returned invalid response: " + parseErr.message);
+          addLog(sel.id, `❌ Phone lookup failed: ${parseErr.message}`);
+          setEnriching(null);
+          return;
         }
+        if (data.found && data.phone) {
           setProspects(prev =>
             prev.map(p => p.id === sel.id ? { ...p, phone: data.phone } : p)
           );
