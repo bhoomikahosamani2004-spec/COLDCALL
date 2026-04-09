@@ -936,8 +936,12 @@ export default function ScannedProspects({
                               {/* WhatsApp */}
                               <button onClick={() => {
                                 const ph = (senderProfile.phone || sel.phone || "").replace(/\D/g, "");
-                                ph ? window.open(`https://wa.me/${ph}?text=${encodeURIComponent(text)}`, "_blank")
-                                   : (navigator.clipboard.writeText(text), window.open("https://web.whatsapp.com/", "_blank"));
+                                if (ph) {
+                                  window.open(`https://wa.me/${ph}?text=${encodeURIComponent(text)}`, "_blank");
+                                } else {
+                                  navigator.clipboard.writeText(text);
+                                  window.open("https://web.whatsapp.com/", "_blank");
+                                }
                               }} style={{ padding: "7px 14px", borderRadius: 4, cursor: "pointer",
                                 border: "1px solid rgba(37,211,102,0.35)", background: "rgba(37,211,102,0.08)",
                                 color: "#25D366", fontSize: 11, fontFamily: FONT, fontWeight: 500,
