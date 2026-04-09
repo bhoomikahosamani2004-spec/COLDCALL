@@ -46,6 +46,21 @@
 //      )}
 
 import { useState, useRef, useCallback } from "react";
+import { createClient } from "@supabase/supabase-js";
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_SUPABASE_URL
+  || process.env.REACT_APP_SUPABASE_URL
+  || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_SUPABASE_ANON_KEY
+  || process.env.REACT_APP_SUPABASE_ANON_KEY
+  || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = SUPABASE_URL && SUPABASE_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+async function scannedDbSave(table, id, data) {
+  if (!supabase) return;
+  try { await supabase.from(table).upsert({ id, data, updated_at: new Date().toISOString() }); }
+  catch(e) { console.error("scannedDbSave error:", e); }
+}
 
 // ─── DESIGN TOKENS (mirrors App.jsx) ─────────────────────────────────────────
 const FONT    = "'Inter', 'DM Sans', system-ui, sans-serif";
@@ -208,22 +223,78 @@ export default function ScannedProspects({
   const [logs, setLogs]                   = useState({});
   const [searchQuery, setSearchQuery]     = useState("");
   const [exportingPDF, setExportingPDF]   = useState(false);
+const [scannedProspects, setScannedProspects] = useState([]);
+const [scannedResearch, setScannedResearch]   = useState({});
+const [scannedMessages, setScannedMessages]   = useState({});
+const [scannedEdits, setScannedEdits]         = useState({});
+const [scannedLoaded, setScannedLoaded]       = useState(false);
   const [cameraOpen, setCameraOpen]       = useState(false);
   const [cameraStream, setCameraStream]   = useState(null);
+  useEffect(() => {
+  async function loadScanned() {
+    if (!supabase) { setScannedLoaded(true); return; }
+    try {
+      const [p, r, m, e] = await Promise.all([
+        supabase.from("v3_scanned_prospects").select("id, data"),
+        supabase.from("v3_scanned_research").select("id, data"),
+        supabase.from("v3_scanned_messages").select("id, data"),
+        supabase.from("v3_scanned_edits").select("id, data"),
+      ]);
+      setScannedProspects((p.data || []).map(r => r.data).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+      setScannedResearch(Object.fromEntries((r.data || []).map(r => [r.id, r.data])));
+      setScannedMessages(Object.fromEntries((m.data || []).map(r => [r.id, r.data])));
+      setScannedEdits(Object.fromEntries((e.data || []).map(r => [r.id, r.data])));
+    } catch(err) { console.error("loadScanned error:", err); }
+    setScannedLoaded(true);
+  }
+  loadScanned();
+}, []);
 
   const fileInputRef  = useRef();
   const videoRef      = useRef();
   const canvasRef     = useRef();
 
   // ── Derived ──────────────────────────────────────────────────────────────
-  const scanned = prospects.filter(p => p.source === "scanned");
-  const sel      = scanned.find(p => p.id === selectedId) || null;
-  const selR     = sel ? research[sel.id]  : null;
-  const selM     = sel ? messages[sel.id]  : null;
-  const selStories = sel && selR ? findMatchingStories?.(sel.company, sel.industry || "", selR) ?? [] : [];
+ const scanned    = scannedProspects;
+const sel        = scanned.find(p => p.id === selectedId) || null;
+const selR       = sel ? scannedResearch[sel.id]  : null;
+const selM       = sel ? scannedMessages[sel.id]  : null;
+const selStories = sel && selR ? findMatchingStories?.(sel.company, sel.industry || "", selR) ?? [] : [];
 
   const addLog = (id, msg) =>
     setLogs(prev => ({ ...prev, [id]: [...(prev[id] || []), msg] }));
+  const runScannedAgent = async (prospect) => {
+  // Update status to researching in scanned state
+  setScannedProspects(prev => prev.map(p =>
+    p.id === prospect.id ? { ...p, status: "researching" } : p
+  ));
+  
+  // Call the main runAgent from App.jsx
+  await runAgent?.(prospect);
+
+  // Wait a moment for App.jsx state to settle, then copy
+  // research + messages out of the main state into scanned-specific state
+  setTimeout(() => {
+    setScannedProspects(prev => prev.map(p => {
+      if (p.id !== prospect.id) return p;
+      const updated = { ...p, status: "ready" };
+      scannedDbSave("v3_scanned_prospects", p.id, updated);
+      return updated;
+    }));
+
+    const r = research[prospect.id];
+    const m = messages[prospect.id];
+
+    if (r) {
+      setScannedResearch(prev => ({ ...prev, [prospect.id]: r }));
+      scannedDbSave("v3_scanned_research", prospect.id, r);
+    }
+    if (m) {
+      setScannedMessages(prev => ({ ...prev, [prospect.id]: m }));
+      scannedDbSave("v3_scanned_messages", prospect.id, m);
+    }
+  }, 3000);
+};
 
   // ── Scanner: file upload ──────────────────────────────────────────────────
   const handleFileSelect = async (file) => {
@@ -298,7 +369,7 @@ export default function ScannedProspects({
   };
 
   // ── Save extracted card as prospect ──────────────────────────────────────
-  const saveScanned = () => {
+ const saveScanned = () => {
     if (!editForm?.name && !editForm?.company) return;
     const id = `sc_${Date.now()}`;
     const today = new Date().toISOString().split("T")[0];
@@ -312,8 +383,8 @@ export default function ScannedProspects({
       sentAt: null,
       cardPreview: preview,
     };
-    setProspects(prev => [newP, ...prev]);
-    dbSave?.("v3_prospects", id, newP);
+    setScannedProspects(prev => [newP, ...prev]);
+    scannedDbSave("v3_scanned_prospects", id, newP);
     setSelectedId(id);
     setPreview(null); setExtracted(null); setEditForm(null);
     setScanSuccess(""); setScanError("");
@@ -327,28 +398,20 @@ export default function ScannedProspects({
   };
 
   // ── Delete scanned prospect ───────────────────────────────────────────────
-  const deleteSP = async (id) => {
+ const deleteSP = async (id) => {
     if (selectedId === id) setSelectedId(null);
-    setProspects(prev => prev.filter(p => p.id !== id));
-    if (dbSave) {
-      // mimic the supabase deletes done in App.jsx
-      try {
-        const { createClient } = await import("@supabase/supabase-js");
-        const sb = createClient(
-          process.env.REACT_APP_SUPABASE_URL || "",
-          process.env.REACT_APP_SUPABASE_ANON_KEY || ""
-        );
-        await Promise.all([
-          sb.from("v3_prospects").delete().eq("id", id),
-          sb.from("v3_research").delete().eq("id", id),
-          sb.from("v3_messages").delete().eq("id", id),
-          sb.from("v3_edits").delete().eq("id", id),
-        ]);
-      } catch { /* non-critical */ }
+    setScannedProspects(prev => prev.filter(p => p.id !== id));
+    setScannedResearch(prev => { const n = {...prev}; delete n[id]; return n; });
+    setScannedMessages(prev => { const n = {...prev}; delete n[id]; return n; });
+    setScannedEdits(prev => { const n = {...prev}; Object.keys(n).filter(k => k.startsWith(id)).forEach(k => delete n[k]); return n; });
+    if (supabase) {
+      await Promise.all([
+        supabase.from("v3_scanned_prospects").delete().eq("id", id),
+        supabase.from("v3_scanned_research").delete().eq("id", id),
+        supabase.from("v3_scanned_messages").delete().eq("id", id),
+        supabase.from("v3_scanned_edits").delete().eq("id", id),
+      ]);
     }
-    setResearch(prev => { const n = { ...prev }; delete n[id]; return n; });
-    setMessages(prev => { const n = { ...prev }; delete n[id]; return n; });
-    setEdits(prev => { const n = { ...prev }; Object.keys(n).filter(k => k.startsWith(id)).forEach(k => delete n[k]); return n; });
   };
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -511,7 +574,7 @@ export default function ScannedProspects({
                       padding: "2px 8px", borderRadius: 10, border: "1px solid #DDD0F8",
                       fontFamily: MONO }}>📷 scanned</span>
                     {(p.status === "ready" || p.status === "error") && (
-                      <button onClick={e => { e.stopPropagation(); runAgent?.(p); }}
+                      <button onClick={e => { e.stopPropagation(); runScannedAgent(p); }}
                         disabled={running !== null}
                         style={{ fontSize: 9, color: C.gold, background: C.goldDim,
                           border: `1px solid ${C.gold}44`, padding: "2px 8px", borderRadius: 10,
@@ -750,12 +813,12 @@ export default function ScannedProspects({
 
                       {/* Run Agent / Regen */}
                       {(sel.status === "idle" || sel.status === "error") && (
-                        <PrimaryBtn onClick={() => runAgent?.(sel)} disabled={running !== null} color={C.gold}>
+                        <PrimaryBtn onClick={() => runScannedAgent(sel)} disabled={running !== null} color={C.gold}>
                           {running === sel.id ? <><Spinner /> Running...</> : "⚡ Run Agent"}
                         </PrimaryBtn>
                       )}
                       {(sel.status === "ready" || sel.status === "following") && (
-                        <button onClick={() => runAgent?.(sel)} disabled={running !== null}
+                        <button onClick={() => runScannedAgent(sel)} disabled={running !== null}
                           style={{ padding: "7px 14px", borderRadius: 6, border: `1px solid ${C.gold}44`,
                             background: C.goldDim, color: C.gold, fontSize: 11, fontFamily: FONT,
                             fontWeight: 500, cursor: running ? "not-allowed" : "pointer",
@@ -964,7 +1027,7 @@ export default function ScannedProspects({
                     {activeMsg && (() => {
                       const msgDef  = FOLLOWUP_SCHEDULE.find(m => m.key === activeMsg);
                       const editKey = `${sel.id}_${activeMsg}`;
-                      const raw     = edits[editKey] ?? selM[activeMsg] ?? "";
+                      const raw     = scannedEdits[editKey] ?? selM[activeMsg] ?? "";
                       const isFollowup = ["day3_followup","day7_followup","day14_followup",
                         "email_followup1","email_followup2"].includes(activeMsg);
                       const fn = sel.name?.split(" ")[0] || "";
@@ -988,7 +1051,7 @@ export default function ScannedProspects({
                             </div>
                             <div style={{ display: "flex", gap: 8 }}>
                               {edits[editKey] !== undefined && (
-                                <button onClick={() => setEdits(prev => { const n = {...prev}; delete n[editKey]; return n; })}
+                                <button onClick={() => setScannedEdits(prev => { const n = {...prev}; delete n[editKey]; return n; })}
                                   style={{ fontSize: 11, color: C.textDim, background: "none",
                                     border: "none", cursor: "pointer" }}>↺ Reset</button>
                               )}
@@ -1002,7 +1065,10 @@ export default function ScannedProspects({
                           </div>
 
                           <textarea value={text}
-                            onChange={e => setEdits(prev => ({ ...prev, [editKey]: e.target.value }))}
+                           onChange={e => {
+                            setScannedEdits(prev => ({ ...prev, [editKey]: e.target.value }));
+                            scannedDbSave("v3_scanned_edits", editKey, e.target.value);
+                            }}
                             style={{ width: "100%", background: "#F8FAFC", border: "1px solid #E4ECF4",
                               color: C.navy, borderRadius: 8, padding: "14px 16px", fontSize: 13,
                               fontFamily: FONT, lineHeight: 1.9, resize: "vertical", outline: "none",
