@@ -2338,41 +2338,19 @@ if (!dbLoaded) return (
 
 {/* DATE FILTER — collapsible */}
 {(() => {
-const dates = [...new Set(
-  prospects.map(p => p.uploadDate || (p.createdAt ? p.createdAt.split("T")[0] : null))
-  .filter(Boolean)
-)].sort((a, b) => b.localeCompare(a));
+  const dates = [...new Set(
+    prospects.map(p => p.uploadDate || (p.createdAt ? p.createdAt.split("T")[0] : null))
+    .filter(Boolean)
+  )].sort((a, b) => b.localeCompare(a));
   if (dates.length === 0) return null;
-  const [dateFilterOpen, setDateFilterOpen] = React.useState(false);
   return (
-    <div style={{ marginBottom: 8 }}>
-      <button onClick={() => setDateFilterOpen(o => !o)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", background: "none", border: "none", cursor: "pointer", padding: "2px 0", marginBottom: dateFilterOpen ? 6 : 0 }}>
-        <span style={{ fontSize: 9, color: C.textDim, fontFamily: MONO, letterSpacing: "0.08em" }}>FILTER BY DATE {prospectDateFilter !== "all" ? `· ${new Date(prospectDateFilter + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}</span>
-        <span style={{ fontSize: 10, color: C.textDim }}>{dateFilterOpen ? "▲" : "▼"}</span>
-      </button>
-      {dateFilterOpen && (
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          <button onClick={() => setProspectDateFilter("all")}
-            style={{ padding: "3px 10px", borderRadius: 20, border: `1px solid ${prospectDateFilter === "all" ? C.navy : "#E4ECF4"}`, background: prospectDateFilter === "all" ? C.navy : "#F8FAFC", color: prospectDateFilter === "all" ? "#fff" : C.textDim, fontSize: 9, fontFamily: MONO, cursor: "pointer", fontWeight: prospectDateFilter === "all" ? 700 : 400 }}>
-            All dates
-          </button>
-          {dates.map(date => {
-            const count = prospects.filter(p => p.uploadDate === date).length;
-            const isActive = prospectDateFilter === date;
-            const label = new Date(date + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-            return (
-              <button key={date} onClick={() => setProspectDateFilter(date)}
-                style={{ padding: "3px 10px", borderRadius: 20, border: `1px solid ${isActive ? C.navy : "#E4ECF4"}`, background: isActive ? C.navy : "#F8FAFC", color: isActive ? "#fff" : C.textDim, fontSize: 9, fontFamily: MONO, cursor: "pointer", fontWeight: isActive ? 700 : 400, display: "flex", alignItems: "center", gap: 4 }}>
-                {label}
-                <span style={{ background: isActive ? "rgba(255,255,255,0.25)" : "#E4ECF4", color: isActive ? "#fff" : C.textMid, borderRadius: 8, padding: "0px 5px", fontSize: 9, fontWeight: 700 }}>{count}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <DateFilter
+      dates={dates}
+      prospects={prospects}
+      prospectDateFilter={prospectDateFilter}
+      setProspectDateFilter={setProspectDateFilter}
+    />
   );
-})()}
 })()}
    
   <div style={{ position: "relative" }}>
