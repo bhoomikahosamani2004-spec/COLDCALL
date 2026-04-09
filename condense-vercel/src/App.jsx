@@ -1866,7 +1866,7 @@ if (!dbLoaded) return (
             {[
             { key: "prospects", label: "🎯 Prospects" },
             { key: "gtm", label: "📊 Tech GTM" },
-            { key: "scanned", label: "📷 Scanned" }
+            { key: "scanned", label: "📷 Scanned" },
             { key: "dashboard", label: "📊 Dashboard" },
             { key: "training", label: "🧠 Training" },
 ].map(v => (
@@ -3565,11 +3565,7 @@ const text = (gtmFollowupKeys.includes(activeGtmTab) && gtmFirstName && !gtmAlre
   </div>
 )}
   
-{activeView === "training" && (
-  <div style={{ maxWidth: 900, margin: "0 auto" }} className="card-enter">
-    ...
-  </div>
-)}
+
 
 {/* ── SCANNED PROSPECTS ── */}
 {activeView === "scanned" && (
