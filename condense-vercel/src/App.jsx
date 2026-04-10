@@ -1038,7 +1038,7 @@ const [showMapper, setShowMapper] = useState(false);
   try { return JSON.parse(localStorage.getItem('sender_profile') || 'null') || {}; } catch { return {}; }
 });
 const [showProfile, setShowProfile] = useState(false);
-const [activeView, setActiveView] = useState("prospects"); // prospects | dashboard | training
+const [activeView, setActiveView] = useState(() => localStorage.getItem('activeView') || "prospects");
 const [zohoPushing, setZohoPushing] = useState(false);      
 const [zohoPushStatus, setZohoPushStatus] = useState({});
 const [searchQuery, setSearchQuery] = useState("");
@@ -1131,10 +1131,13 @@ useEffect(() => {
   Object.entries(gtmResearch).forEach(([id, val]) => dbSave('v3_gtm_research', id, val));
 }, [gtmResearch, dbLoaded]);
   
-  useEffect(() => {
+useEffect(() => {
   localStorage.setItem('sender_profile', JSON.stringify(senderProfile));
 }, [senderProfile]);
 
+useEffect(() => {
+  localStorage.setItem('activeView', activeView);
+}, [activeView]);
   // Auto-scroll logs
   useEffect(() => { if (logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [logs]);
 
@@ -1863,15 +1866,34 @@ if (!dbLoaded) return (
               <span style={{ fontSize: 18, fontFamily: DISPLAY, fontWeight: 700, color: replies.length > 0 ? "#FFC043" : "rgba(255,255,255,0.25)", lineHeight: 1 }}>{replies.length}</span>
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontFamily: MONO, letterSpacing: "0.06em" }}>Trained</span>
             </div>
-            {[
-            { key: "prospects", label: "🎯 Prospects" },
-            { key: "gtm", label: "📊 Tech GTM" },
-            { key: "scanned", label: "📷 Scanned" },
-            { key: "dashboard", label: "📊 Dashboard" },
-            { key: "training", label: "🧠 Training" },
-].map(v => (
-  <button key={v.key} onClick={() => setActiveView(v.key)} style={{ padding: "5px 12px", borderRadius: 6, border: "none", background: activeView === v.key ? "rgba(27,110,243,0.3)" : "transparent", color: activeView === v.key ? "#FFFFFF" : "rgba(255,255,255,0.5)", fontSize: 11, fontFamily: FONT, cursor: "pointer", fontWeight: activeView === v.key ? 600 : 400 }}>{v.label}</button>
-))}
+            {(() => {
+  const NAV_ITEMS = [
+    { key: "prospects", label: "🎯 Prospects" },
+    { key: "gtm", label: "📊 Tech GTM" },
+    { key: "dashboard", label: "📈 Dashboard" },
+    { key: "training", label: "🧠 Training" },
+  ];
+  const current = NAV_ITEMS.find(v => v.key === activeView) || NAV_ITEMS[0];
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => document.getElementById('nav-dropdown').style.display =
+          document.getElementById('nav-dropdown').style.display === 'none' ? 'flex' : 'none'}
+        style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(27,110,243,0.25)", color: "#FFFFFF", fontSize: 12, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
+        {current.label}
+        <span style={{ fontSize: 9, opacity: 0.7 }}>▼</span>
+      </button>
+      <div id="nav-dropdown" style={{ display: "none", position: "absolute", top: "calc(100% + 8px)", right: 0, background: "#0A2540", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, overflow: "hidden", zIndex: 500, flexDirection: "column", minWidth: 160, boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}>
+        {NAV_ITEMS.map(v => (
+          <button key={v.key} onClick={() => { setActiveView(v.key); document.getElementById('nav-dropdown').style.display = 'none'; }}
+            style={{ padding: "10px 18px", border: "none", background: activeView === v.key ? "rgba(27,110,243,0.35)" : "transparent", color: activeView === v.key ? "#FFFFFF" : "rgba(255,255,255,0.6)", fontSize: 12, fontFamily: FONT, cursor: "pointer", fontWeight: activeView === v.key ? 600 : 400, textAlign: "left", borderLeft: activeView === v.key ? "3px solid #1B6EF3" : "3px solid transparent" }}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+})()}
             <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.12)" }} />
             <button onClick={() => setShowProfile(s => !s)} style={{ background: showProfile ? "#EEF5FF" : "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "6px 14px", color: "#FFFFFF", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontFamily: FONT }}>
   <div style={{ width: 24, height: 24, borderRadius: "50%", background: senderProfile.name ? "linear-gradient(135deg, #1B6EF3, #3D8BFF)" : "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#FFFFFF" }}>
