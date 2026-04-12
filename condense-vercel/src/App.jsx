@@ -1867,9 +1867,10 @@ if (!dbLoaded) return (
               <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", fontFamily: MONO, letterSpacing: "0.06em" }}>Trained</span>
             </div>
             {(() => {
-  const NAV_ITEMS = [
+const NAV_ITEMS = [
     { key: "prospects", label: "🎯 Prospects" },
     { key: "gtm", label: "📊 Tech GTM" },
+    { key: "scanned", label: "📷 Scanned" },
     { key: "dashboard", label: "📈 Dashboard" },
     { key: "training", label: "🧠 Training" },
   ];
