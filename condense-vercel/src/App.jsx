@@ -2290,8 +2290,34 @@ if (!dbLoaded) return (
                   <button onClick={() => fileInputRef.current.click()} style={{ width: "100%", padding: "11px", borderRadius: 4, border: `1px solid ${C.gold}44`, background: "rgba(14,165,233,0.05)", color: C.gold, fontSize: 11, fontFamily: MONO, letterSpacing: "0.07em", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.15s" }}>
                     <span style={{ fontSize: 16 }}>↑</span> Upload CSV / Excel
                   </button>
-                  <div style={{ fontSize: 9, color: C.textDim, fontFamily: MONO, marginTop: 5, textAlign: "center", lineHeight: 1.6 }}>
-                    Supports .csv · .xlsx · .xls · Columns: Name, Company, Title, Email, Phone, LinkedIn
+                <div style={{ fontSize: 9, color: C.textDim, fontFamily: MONO, marginTop: 5, textAlign: "center", lineHeight: 1.6 }}>
+                    Supports .csv · .xlsx · .xls
+                  </div>
+                  <div style={{ marginTop: 8, background: "#F0F4F8", borderRadius: 6, overflow: "hidden", border: "1px solid #E4ECF4" }}>
+                    <div style={{ fontSize: 8, color: C.textDim, fontFamily: MONO, padding: "4px 8px", background: "#E8EDF4", letterSpacing: "0.08em" }}>EXPECTED COLUMNS (sample)</div>
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 8, fontFamily: MONO }}>
+                        <thead>
+                          <tr style={{ background: "#E8EDF4" }}>
+                            {["Full Name","Company","Job Title","Email","Phone","LinkedIn URL"].map(h => (
+                              <td key={h} style={{ padding: "3px 6px", color: C.navy, fontWeight: 700, borderRight: "1px solid #D8E2EE", whiteSpace: "nowrap" }}>{h}</td>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ["Rahul Sharma","Dream11","VP Data Eng","rahul@dream11.com","9876543210","linkedin.com/in/rahul"],
+                            ["Priya Nair","Flipkart","Head of Platform","priya@flipkart.com","","linkedin.com/in/priya"],
+                          ].map((row, i) => (
+                            <tr key={i} style={{ background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}>
+                              {row.map((cell, j) => (
+                                <td key={j} style={{ padding: "3px 6px", color: cell ? C.textMid : C.textFaint, borderRight: "1px solid #E4ECF4", whiteSpace: "nowrap", fontStyle: cell ? "normal" : "italic" }}>{cell || "—"}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                   {uploadStatus && <div style={{ fontSize: 10, fontFamily: MONO, marginTop: 5, padding: "5px 8px", borderRadius: 3, background: uploadStatus.startsWith("✅") ? C.greenDim : uploadStatus.startsWith("❌") ? C.redDim : C.goldDimmer, color: uploadStatus.startsWith("✅") ? C.green : uploadStatus.startsWith("❌") ? C.red : C.gold }}>{uploadStatus}</div>}
                  {prospects.filter(p => p.status === "idle").length > 0 && (
@@ -2510,9 +2536,34 @@ if (prospectDateFilter !== "all" && pDate !== prospectDateFilter) return false;
       <div style={{ background: "#fff", border: "1px solid #E4ECF4", borderRadius: 12, padding: "60px 32px", textAlign: "center" }}>
         <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>📊</div>
         <div style={{ fontSize: 15, color: C.textMid, marginBottom: 8 }}>Upload your India Tech GTM file</div>
-        <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, marginBottom: 24, lineHeight: 1.9 }}>
-          Required columns: Company · HQ · Employees · Data Stack Signal<br/>
-          Tool Used · Use Case · Cloud Provider · Data Warehouse · Buying Persona · Integration Opportunity
+     <div style={{ fontSize: 12, color: C.textDim, fontFamily: MONO, marginBottom: 16, lineHeight: 1.9 }}>
+          Required columns — upload an Excel or CSV with these headers:
+        </div>
+        <div style={{ background: "#F0F4F8", borderRadius: 8, overflow: "hidden", border: "1px solid #E4ECF4", marginBottom: 24 }}>
+          <div style={{ fontSize: 9, color: C.textDim, fontFamily: MONO, padding: "5px 10px", background: "#E8EDF4", letterSpacing: "0.08em" }}>EXPECTED COLUMNS (sample)</div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9, fontFamily: MONO }}>
+              <thead>
+                <tr style={{ background: "#E8EDF4" }}>
+                  {["Company","HQ","Employees","Data Stack Signal","Tool Used","Use Case","Cloud Provider","Data Warehouse","Buying Persona","Integration Opportunity"].map(h => (
+                    <td key={h} style={{ padding: "4px 8px", color: C.navy, fontWeight: 700, borderRight: "1px solid #D8E2EE", whiteSpace: "nowrap" }}>{h}</td>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["Dream11","Mumbai","1000–5000","Kafka, Flink","Kafka Connect","Real-Time Analytics","AWS","Snowflake","VP Data Eng","Kafka → Snowflake CDC"],
+                  ["Meesho","Bengaluru","5000+","Kafka, Spark","Debezium, Airbyte","Fraud Detection","GCP","BigQuery","Head of Data","CDC to BigQuery"],
+                ].map((row, i) => (
+                  <tr key={i} style={{ background: i % 2 === 0 ? "#FFFFFF" : "#F8FAFC" }}>
+                    {row.map((cell, j) => (
+                      <td key={j} style={{ padding: "4px 8px", color: C.textMid, borderRight: "1px solid #E4ECF4", whiteSpace: "nowrap" }}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       <button onClick={() => gtmFileRef.current.click()} style={{ padding: "12px 28px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, #1B6EF3, #3D8BFF)", color: "#fff", fontSize: 14, fontFamily: FONT, fontWeight: 600, cursor: "pointer" }}>
   📊 Upload Excel or CSV to Begin
